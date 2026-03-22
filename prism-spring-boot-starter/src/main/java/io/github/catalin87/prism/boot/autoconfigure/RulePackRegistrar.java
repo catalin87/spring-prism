@@ -66,7 +66,7 @@ final class RulePackRegistrar {
         properties.getCustomRules().stream()
             .filter(rule -> rule.getName() != null && !rule.getName().isBlank())
             .filter(rule -> rule.getPattern() != null && !rule.getPattern().isBlank())
-            .map(rule -> new CustomRegexDetector(rule.getName(), rule.getPattern()))
+            .<PiiDetector>map(rule -> new CustomRegexDetector(rule.getName(), rule.getPattern()))
             .toList();
     return new CustomPropertyRulePack(detectors);
   }
