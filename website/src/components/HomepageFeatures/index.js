@@ -28,8 +28,8 @@ const FeatureList = [
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Seamlessly integrates as a non-invasive Advisor for Spring AI today,
-        with LangChain4j support planned in the next integration milestone.
+        Seamlessly integrates as a non-invasive Advisor for Spring AI and as
+        decorated chat wrappers for LangChain4j.
       </>
     ),
   },

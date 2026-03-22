@@ -3,7 +3,7 @@
 > **The Reversible Privacy Firewall for Generative AI in the Java Ecosystem.**
 > [📖 Read the Documentation](https://catalin87.github.io/spring-prism/)
 
-Spring Prism is a rigorous, zero-dependency data privacy framework designed specifically for integration with **Spring AI**, with **LangChain4j** planned next in the roadmap. It seamlessly sits between your robust backend infrastructure and untrusted Large Language Model providers (OpenAI, Anthropic, Mistral), ensuring sensitive data mathematically *cannot* escape your enterprise boundaries.
+Spring Prism is a rigorous, zero-dependency data privacy framework designed for integration with **Spring AI** and **LangChain4j**. It seamlessly sits between your robust backend infrastructure and untrusted Large Language Model providers (OpenAI, Anthropic, Mistral), ensuring sensitive data mathematically *cannot* escape your enterprise boundaries.
 
 ---
 
@@ -88,10 +88,9 @@ Spring Prism executes strict isolation through a robust Maven multi-module archi
 | -------------- | ------- |
 | `prism-core` | The zero-dependency cryptographic Vault, generic `PiiDetector` interfaces, and string boundaries. |
 | `prism-spring-ai` | Spring AI advisor integration for synchronous and streaming chat interception. |
+| `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` decorators for tokenization and restoration. |
 | `prism-spring-boot-starter` | Instantly initializes Spring AI auto-configurations and exposes cleanly configurable `application.yml` localization boundaries. |
 | `prism-dashboard` | An optional, self-hosted visual interface rendering Micrometer usage statistics on exactly what PII parameters were prevented from escaping to the LLM. |
-
-LangChain4j support is planned, but is not shipped on this branch yet.
 
 ## 📜 Governance & Licensing
 

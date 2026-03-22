@@ -15,6 +15,18 @@ The heartbeat of the system.
   - `TokenGenerator`: Deterministic HMAC-SHA256 signature generator for pseudonymization.
   - Core detectors stay deterministic and checksum-driven. NLP models are intentionally excluded from this module.
 
+### `prism-spring-ai`
+The Spring AI interception layer.
+- **Frameworks**: Spring AI 1.x, Reactor, Micrometer Observation.
+- **Entry Point**: `PrismChatClientAdvisor` wraps `ChatClient` flows for synchronous and streaming requests.
+- **Streaming Safety**: Uses `StreamingBuffer` so fragmented Prism tokens can still be restored across SSE chunks.
+
+### `prism-langchain4j`
+The LangChain4j chat integration layer.
+- **Frameworks**: LangChain4j chat APIs, Micrometer Observation.
+- **Entry Point**: `PrismChatModel` and `PrismStreamingChatModel` decorate LangChain4j `ChatModel` and `StreamingChatModel`.
+- **Boundary Rule**: Keeps Spring-specific concerns out of the integration so `prism-core` remains portable and zero-dependency.
+
 ### `prism-spring-boot-starter`
 The Spring Boot 3 autoconfiguration bridge.
 - **Frameworks**: Spring Boot 3.4+, Micrometer Observation.
@@ -24,7 +36,7 @@ The Spring Boot 3 autoconfiguration bridge.
 
 ## The Request Lifecycle
 
-1. **Interception**: A `ChatClientAdvisor` captures the prompt.
+1. **Interception**: A Spring AI advisor or LangChain4j chat wrapper captures the prompt.
 2. **Detection**: `PiiDetector` implementations (e.g., `EmailDetector`) scan the text for PII candidates.
 3. **Tokenization**: `TokenGenerator` creates deterministic HMAC-SHA256 tokens.
 4. **Vaulting**: `PrismVault` stores the `original` ↔ `token` mapping.
