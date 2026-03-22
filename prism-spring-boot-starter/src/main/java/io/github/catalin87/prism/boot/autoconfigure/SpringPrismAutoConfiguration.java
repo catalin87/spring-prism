@@ -116,9 +116,14 @@ public class SpringPrismAutoConfiguration {
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault,
       ObservationRegistry observationRegistry,
-      PrismMetricsSink prismMetricsSink) {
+      PrismMetricsSink prismMetricsSink,
+      SpringPrismProperties properties) {
     return new PrismChatClientAdvisor(
-        springPrismRulePacks, prismVault, observationRegistry, prismMetricsSink);
+        springPrismRulePacks,
+        prismVault,
+        observationRegistry,
+        prismMetricsSink,
+        properties.isSecurityStrictMode());
   }
 
   @Bean

@@ -40,16 +40,27 @@ class PrismTextScanner {
   private final PrismVault vault;
   private final ObservationRegistry observationRegistry;
   private final PrismMetricsSink metricsSink;
+  private final boolean strictMode;
 
   PrismTextScanner(
       @NonNull List<PrismRulePack> rulePacks,
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink) {
+    this(rulePacks, vault, observationRegistry, metricsSink, false);
+  }
+
+  PrismTextScanner(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode) {
     this.rulePacks = List.copyOf(rulePacks);
     this.vault = vault;
     this.observationRegistry = observationRegistry;
     this.metricsSink = metricsSink;
+    this.strictMode = strictMode;
   }
 
   /**
@@ -76,6 +87,12 @@ class PrismTextScanner {
           }
         } catch (Exception e) {
           metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
+          if (strictMode) {
+            throw new IllegalStateException(
+                "Strict mode blocked Prism processing after detector failure: "
+                    + detector.getEntityType(),
+                e);
+          }
           // Fail-Open: emit metric but do not block the request
           observationRegistry
               .observationConfig()

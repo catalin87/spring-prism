@@ -17,10 +17,12 @@ package io.github.catalin87.prism.spring.ai.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
@@ -32,11 +34,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.AdvisedRequest;
+import org.springframework.ai.chat.client.advisor.api.AdvisedResponse;
+import org.springframework.ai.chat.client.advisor.api.StreamAroundAdvisorChain;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
 /**
  * Integration test verifying that PrismChatClientAdvisor correctly intercepts calls and tokenizes
@@ -78,5 +85,37 @@ class PrismAdvisorIntegrationTest {
     String sentContent = promptCaptor.getValue().getContents();
     assertThat(sentContent).doesNotContain("user@example.com");
     assertThat(sentContent).contains("PRISM_EMAIL_");
+  }
+
+  @Test
+  void advisorRestoresFragmentedTokensAcrossStreamingChunks() {
+    PrismToken token = vault.tokenize("user@example.com", "EMAIL");
+    String key = token.key();
+
+    AdvisedRequest request = mock(AdvisedRequest.class);
+    when(request.userText()).thenReturn("Hello");
+    when(request.systemText()).thenReturn("");
+
+    StreamAroundAdvisorChain chain = mock(StreamAroundAdvisorChain.class);
+    when(chain.nextAroundStream(eq(request)))
+        .thenReturn(
+            Flux.just(
+                advisedChunk("Message for "),
+                advisedChunk(key.substring(0, 6)),
+                advisedChunk(key.substring(6))));
+
+    Flux<AdvisedResponse> result = advisor.aroundStream(request, chain);
+
+    StepVerifier.create(
+            result.map(response -> response.response().getResults().get(0).getOutput().getText()))
+        .expectNext("Message for ")
+        .expectNext("")
+        .expectNext("user@example.com")
+        .verifyComplete();
+  }
+
+  private static AdvisedResponse advisedChunk(String text) {
+    return new AdvisedResponse(
+        new ChatResponse(List.of(new Generation(new AssistantMessage(text)))), java.util.Map.of());
   }
 }
