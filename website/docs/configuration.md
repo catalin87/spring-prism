@@ -47,7 +47,8 @@ The starter auto-configures:
 - the `PrismVault`
 - the `PrismChatClientAdvisor`
 - primary LangChain4j `PrismChatModel` and `PrismStreamingChatModel` wrappers when a single delegate `ChatModel` or `StreamingChatModel` bean is present
-- the runtime metrics endpoint at `/actuator/prism`
+- the runtime metrics endpoint at `/actuator/prism` when Spring Boot Actuator is on the classpath
+- the fallback metrics endpoint at `/prism/metrics` when Actuator is absent
 
 When a `StringRedisTemplate` bean is present, the starter switches to the Redis-backed vault automatically. Otherwise it keeps the default in-memory vault.
 

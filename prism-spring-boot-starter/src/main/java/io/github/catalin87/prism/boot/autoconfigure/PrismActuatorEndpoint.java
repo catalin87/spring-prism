@@ -19,21 +19,19 @@ import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
+import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 
-/** Fallback HTTP endpoint for Spring Prism runtime state when Actuator is not desired. */
-@RestController
-@RequestMapping("/prism/metrics")
-public class MetricsController {
+/** Actuator endpoint exposing the current Spring Prism runtime snapshot. */
+@Endpoint(id = "prism")
+public class PrismActuatorEndpoint {
 
   private final PrismRuntimeMetrics prismRuntimeMetrics;
   private final List<PrismRulePack> springPrismRulePacks;
   private final PrismVault prismVault;
 
-  /** Creates the metrics controller with the active rule packs, vault, and runtime counters. */
-  public MetricsController(
+  /** Creates the actuator endpoint with the active rule packs, vault, and runtime counters. */
+  public PrismActuatorEndpoint(
       PrismRuntimeMetrics prismRuntimeMetrics,
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault) {
@@ -42,8 +40,8 @@ public class MetricsController {
     this.prismVault = prismVault;
   }
 
-  /** Returns the current Spring Prism runtime snapshot for non-Actuator consumers. */
-  @GetMapping
+  /** Returns the current Spring Prism runtime snapshot for actuator consumers. */
+  @ReadOperation
   public PrismMetricsSnapshot metrics() {
     return PrismMetricsSnapshotFactory.create(
         prismRuntimeMetrics, springPrismRulePacks, prismVault);
