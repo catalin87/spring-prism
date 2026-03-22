@@ -27,5 +27,6 @@ public record PrismMetricsSnapshot(
     Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics,
     List<RulePackMetric> rulePackMetrics,
     List<PrismRuntimeMetrics.AuditEvent> auditEvents,
+    int auditRetentionLimit,
     List<String> activeRulePacks,
     String vaultType) {}

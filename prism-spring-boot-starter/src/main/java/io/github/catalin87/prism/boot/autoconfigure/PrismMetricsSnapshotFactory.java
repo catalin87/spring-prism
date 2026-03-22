@@ -58,6 +58,7 @@ final class PrismMetricsSnapshotFactory {
         prismRuntimeMetrics.durationMetrics(),
         rulePackMetrics,
         prismRuntimeMetrics.recentAuditEvents(),
+        prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
         vaultType);
   }

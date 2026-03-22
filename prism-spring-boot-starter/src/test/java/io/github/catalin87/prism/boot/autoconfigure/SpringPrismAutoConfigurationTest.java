@@ -189,6 +189,7 @@ class SpringPrismAutoConfigurationTest {
               .extracting(RulePackMetric::name)
               .contains("UNIVERSAL");
           assertThat(snapshot.auditEvents()).isNotEmpty();
+          assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
         });
   }
 
@@ -207,6 +208,7 @@ class SpringPrismAutoConfigurationTest {
 
               assertThat(snapshot.durationMetrics()).containsKey("spring-ai:scan");
               assertThat(snapshot.rulePackMetrics()).isNotEmpty();
+              assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
             });
   }
 

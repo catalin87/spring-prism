@@ -28,6 +28,8 @@ public class PrismRuntimeMetrics
     implements io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink,
         io.github.catalin87.prism.langchain4j.PrismMetricsSink {
 
+  private static final int MAX_AUDIT_EVENTS = 12;
+
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
   private final AtomicLong detectionErrorCount = new AtomicLong();
@@ -120,6 +122,11 @@ public class PrismRuntimeMetrics
     return java.util.List.copyOf(auditEvents);
   }
 
+  /** Returns the maximum number of masked audit events retained in memory. */
+  public int auditRetentionLimit() {
+    return MAX_AUDIT_EVENTS;
+  }
+
   private String metricKey(String rulePackName, String entityType) {
     return rulePackName + ":" + entityType;
   }
@@ -132,7 +139,7 @@ public class PrismRuntimeMetrics
 
   private synchronized void recordEvent(String action, String subject, long count, String source) {
     auditEvents.addFirst(new AuditEvent(Instant.now().toString(), action, subject, count, source));
-    while (auditEvents.size() > 12) {
+    while (auditEvents.size() > MAX_AUDIT_EVENTS) {
       auditEvents.removeLast();
     }
   }

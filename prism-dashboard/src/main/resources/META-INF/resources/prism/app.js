@@ -1,28 +1,51 @@
-const endpoints = ["/actuator/prism", "/prism/metrics"];
+const liveEndpoints = ["/actuator/prism", "/prism/metrics"];
+const demoEndpoint = "./demo-metrics.json";
+const searchParams = new URLSearchParams(window.location.search);
 
 const statusPanel = document.getElementById("status-panel");
 const cardsGrid = document.getElementById("cards-grid");
 const analyticsGrid = document.getElementById("analytics-grid");
 const refreshButton = document.getElementById("refresh-button");
+const demoButton = document.getElementById("demo-button");
+const modePill = document.getElementById("mode-pill");
+const auditActionFilter = document.getElementById("audit-action-filter");
+const auditSourceFilter = document.getElementById("audit-source-filter");
+const auditLimitFilter = document.getElementById("audit-limit-filter");
+const auditRetentionNote = document.getElementById("audit-retention-note");
+
+let currentMetrics = null;
+let currentEndpoint = null;
+let demoMode = searchParams.get("demo") === "1";
+
+async function fetchJson(endpoint) {
+  const response = await fetch(endpoint, {
+    headers: {"Accept": "application/json"}
+  });
+  if (!response.ok) {
+    throw new Error(`Request to ${endpoint} returned ${response.status}`);
+  }
+  return response.json();
+}
 
 async function fetchMetrics() {
+  if (demoMode) {
+    return {endpoint: demoEndpoint, payload: await fetchJson(demoEndpoint)};
+  }
+
   let lastError = null;
-  for (const endpoint of endpoints) {
+  for (const endpoint of liveEndpoints) {
     try {
-      const response = await fetch(endpoint, {
-        headers: {"Accept": "application/json"}
-      });
-      if (!response.ok) {
-        lastError = new Error(`Request to ${endpoint} returned ${response.status}`);
-        continue;
-      }
-      const payload = await response.json();
-      return {endpoint, payload};
+      return {endpoint, payload: await fetchJson(endpoint)};
     } catch (error) {
       lastError = error;
     }
   }
   throw lastError ?? new Error("Unable to fetch Spring Prism metrics");
+}
+
+function updateModeUi() {
+  modePill.textContent = demoMode ? "Demo mode" : "Live mode";
+  demoButton.textContent = demoMode ? "Return to Live Data" : "Open Demo Data";
 }
 
 function formatMilliseconds(durationMetric) {
@@ -36,6 +59,15 @@ function topDetections(detectionCounts) {
   return Object.entries(detectionCounts ?? {})
       .sort((left, right) => right[1] - left[1])
       .slice(0, 4);
+}
+
+function sumDetections(detectionCounts) {
+  return Object.values(detectionCounts ?? {}).reduce((sum, count) => sum + count, 0);
+}
+
+function dominantTimer(durationMetrics) {
+  return Object.entries(durationMetrics ?? {})
+      .sort((left, right) => right[1].averageNanos - left[1].averageNanos)[0];
 }
 
 function renderTopDetections(detections) {
@@ -86,19 +118,114 @@ function renderRulePackMetrics(rulePackMetrics) {
   });
 }
 
-function renderAuditLog(auditEvents) {
+function renderTrendCards(metrics) {
+  const trendCards = document.getElementById("trend-cards");
+  trendCards.replaceChildren();
+
+  const leadingRulePack = (metrics.rulePackMetrics ?? [])[0];
+  const totalDetections = sumDetections(metrics.detectionCounts);
+  const slowestTimer = dominantTimer(metrics.durationMetrics);
+  const retentionLabel =
+      `${Math.min((metrics.auditEvents ?? []).length, metrics.auditRetentionLimit ?? 0)} / ${metrics.auditRetentionLimit ?? 0}`;
+
+  [
+    {
+      label: "Leading Pack",
+      value: leadingRulePack?.name ?? "None",
+      caption: leadingRulePack
+          ? `${leadingRulePack.totalDetections} detections across ${leadingRulePack.detectorCount} detectors`
+          : "Waiting for live detections"
+    },
+    {
+      label: "Total Detections",
+      value: `${totalDetections}`,
+      caption: "Combined detections across all active rule packs"
+    },
+    {
+      label: "Slowest Timer",
+      value: slowestTimer ? slowestTimer[0] : "No timers",
+      caption: slowestTimer ? formatMilliseconds(slowestTimer[1]) : "No duration samples yet"
+    },
+    {
+      label: "Audit Retention",
+      value: retentionLabel,
+      caption: "Masked events currently kept in the in-memory dashboard history"
+    }
+  ].forEach(card => {
+    const article = document.createElement("article");
+    article.className = "trend-card";
+    article.innerHTML = `
+      <p>${card.label}</p>
+      <strong>${card.value}</strong>
+      <span>${card.caption}</span>
+    `;
+    trendCards.append(article);
+  });
+}
+
+function renderFilterOptions(select, values) {
+  const currentValue = select.value;
+  select.replaceChildren();
+
+  const allOption = document.createElement("option");
+  allOption.value = "ALL";
+  allOption.textContent = "All";
+  select.append(allOption);
+
+  values.forEach(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  });
+
+  if ([...select.options].some(option => option.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function updateAuditFilters(auditEvents, retentionLimit) {
+  const actions = [...new Set((auditEvents ?? []).map(event => event.action.toUpperCase()))].sort();
+  const sources = [...new Set((auditEvents ?? []).map(event => event.source))].sort();
+
+  renderFilterOptions(auditActionFilter, actions);
+  renderFilterOptions(auditSourceFilter, sources);
+
+  const limit = retentionLimit ?? Math.max((auditEvents ?? []).length, 1);
+  const desiredLimit = Math.min(Number(auditLimitFilter.value || "5"), limit);
+  auditLimitFilter.value = `${desiredLimit}`;
+  [...auditLimitFilter.options].forEach(option => {
+    option.disabled = Number(option.value) > limit;
+  });
+
+  auditRetentionNote.textContent =
+      `Showing masked history only. Prism retains the most recent ${limit} in-memory event(s).`;
+}
+
+function filteredAuditEvents(auditEvents, retentionLimit) {
+  const limit = Math.min(Number(auditLimitFilter.value || "5"), retentionLimit ?? auditEvents.length);
+  return (auditEvents ?? [])
+      .filter(event =>
+        auditActionFilter.value === "ALL"
+            || event.action.toUpperCase() === auditActionFilter.value)
+      .filter(event => auditSourceFilter.value === "ALL" || event.source === auditSourceFilter.value)
+      .slice(0, limit);
+}
+
+function renderAuditLog(auditEvents, retentionLimit) {
   const auditLog = document.getElementById("audit-log");
   auditLog.replaceChildren();
 
-  if (!auditEvents || auditEvents.length === 0) {
+  const visibleEvents = filteredAuditEvents(auditEvents, retentionLimit);
+  if (visibleEvents.length === 0) {
     const empty = document.createElement("li");
     empty.className = "audit-empty";
-    empty.textContent = "No masked Prism activity has been recorded yet.";
+    empty.textContent = "No masked Prism activity matches the current audit filters.";
     auditLog.append(empty);
     return;
   }
 
-  auditEvents.forEach(event => {
+  visibleEvents.forEach(event => {
     const item = document.createElement("li");
     item.className = "audit-item";
     item.innerHTML = `
@@ -113,6 +240,9 @@ function renderAuditLog(auditEvents) {
 }
 
 function renderMetrics(endpoint, metrics) {
+  currentMetrics = metrics;
+  currentEndpoint = endpoint;
+
   const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
       ?? metrics.durationMetrics?.["langchain4j:scan"];
 
@@ -129,24 +259,37 @@ function renderMetrics(endpoint, metrics) {
 
   renderTopDetections(topDetections(metrics.detectionCounts));
   renderRulePackMetrics(metrics.rulePackMetrics ?? []);
-  renderAuditLog(metrics.auditEvents ?? []);
+  renderTrendCards(metrics);
+  updateAuditFilters(metrics.auditEvents ?? [], metrics.auditRetentionLimit ?? 0);
+  renderAuditLog(metrics.auditEvents ?? [], metrics.auditRetentionLimit ?? 0);
 
   statusPanel.innerHTML =
-      `<strong>Connected.</strong> Reading live Prism metrics from <code>${endpoint}</code>.`;
+      `<strong>Connected.</strong> Reading Prism metrics from <code>${endpoint}</code>.`;
   statusPanel.classList.remove("error-panel");
   cardsGrid.classList.remove("hidden");
   analyticsGrid.classList.remove("hidden");
+  updateModeUi();
 }
 
 function renderError(error) {
+  currentMetrics = null;
+  currentEndpoint = null;
   statusPanel.innerHTML = `
     <strong>Metrics unavailable.</strong>
     <p>${error.message}</p>
-    <p>Expose either the Actuator Prism endpoint or the fallback Prism metrics route.</p>
+    <p>Expose either the Actuator Prism endpoint, the fallback Prism metrics route, or use demo mode.</p>
   `;
   statusPanel.classList.add("error-panel");
   cardsGrid.classList.add("hidden");
   analyticsGrid.classList.add("hidden");
+  updateModeUi();
+}
+
+function rerenderAuditFromCurrentState() {
+  if (!currentMetrics) {
+    return;
+  }
+  renderAuditLog(currentMetrics.auditEvents ?? [], currentMetrics.auditRetentionLimit ?? 0);
 }
 
 async function refresh() {
@@ -160,4 +303,20 @@ async function refresh() {
 }
 
 refreshButton.addEventListener("click", refresh);
+demoButton.addEventListener("click", async () => {
+  demoMode = !demoMode;
+  const nextUrl = new URL(window.location.href);
+  if (demoMode) {
+    nextUrl.searchParams.set("demo", "1");
+  } else {
+    nextUrl.searchParams.delete("demo");
+  }
+  window.history.replaceState({}, "", nextUrl);
+  await refresh();
+});
+[auditActionFilter, auditSourceFilter, auditLimitFilter].forEach(element => {
+  element.addEventListener("change", rerenderAuditFromCurrentState);
+});
+
+updateModeUi();
 refresh();

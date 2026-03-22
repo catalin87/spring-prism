@@ -16,6 +16,10 @@
             This embedded dashboard reads the live Spring Prism runtime snapshot and surfaces top
             detections, vault health, and the privacy flow around your AI requests.
           </p>
+          <div class="hero-actions">
+            <span id="mode-pill" class="mode-pill">Live mode</span>
+            <button id="demo-button" class="demo-button" type="button">Open Demo Data</button>
+          </div>
         </div>
         <button id="refresh-button" class="refresh-button" type="button">Refresh</button>
       </section>
@@ -78,8 +82,37 @@
         </article>
 
         <article class="panel metric-card">
+          <p class="label">Trend Cards</p>
+          <h2>Runtime checkpoints</h2>
+          <div id="trend-cards" class="trend-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
           <p class="label">Audit Log</p>
           <h2>Masked recent activity</h2>
+          <div class="audit-toolbar">
+            <label>
+              Action
+              <select id="audit-action-filter">
+                <option value="ALL">All</option>
+              </select>
+            </label>
+            <label>
+              Source
+              <select id="audit-source-filter">
+                <option value="ALL">All</option>
+              </select>
+            </label>
+            <label>
+              Show
+              <select id="audit-limit-filter">
+                <option value="5">5</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+              </select>
+            </label>
+          </div>
+          <p id="audit-retention-note" class="audit-note"></p>
           <ul id="audit-log" class="audit-list"></ul>
         </article>
       </section>
