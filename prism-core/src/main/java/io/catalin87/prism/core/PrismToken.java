@@ -17,6 +17,6 @@ package io.catalin87.prism.core;
 
 import org.jspecify.annotations.NonNull;
 
-/** The immutable result of pseudonymization containing the deterministic signature. */
+/** The immutable secure token representation bounding the original data natively. */
 public record PrismToken(
     @NonNull String key, @NonNull String originalValue, @NonNull String hmacSignature) {}
