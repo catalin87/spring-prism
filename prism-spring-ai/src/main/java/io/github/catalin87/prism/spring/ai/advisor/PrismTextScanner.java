@@ -39,14 +39,17 @@ class PrismTextScanner {
   private final List<PrismRulePack> rulePacks;
   private final PrismVault vault;
   private final ObservationRegistry observationRegistry;
+  private final PrismMetricsSink metricsSink;
 
   PrismTextScanner(
       @NonNull List<PrismRulePack> rulePacks,
       @NonNull PrismVault vault,
-      @NonNull ObservationRegistry observationRegistry) {
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink) {
     this.rulePacks = List.copyOf(rulePacks);
     this.vault = vault;
     this.observationRegistry = observationRegistry;
+    this.metricsSink = metricsSink;
   }
 
   /**
@@ -66,8 +69,13 @@ class PrismTextScanner {
     for (PrismRulePack pack : rulePacks) {
       for (PiiDetector detector : pack.getDetectors()) {
         try {
-          allCandidates.addAll(detector.detect(text));
+          List<PiiCandidate> detected = detector.detect(text);
+          if (!detected.isEmpty()) {
+            metricsSink.onDetected(pack.getName(), detector.getEntityType(), detected.size());
+            allCandidates.addAll(detected);
+          }
         } catch (Exception e) {
+          metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
           // Fail-Open: emit metric but do not block the request
           observationRegistry
               .observationConfig()
@@ -96,6 +104,7 @@ class PrismTextScanner {
     }
 
     if (redactedCount > 0) {
+      metricsSink.onTokenized(redactedCount);
       observationRegistry
           .observationConfig()
           .observationHandler(null); // no-op: real metrics emitted via Observation API
@@ -118,14 +127,21 @@ class PrismTextScanner {
 
     Matcher matcher = TOKEN_PATTERN.matcher(text);
     StringBuilder result = new StringBuilder(text.length());
+    int detokenizedCount = 0;
     while (matcher.find()) {
       String tokenKey = matcher.group();
       String original = vault.detokenize(tokenKey);
       // Fail-Open: if token not found or expired, keep the token placeholder
+      if (original != null) {
+        detokenizedCount++;
+      }
       matcher.appendReplacement(
           result, Matcher.quoteReplacement(original != null ? original : tokenKey));
     }
     matcher.appendTail(result);
+    if (detokenizedCount > 0) {
+      metricsSink.onDetokenized(detokenizedCount);
+    }
     return result.toString();
   }
 

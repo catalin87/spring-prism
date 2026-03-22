@@ -21,6 +21,7 @@ import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
+import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -99,10 +100,34 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  PrismRuntimeMetrics prismRuntimeMetrics() {
+    return new PrismRuntimeMetrics();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PrismMetricsSink prismMetricsSink(PrismRuntimeMetrics prismRuntimeMetrics) {
+    return prismRuntimeMetrics;
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   PrismChatClientAdvisor prismChatClientAdvisor(
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault,
-      ObservationRegistry observationRegistry) {
-    return new PrismChatClientAdvisor(springPrismRulePacks, prismVault, observationRegistry);
+      ObservationRegistry observationRegistry,
+      PrismMetricsSink prismMetricsSink) {
+    return new PrismChatClientAdvisor(
+        springPrismRulePacks, prismVault, observationRegistry, prismMetricsSink);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(MetricsController.class)
+  MetricsController metricsController(
+      PrismRuntimeMetrics prismRuntimeMetrics,
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+      PrismVault prismVault) {
+    return new MetricsController(prismRuntimeMetrics, springPrismRulePacks, prismVault);
   }
 }

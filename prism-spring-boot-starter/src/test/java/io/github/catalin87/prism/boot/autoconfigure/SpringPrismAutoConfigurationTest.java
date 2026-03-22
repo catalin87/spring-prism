@@ -24,6 +24,7 @@ import io.github.catalin87.prism.core.detector.universal.EmailDetector;
 import io.github.catalin87.prism.core.ruleset.EuropeRulePack;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
+import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
 import java.time.Duration;
 import java.util.List;
@@ -49,6 +50,9 @@ class SpringPrismAutoConfigurationTest {
           assertThat(context).hasSingleBean(PrismVault.class);
           assertThat(context).hasSingleBean(PrismChatClientAdvisor.class);
           assertThat(context).hasSingleBean(ObservationRegistry.class);
+          assertThat(context).hasSingleBean(PrismRuntimeMetrics.class);
+          assertThat(context).hasSingleBean(PrismMetricsSink.class);
+          assertThat(context).hasSingleBean(MetricsController.class);
 
           List<PrismRulePack> rulePacks = getRulePacks(context);
           assertThat(rulePacks).hasSize(1);
@@ -104,6 +108,18 @@ class SpringPrismAutoConfigurationTest {
               assertThat(context).hasSingleBean(PrismVault.class);
               assertThat(context.getBean(PrismVault.class)).isInstanceOf(RedisPrismVault.class);
             });
+  }
+
+  @Test
+  void metricsControllerExposesRuntimeSnapshot() {
+    contextRunner.run(
+        context -> {
+          MetricsController controller = context.getBean(MetricsController.class);
+          MetricsController.MetricsSnapshot snapshot = controller.metrics();
+
+          assertThat(snapshot.activeRulePacks()).contains("UNIVERSAL");
+          assertThat(snapshot.vaultType()).isNotBlank();
+        });
   }
 
   @Test
