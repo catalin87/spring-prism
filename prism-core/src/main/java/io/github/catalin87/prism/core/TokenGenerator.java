@@ -17,5 +17,15 @@ package io.github.catalin87.prism.core;
 
 import org.jspecify.annotations.NonNull;
 
-/** Represents a finding before it is tokenized. */
-public record PiiCandidate(@NonNull String text, int start, int end, @NonNull String label) {}
+/** Protocol for deterministic token generators mapped exactly to EU rules. */
+public interface TokenGenerator {
+
+  /**
+   * Generates a protected PrismToken record using mathematical boundaries.
+   *
+   * @param candidate The isolated textual entity bounding the PII mapping.
+   * @param secretKey The byte payload generating the mathematical signature.
+   * @return A cryptographically secure prism context.
+   */
+  @NonNull PrismToken generate(@NonNull PiiCandidate candidate, byte @NonNull [] secretKey);
+}

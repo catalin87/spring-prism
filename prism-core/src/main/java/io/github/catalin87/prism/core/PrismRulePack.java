@@ -25,11 +25,15 @@ import org.jspecify.annotations.NonNull;
 public interface PrismRulePack {
 
   /**
+   * Identifies all active sequence finding logic components bound to this specific core RulePack.
+   *
    * @return A list of actively registered detectors provided by this rule pack.
    */
   @NonNull List<PiiDetector> getDetectors();
 
   /**
+   * Evaluates the standard geographical or contextual identifier of this matrix node.
+   *
    * @return the locale identifier or logical grouping name (e.g. "EN", "EU", "UNIVERSAL").
    */
   @NonNull String getName();
