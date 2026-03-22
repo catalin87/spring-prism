@@ -18,4 +18,4 @@ Spring Prism relies on a localized, zero-dependency plugin architecture for loca
 3. **Register Detectors**: Implement `getDetectors()` and expose your `List<PiiDetector>` implementations.
 4. **Build the Detectors**: Ensure your `PiiDetector` implementations accurately compute string offsets and return immutable `PiiCandidate` records.
 5. **Fail Open**: Detectors must gracefully handle invalid buffers without throwing runtime exceptions.
-6. **Property-Based Testing**: You MUST include `jqwik` property tests for new Regex/NLP detectors to guarantee extreme Unicode handling stability!
+6. **Property-Based Testing**: You MUST include `jqwik` property tests for new regex detectors, and focused integration tests for any optional NLP-backed detectors, to guarantee extreme Unicode handling stability!

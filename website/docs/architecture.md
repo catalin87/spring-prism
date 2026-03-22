@@ -13,11 +13,13 @@ The heartbeat of the system.
   - `PrismRulePack`: Aggregate of detectors for a specific locale (e.g., `EuropeRulePack`).
   - `PrismVault`: Interface for secure, TTL-managed token-to-data mapping.
   - `TokenGenerator`: Deterministic HMAC-SHA256 signature generator for pseudonymization.
+  - Core detectors stay deterministic and checksum-driven. NLP models are intentionally excluded from this module.
 
 ### `prism-spring-boot-starter`
 The Spring Boot 3 autoconfiguration bridge.
 - **Frameworks**: Spring Boot 3.4+, Micrometer Observation.
 - **Safety**: "Fail Open" by default (standard security practice) with Micrometer error metrics. "Fail Closed" only if `spring.prism.security-strict-mode=true`.
+- **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.
 
 ## The Request Lifecycle
 

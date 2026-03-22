@@ -56,3 +56,15 @@ public class MyRulePack implements PrismRulePack {
   }
 }
 ```
+
+## Optional Integration Detectors
+
+`prism-core` stays regex and checksum focused by design. If you need probabilistic or model-backed detection such as person names, add it in `prism-spring-ai` or `prism-spring-boot-starter` behind optional classpath checks.
+
+This split keeps the core:
+
+- dependency-free
+- deterministic and fast to test
+- usable outside Spring
+
+It also keeps fail-open metrics and strict-mode policy in the integration layer where Micrometer and application configuration already exist.
