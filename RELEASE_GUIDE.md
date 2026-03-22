@@ -4,7 +4,22 @@
 
 ---
 
-## One-Time GitHub Secrets Setup
+## Prerequisites (One-Time Setup)
+
+Before you can publish to Maven Central, verify these are complete:
+
+1. **Sonatype Namespace Verified** — Go to [central.sonatype.com](https://central.sonatype.com) → Namespaces → confirm `io.github.catalin87` shows ✅ Verified.
+   - If not: create a **public** temporary GitHub repo named with the verification key they provide, click Verify, then delete the repo.
+
+2. **GitHub Secrets Configured** — All four secrets must exist in **Settings → Secrets → Actions**:
+   - `OSSRH_USERNAME` — Sonatype Central Portal User Token username
+   - `OSSRH_TOKEN` — Sonatype Central Portal User Token password
+   - `GPG_PRIVATE_KEY` — Your armored GPG private key block
+   - `GPG_PASSPHRASE` — Your GPG key passphrase
+
+3. **GitHub Environment Exists** — `maven-central-release` environment must exist in **Settings → Environments**.
+
+4. **Only release from `main`** — Merge all feature branches to `main` before tagging. Tags must point to `main` for the release workflow to produce a coherent artifact.
 
 Before your first release, add the following four secrets to **GitHub → Settings → Secrets and variables → Actions**:
 
