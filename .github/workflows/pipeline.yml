@@ -57,7 +57,7 @@ jobs:
         run: mvn spotless:check checkstyle:check --batch-mode
 
       - name: "Architectural Compilation & Verification"
-        run: mvn clean verify --batch-mode
+        run: mvn clean install --batch-mode
 
       - name: "OWASP Dependency Vulnerability Scan"
         # Executes deep CVE inspection exclusively for our 3rd-party integration layers
