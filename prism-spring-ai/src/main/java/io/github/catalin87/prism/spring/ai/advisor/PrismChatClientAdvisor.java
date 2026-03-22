@@ -63,7 +63,7 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull List<PrismRulePack> rulePacks,
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry) {
-    this(rulePacks, vault, observationRegistry, PrismMetricsSink.NOOP, DEFAULT_ORDER);
+    this(rulePacks, vault, observationRegistry, PrismMetricsSink.NOOP, false, DEFAULT_ORDER);
   }
 
   /** Creates a new advisor with the supplied rule packs, vault, metrics sink, and default order. */

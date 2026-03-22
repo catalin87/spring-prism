@@ -10,6 +10,7 @@ The `UniversalRulePack` contains detectors applicable in nearly any context.
 | `EMAIL` | Standard email addresses (RFC 5321). | Backtracking-safe regex. |
 | `CREDIT_CARD` | Major credit cards (Visa, MC, Amex, etc.). | Luhn algorithm Checksum. |
 | `SSN` | US Social Security Numbers. | Invalid area code (000, 666, 9xx) exclusions. |
+| `PHONE_NUMBER` | Common international and North American phone numbers. | Normalized digit-count and false-positive filtering. |
 | `IP_ADDRESS` | IPv4 and IPv6 addresses. | Octet range (0-255) and format validation. |
 
 ## European Detectors

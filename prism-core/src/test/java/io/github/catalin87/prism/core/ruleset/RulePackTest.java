@@ -23,17 +23,17 @@ import org.junit.jupiter.api.Test;
 class RulePackTest {
 
   @Test
-  void testUniversalRulePackContainsFourDetectors() {
+  void testUniversalRulePackContainsFiveDetectors() {
     UniversalRulePack pack = new UniversalRulePack();
     assertEquals("UNIVERSAL", pack.getName());
-    assertEquals(4, pack.getDetectors().size());
+    assertEquals(5, pack.getDetectors().size());
   }
 
   @Test
-  void testEuropeRulePackContainsNineDetectors() {
+  void testEuropeRulePackContainsTenDetectors() {
     EuropeRulePack pack = new EuropeRulePack();
     assertEquals("EUROPE", pack.getName());
-    assertEquals(9, pack.getDetectors().size());
+    assertEquals(10, pack.getDetectors().size());
   }
 
   @Test
@@ -53,6 +53,16 @@ class RulePackTest {
         pack.getDetectors().stream()
             .flatMap(d -> d.detect("DE89370400440532013000").stream())
             .anyMatch(c -> c.label().equals("IBAN"));
+    assertTrue(anyMatch);
+  }
+
+  @Test
+  void testUniversalPackDetectsPhoneNumberEndToEnd() {
+    UniversalRulePack pack = new UniversalRulePack();
+    boolean anyMatch =
+        pack.getDetectors().stream()
+            .flatMap(d -> d.detect("Reach me at +40 712 345 678").stream())
+            .anyMatch(c -> c.label().equals("PHONE_NUMBER"));
     assertTrue(anyMatch);
   }
 }

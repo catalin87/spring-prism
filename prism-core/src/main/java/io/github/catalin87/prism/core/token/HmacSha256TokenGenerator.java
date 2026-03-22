@@ -43,7 +43,7 @@ public final class HmacSha256TokenGenerator implements TokenGenerator {
 
       byte[] digest = mac.doFinal(candidate.text().getBytes(StandardCharsets.UTF_8));
       String signature = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
-      String suffix = signature.substring(0, Math.min(8, signature.length()));
+      String suffix = toHex(digest).substring(0, 8);
 
       String tokenKey = String.format("<PRISM_%s_%s>", candidate.label().toUpperCase(), suffix);
 
@@ -51,5 +51,14 @@ public final class HmacSha256TokenGenerator implements TokenGenerator {
     } catch (NoSuchAlgorithmException | InvalidKeyException e) {
       throw new IllegalStateException("Cryptographic algorithm constraint violated natively.", e);
     }
+  }
+
+  private static String toHex(byte[] digest) {
+    StringBuilder builder = new StringBuilder(digest.length * 2);
+    for (byte value : digest) {
+      builder.append(Character.forDigit((value >> 4) & 0xF, 16));
+      builder.append(Character.forDigit(value & 0xF, 16));
+    }
+    return builder.toString().toUpperCase();
   }
 }

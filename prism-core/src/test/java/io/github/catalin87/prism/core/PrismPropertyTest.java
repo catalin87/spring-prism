@@ -15,7 +15,8 @@
  */
 package io.github.catalin87.prism.core;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.github.catalin87.prism.core.ruleset.EuropeRulePack;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
@@ -48,7 +49,7 @@ public class PrismPropertyTest {
     for (PrismRulePack pack : packs) {
       for (PiiDetector detector : pack.getDetectors()) {
         List<PiiCandidate> candidates = detector.detect(maliciousUnicodeText);
-        assertThat(candidates).isNotNull();
+        assertNotNull(candidates);
       }
     }
   }
@@ -60,7 +61,7 @@ public class PrismPropertyTest {
 
     PrismToken token = vault.tokenize(rawText, "CUSTOM");
 
-    assertThat(token).isNotNull();
-    assertThat(vault.detokenize(token.key())).isEqualTo(rawText);
+    assertNotNull(token);
+    assertEquals(rawText, vault.detokenize(token.key()));
   }
 }

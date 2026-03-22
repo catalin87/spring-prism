@@ -65,6 +65,14 @@ class PrismTextScannerTest {
   }
 
   @Test
+  void tokenize_replacesPhoneNumberWithVaultToken() {
+    String result = scanner.tokenize("Call +40 712 345 678 for support.");
+
+    assertThat(result).doesNotContain("+40 712 345 678");
+    assertThat(result).containsPattern("<PRISM_PHONE_NUMBER_[A-Za-z0-9_-]+>");
+  }
+
+  @Test
   void tokenize_noopOnCleanText() {
     String clean = "The weather today is sunny.";
     String result = scanner.tokenize(clean);

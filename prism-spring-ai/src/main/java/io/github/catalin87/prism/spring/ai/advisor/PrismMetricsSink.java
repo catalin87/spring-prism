@@ -30,6 +30,7 @@ public interface PrismMetricsSink {
 
   void onDetokenized(int count);
 
+  /** No-op sink used when callers do not need runtime metrics callbacks. */
   final class NoOpPrismMetricsSink implements PrismMetricsSink {
     @Override
     public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {}

@@ -92,9 +92,22 @@ class PrismAdvisorIntegrationTest {
     PrismToken token = vault.tokenize("user@example.com", "EMAIL");
     String key = token.key();
 
-    AdvisedRequest request = mock(AdvisedRequest.class);
-    when(request.userText()).thenReturn("Hello");
-    when(request.systemText()).thenReturn("");
+    AdvisedRequest request =
+        AdvisedRequest.builder()
+            .chatModel(chatModel)
+            .userText("Hello")
+            .systemText("")
+            .userParams(java.util.Map.of())
+            .systemParams(java.util.Map.of())
+            .advisorParams(java.util.Map.of())
+            .adviseContext(java.util.Map.of())
+            .toolContext(java.util.Map.of())
+            .messages(List.of())
+            .media(List.of())
+            .functionNames(List.of())
+            .functionCallbacks(List.of())
+            .advisors(List.of())
+            .build();
 
     StreamAroundAdvisorChain chain = mock(StreamAroundAdvisorChain.class);
     when(chain.nextAroundStream(eq(request)))
