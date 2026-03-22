@@ -36,8 +36,6 @@ jobs:
       - name: "Enforce Google Java Formatting & Checkstyle"
         run: mvn spotless:check checkstyle:check --batch-mode
 
-      - name: "Compile Architecture & Execute Jqwik Property Tests"
+      - name: "Compile Architecture, Execute Tests & Enforce 90% JaCoCo Coverage"
+        # jacoco:check is bound to the 'verify' phase in pluginManagement, so it runs automatically here.
         run: mvn clean verify --batch-mode
-        
-      - name: "Ensure 90% Minimum JaCoCo Core Coverage"
-        run: mvn jacoco:check -pl prism-core --batch-mode
