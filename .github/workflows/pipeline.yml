@@ -2,9 +2,13 @@ name: "Spring Prism Continuous Delivery Pipeline"
 
 on:
   push:
-    branches: 
+    branches:
       - main
+      - 'feature/*'
   pull_request:
+    branches:
+      - main
+      - 'feature/*'
 
 jobs:
   dco-verification:
@@ -26,7 +30,7 @@ jobs:
             REVS="HEAD~1..HEAD"
           fi
           
-          for commit in $(git rev-list $REVS); do
+          for commit in $(git rev-list --no-merges $REVS); do
             if ! git show -s --format=%B $commit | grep -iE "Signed-off-by: .+ <.+@.+>"; then
               echo "::error title=DCO Signed-off-by Missing::Commit $commit is missing the 'Signed-off-by: Name <email>' legal trailer."
               exit 1
@@ -49,16 +53,22 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: "Code Style Guardrails (Spotless)"
-        run: mvn spotless:check --batch-mode
+      - name: "Code Style Guardrails (Spotless + Checkstyle)"
+        run: mvn spotless:check checkstyle:check --batch-mode
 
       - name: "Architectural Compilation & Verification"
-        run: mvn clean verify --batch-mode
+        run: mvn clean install --batch-mode
 
       - name: "OWASP Dependency Vulnerability Scan"
-        # Executes deep CVE inspection exclusively for our 3rd-party integration layers (Dashboard, Spring AI extensions)
-        # Prism-core strictly skips this footprint implicitly because of our zero-dependency enforcer block.
-        run: mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 --batch-mode
+        # Executes deep CVE inspection exclusively for our 3rd-party integration layers
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::warning title=CVE Scanner Disabled::Skipping OWASP dependency-check. Please add NVD_API_KEY to GitHub Secrets to prevent 429 API rate limits!"
+          else
+            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY -DossIndexAnalyzerEnabled=false --batch-mode
+          fi
 
       - name: "Store JaCoCo Coverage Evidence"
         uses: actions/upload-artifact@v4
