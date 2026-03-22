@@ -32,6 +32,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -39,6 +40,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 /** Auto-configuration entry point for Spring Prism. */
 @AutoConfiguration
 @ConditionalOnClass(PrismChatClientAdvisor.class)
+@ConditionalOnProperty(
+    prefix = "spring.prism",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 @EnableConfigurationProperties(SpringPrismProperties.class)
 public class SpringPrismAutoConfiguration {
 
@@ -68,8 +74,8 @@ public class SpringPrismAutoConfiguration {
       TokenGenerator prismTokenGenerator,
       SpringPrismProperties properties,
       StringRedisTemplate stringRedisTemplate) {
-    Duration ttl = properties.getTtl().isNegative() ? Duration.ofSeconds(1) : properties.getTtl();
-    byte[] secret = properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+    Duration ttl = properties.getTtl();
+    byte[] secret = secretKey(properties);
     return new RedisPrismVault(stringRedisTemplate, prismTokenGenerator, secret, ttl);
   }
 
@@ -78,7 +84,7 @@ public class SpringPrismAutoConfiguration {
   @ConditionalOnMissingClass("org.springframework.data.redis.core.StringRedisTemplate")
   PrismVault prismVault(TokenGenerator prismTokenGenerator, SpringPrismProperties properties) {
     long ttlSeconds = Math.max(1L, properties.getTtl().toSeconds());
-    byte[] secret = properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+    byte[] secret = secretKey(properties);
     return new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
   }
 
@@ -88,7 +94,7 @@ public class SpringPrismAutoConfiguration {
   PrismVault fallbackPrismVault(
       TokenGenerator prismTokenGenerator, SpringPrismProperties properties) {
     long ttlSeconds = Math.max(1L, properties.getTtl().toSeconds());
-    byte[] secret = properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+    byte[] secret = secretKey(properties);
     return new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
   }
 
@@ -134,5 +140,9 @@ public class SpringPrismAutoConfiguration {
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault) {
     return new MetricsController(prismRuntimeMetrics, springPrismRulePacks, prismVault);
+  }
+
+  private static byte[] secretKey(SpringPrismProperties properties) {
+    return properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
   }
 }

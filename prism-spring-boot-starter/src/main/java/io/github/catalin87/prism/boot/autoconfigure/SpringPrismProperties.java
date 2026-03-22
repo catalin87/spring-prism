@@ -27,13 +27,24 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SpringPrismProperties {
 
   private static final String DEFAULT_SECRET = "spring-prism-change-me";
+  private static final Duration DEFAULT_TTL = Duration.ofMinutes(30);
+  private static final List<String> DEFAULT_LOCALES = List.of("UNIVERSAL");
 
+  private boolean enabled = true;
   private boolean securityStrictMode;
-  private Duration ttl = Duration.ofMinutes(30);
+  private Duration ttl = DEFAULT_TTL;
   private String appSecret = DEFAULT_SECRET;
-  private List<String> locales = new ArrayList<>(List.of("UNIVERSAL"));
+  private List<String> locales = new ArrayList<>(DEFAULT_LOCALES);
   private List<CustomRule> customRules = new ArrayList<>();
   private Set<String> disabledRules = new LinkedHashSet<>();
+
+  public boolean isEnabled() {
+    return enabled;
+  }
+
+  public void setEnabled(boolean enabled) {
+    this.enabled = enabled;
+  }
 
   public boolean isSecurityStrictMode() {
     return securityStrictMode;
@@ -47,7 +58,12 @@ public class SpringPrismProperties {
     return ttl;
   }
 
+  /** Sets the vault TTL, falling back to the starter default for null or non-positive values. */
   public void setTtl(Duration ttl) {
+    if (ttl == null || ttl.isZero() || ttl.isNegative()) {
+      this.ttl = DEFAULT_TTL;
+      return;
+    }
     this.ttl = ttl;
   }
 
@@ -55,7 +71,12 @@ public class SpringPrismProperties {
     return appSecret;
   }
 
+  /** Sets the HMAC application secret, falling back to the starter default when blank. */
   public void setAppSecret(String appSecret) {
+    if (appSecret == null || appSecret.isBlank()) {
+      this.appSecret = DEFAULT_SECRET;
+      return;
+    }
     this.appSecret = appSecret;
   }
 
@@ -63,8 +84,13 @@ public class SpringPrismProperties {
     return locales;
   }
 
+  /** Sets the active locales, defaulting back to {@code UNIVERSAL} when the list is empty. */
   public void setLocales(List<String> locales) {
-    this.locales = locales;
+    if (locales == null || locales.isEmpty()) {
+      this.locales = new ArrayList<>(DEFAULT_LOCALES);
+      return;
+    }
+    this.locales = new ArrayList<>(locales);
   }
 
   public List<CustomRule> getCustomRules() {
@@ -72,7 +98,7 @@ public class SpringPrismProperties {
   }
 
   public void setCustomRules(List<CustomRule> customRules) {
-    this.customRules = customRules;
+    this.customRules = customRules == null ? new ArrayList<>() : new ArrayList<>(customRules);
   }
 
   public Set<String> getDisabledRules() {
@@ -80,7 +106,8 @@ public class SpringPrismProperties {
   }
 
   public void setDisabledRules(Set<String> disabledRules) {
-    this.disabledRules = disabledRules;
+    this.disabledRules =
+        disabledRules == null ? new LinkedHashSet<>() : new LinkedHashSet<>(disabledRules);
   }
 
   /** Placeholder binding model for future property-defined detectors. */

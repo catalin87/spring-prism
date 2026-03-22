@@ -23,6 +23,7 @@ import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.detector.universal.EmailDetector;
 import io.github.catalin87.prism.core.ruleset.EuropeRulePack;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
+import io.github.catalin87.prism.core.vault.DefaultPrismVault;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
@@ -58,6 +59,18 @@ class SpringPrismAutoConfigurationTest {
           assertThat(rulePacks).hasSize(1);
           assertThat(rulePacks.get(0)).isInstanceOf(UniversalRulePack.class);
         });
+  }
+
+  @Test
+  void disabledPropertySkipsAutoConfiguration() {
+    contextRunner
+        .withPropertyValues("spring.prism.enabled=false")
+        .run(
+            context -> {
+              assertThat(context).doesNotHaveBean(PrismVault.class);
+              assertThat(context).doesNotHaveBean(PrismChatClientAdvisor.class);
+              assertThat(context).doesNotHaveBean(MetricsController.class);
+            });
   }
 
   @Test
@@ -100,6 +113,22 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void invalidPropertyValuesFallBackToStarterDefaults() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.ttl=-15s", "spring.prism.app-secret=   ", "spring.prism.locales=")
+        .run(
+            context -> {
+              SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
+
+              assertThat(properties.getTtl()).isEqualTo(Duration.ofMinutes(30));
+              assertThat(properties.getAppSecret()).isEqualTo("spring-prism-change-me");
+              assertThat(properties.getLocales()).containsExactly("UNIVERSAL");
+              assertThat(context.getBean(PrismVault.class)).isInstanceOf(DefaultPrismVault.class);
+            });
+  }
+
+  @Test
   void redisTemplateSwitchesVaultImplementation() {
     contextRunner
         .withUserConfiguration(RedisTemplateConfiguration.class)
@@ -108,6 +137,15 @@ class SpringPrismAutoConfigurationTest {
               assertThat(context).hasSingleBean(PrismVault.class);
               assertThat(context.getBean(PrismVault.class)).isInstanceOf(RedisPrismVault.class);
             });
+  }
+
+  @Test
+  void defaultVaultRemainsLocalWhenRedisBeanIsAbsent() {
+    contextRunner.run(
+        context -> {
+          assertThat(context).hasSingleBean(PrismVault.class);
+          assertThat(context.getBean(PrismVault.class)).isInstanceOf(DefaultPrismVault.class);
+        });
   }
 
   @Test
@@ -141,6 +179,22 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void incompleteCustomRulesAreIgnored() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.custom-rules[0].name=   ",
+            "spring.prism.custom-rules[0].pattern=ID-\\d{5}",
+            "spring.prism.custom-rules[1].name=INTERNAL_ID",
+            "spring.prism.custom-rules[1].pattern=   ")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(UniversalRulePack.class);
+            });
+  }
+
+  @Test
   void disabledRulesAlsoFilterCustomRules() {
     contextRunner
         .withPropertyValues(
@@ -158,6 +212,30 @@ class SpringPrismAutoConfigurationTest {
             });
   }
 
+  @Test
+  void userProvidedVaultBeanOverridesStarterDefault() {
+    contextRunner
+        .withUserConfiguration(CustomVaultConfiguration.class)
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismVault.class);
+              assertThat(context.getBean(PrismVault.class))
+                  .isSameAs(context.getBean("customPrismVault"));
+            });
+  }
+
+  @Test
+  void userProvidedRulePackBeanOverridesResolvedDefaults() {
+    contextRunner
+        .withUserConfiguration(CustomRulePackConfiguration.class)
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("CUSTOM_OVERRIDE");
+            });
+  }
+
   @SuppressWarnings("unchecked")
   private static List<PrismRulePack> getRulePacks(
       org.springframework.context.ApplicationContext context) {
@@ -170,6 +248,35 @@ class SpringPrismAutoConfigurationTest {
     @Bean
     StringRedisTemplate stringRedisTemplate() {
       return mock(StringRedisTemplate.class);
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class CustomVaultConfiguration {
+
+    @Bean("customPrismVault")
+    PrismVault customPrismVault() {
+      return mock(PrismVault.class);
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class CustomRulePackConfiguration {
+
+    @Bean("springPrismRulePacks")
+    List<PrismRulePack> springPrismRulePacks() {
+      return List.of(
+          new PrismRulePack() {
+            @Override
+            public String getName() {
+              return "CUSTOM_OVERRIDE";
+            }
+
+            @Override
+            public List<io.github.catalin87.prism.core.PiiDetector> getDetectors() {
+              return List.of();
+            }
+          });
     }
   }
 }
