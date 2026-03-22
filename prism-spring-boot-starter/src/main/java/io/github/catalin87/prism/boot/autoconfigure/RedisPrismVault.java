@@ -28,6 +28,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 /** Redis-backed {@link PrismVault} implementation for multi-node deployments. */
 final class RedisPrismVault implements PrismVault {
 
+  private static final Duration MINIMUM_TTL = Duration.ofSeconds(1);
+
   private final StringRedisTemplate redisTemplate;
   private final TokenGenerator tokenGenerator;
   private final byte[] secretKey;
@@ -41,7 +43,7 @@ final class RedisPrismVault implements PrismVault {
     this.redisTemplate = redisTemplate;
     this.tokenGenerator = tokenGenerator;
     this.secretKey = secretKey;
-    this.ttl = ttl;
+    this.ttl = ttl.isZero() || ttl.isNegative() ? MINIMUM_TTL : ttl;
   }
 
   @Override
@@ -54,6 +56,10 @@ final class RedisPrismVault implements PrismVault {
 
   @Override
   public @Nullable String detokenize(@NonNull String tokenKey) {
+    if (!isPrismToken(tokenKey)) {
+      return null;
+    }
+
     String originalValue = redisTemplate.opsForValue().get(tokenKey);
     if (originalValue == null) {
       return null;
@@ -62,11 +68,15 @@ final class RedisPrismVault implements PrismVault {
     PiiCandidate verificationCandidate =
         new PiiCandidate(originalValue, 0, originalValue.length(), extractLabel(tokenKey));
     PrismToken expected = tokenGenerator.generate(verificationCandidate, secretKey);
-    return expected.key().equals(tokenKey) ? originalValue : null;
+    if (!expected.key().equals(tokenKey)) {
+      redisTemplate.delete(tokenKey);
+      return null;
+    }
+    return originalValue;
   }
 
   private String extractLabel(String tokenKey) {
-    if (!tokenKey.startsWith("<PRISM_") || !tokenKey.endsWith(">")) {
+    if (!isPrismToken(tokenKey)) {
       return "UNKNOWN";
     }
     String inner = tokenKey.substring(1, tokenKey.length() - 1);
@@ -76,5 +86,9 @@ final class RedisPrismVault implements PrismVault {
       return "UNKNOWN";
     }
     return inner.substring(firstUnderscore + 1, lastUnderscore).toUpperCase(Locale.ROOT);
+  }
+
+  private boolean isPrismToken(String tokenKey) {
+    return tokenKey.startsWith("<PRISM_") && tokenKey.endsWith(">");
   }
 }

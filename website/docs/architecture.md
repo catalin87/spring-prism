@@ -19,6 +19,7 @@ The heartbeat of the system.
 The Spring Boot 3 autoconfiguration bridge.
 - **Frameworks**: Spring Boot 3.4+, Micrometer Observation.
 - **Safety**: "Fail Open" by default (standard security practice) with Micrometer error metrics. "Fail Closed" only if `spring.prism.security-strict-mode=true`.
+- **Deployments**: Uses the in-memory `DefaultPrismVault` by default and switches to `RedisPrismVault` automatically when a `StringRedisTemplate` bean is available.
 - **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.
 
 ## The Request Lifecycle
@@ -33,6 +34,7 @@ The Spring Boot 3 autoconfiguration bridge.
 
 ## Security Controls
 
-- **HMAC Signatures**: Tokens include an HMAC-SHA256 signature calculated with a salt (provided in `spring.prism.security-salt`). This ensures that even if an attacker gains access to the LLM interaction logs, they cannot reverse the tokens without the application's secret key.
-- **TTL Lifecycle**: Tokens in the vault automatically expire after a configurable period (default: 1 hour).
+- **HMAC Signatures**: Tokens include an HMAC-SHA256 signature calculated with `spring.prism.app-secret`. This ensures that even if an attacker gains access to the LLM interaction logs, they cannot reverse the tokens without the application's secret key.
+- **TTL Lifecycle**: Tokens in the vault automatically expire after a configurable period (default: 30 minutes).
+- **Distributed Vault Option**: Redis-backed deployments preserve the same signature validation model as the local vault while allowing multiple application nodes to restore the same Prism token set.
 - **No PII Logging**: Spring Prism emits Micrometer metrics (`gen_ai.prism.redacted.count`) rather than logging sensitive values.
