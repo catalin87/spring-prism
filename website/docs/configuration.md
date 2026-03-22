@@ -18,7 +18,8 @@ To use Spring Prism with your `ChatClient`, use the `PrismChatClientAdvisor`:
 
 ```java
 ChatClient chatClient = ChatClient.builder(chatModel)
-    .defaultAdvisors(new PrismChatClientAdvisor(prismVault, rulePack))
+    .defaultAdvisors(
+        new PrismChatClientAdvisor(List.of(rulePack), prismVault, ObservationRegistry.NOOP))
     .build();
 
 String response = chatClient.prompt()
