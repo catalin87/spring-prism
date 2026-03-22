@@ -2,9 +2,11 @@ name: "Spring Prism Continuous Delivery Pipeline"
 
 on:
   push:
-    branches: 
+    branches:
       - main
   pull_request:
+    branches:
+      - main
 
 jobs:
   dco-verification:
@@ -49,8 +51,8 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: "Code Style Guardrails (Spotless)"
-        run: mvn spotless:check --batch-mode
+      - name: "Code Style Guardrails (Spotless + Checkstyle)"
+        run: mvn spotless:check checkstyle:check --batch-mode
 
       - name: "Architectural Compilation & Verification"
         run: mvn clean verify --batch-mode
