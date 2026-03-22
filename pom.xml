@@ -53,9 +53,11 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring-boot.version>3.4.0</spring-boot.version>
+        <spring-boot.version>3.4.13</spring-boot.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
         <langchain4j.version>1.0.1</langchain4j.version>
+        <tomcat.version>10.1.52</tomcat.version>
+        <log4j2.version>2.25.3</log4j2.version>
         <jspecify.version>1.0.0</jspecify.version>
         <spotless.version>2.43.0</spotless.version>
         <enforcer.version>3.5.0</enforcer.version>
@@ -79,6 +81,26 @@
                 <version>${spring-ai.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-el</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>${log4j2.version}</version>
             </dependency>
             <!-- Core Annotations -->
             <dependency>

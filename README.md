@@ -1,3 +1,5 @@
+![Spring Prism Social Banner](social_banner.jpg)
+
 # 🌈 Spring Prism
 
 > **The Reversible Privacy Firewall for Generative AI in the Java Ecosystem.**
