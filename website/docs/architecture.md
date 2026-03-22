@@ -32,6 +32,7 @@ The Spring Boot 3 autoconfiguration bridge.
 - **Frameworks**: Spring Boot 3.4+, Micrometer Observation.
 - **Safety**: "Fail Open" by default (standard security practice) with Micrometer error metrics. "Fail Closed" only if `spring.prism.security-strict-mode=true`.
 - **Deployments**: Uses the in-memory `DefaultPrismVault` by default and switches to `RedisPrismVault` automatically when a `StringRedisTemplate` bean is available.
+- **Integrations**: Publishes `PrismChatClientAdvisor` for Spring AI and primary LangChain4j wrappers when delegate chat beans are present.
 - **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.
 
 ## The Request Lifecycle

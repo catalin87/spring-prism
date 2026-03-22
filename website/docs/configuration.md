@@ -46,6 +46,7 @@ The starter auto-configures:
 - the active `PrismRulePack` list
 - the `PrismVault`
 - the `PrismChatClientAdvisor`
+- primary LangChain4j `PrismChatModel` and `PrismStreamingChatModel` wrappers when a single delegate `ChatModel` or `StreamingChatModel` bean is present
 - the runtime metrics endpoint at `/actuator/prism`
 
 When a `StringRedisTemplate` bean is present, the starter switches to the Redis-backed vault automatically. Otherwise it keeps the default in-memory vault.
@@ -59,3 +60,12 @@ My email is <PRISM_EMAIL_h8a2...]
 ```
 
 The response returned to the application has the original values restored transparently.
+
+## LangChain4j Runtime Behavior
+
+If your application already defines a single LangChain4j `ChatModel` bean, the starter publishes a
+primary `PrismChatModel` wrapper around it. The same pattern applies to a single
+`StreamingChatModel` bean, which is wrapped as a primary `PrismStreamingChatModel`.
+
+This keeps your original delegate bean available while making the Prism-protected wrapper the
+default injection target for application code.
