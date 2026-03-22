@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+    <!-- 
+      Spotless 'googleJavaFormat' intrinsically strips trailing newlines after license blocks, 
+      while Checkstyle 'google_checks' demands a blank line before the package declaration. 
+      This suppression resolves the architectural dissent by disabling EmptyLineSeparator 
+      blocks universally, allowing Spotless to rule formatting untouched. 
+    -->
+    <suppress checks="EmptyLineSeparator" files=".*\.java"/>
+</suppressions>

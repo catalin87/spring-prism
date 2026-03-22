@@ -17,5 +17,5 @@ package io.github.catalin87.prism.core;
 
 import org.jspecify.annotations.NonNull;
 
-/** A holder for raw PII found during scanning. */
+/** Represents a finding before it is tokenized. */
 public record PiiCandidate(@NonNull String text, int start, int end, @NonNull String label) {}

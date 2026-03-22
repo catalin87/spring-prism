@@ -36,8 +36,9 @@ public interface PrismVault {
   /**
    * Retrieves the original PII value utilizing its un-guessable token metadata.
    *
-   * @param token The Token metadata intercepted from the LLM response.
+   * @param tokenKey The String key intercepted from the LLM response (e.g. {@code
+   *     <PRISM_EMAIL_xyz>}).
    * @return The raw PII value, or null if TTL expired or signature invalid.
    */
-  @Nullable String detokenize(@NonNull PrismToken token);
+  @Nullable String detokenize(@NonNull String tokenKey);
 }
