@@ -56,9 +56,15 @@ jobs:
         run: mvn clean verify --batch-mode
 
       - name: "OWASP Dependency Vulnerability Scan"
-        # Executes deep CVE inspection exclusively for our 3rd-party integration layers (Dashboard, Spring AI extensions)
-        # Prism-core strictly skips this footprint implicitly because of our zero-dependency enforcer block.
-        run: mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 --batch-mode
+        # Executes deep CVE inspection exclusively for our 3rd-party integration layers
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::warning title=CVE Scanner Disabled::Skipping OWASP dependency-check. Please add NVD_API_KEY to GitHub Secrets to prevent 429 API rate limits!"
+          else
+            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY --batch-mode
+          fi
 
       - name: "Store JaCoCo Coverage Evidence"
         uses: actions/upload-artifact@v4
