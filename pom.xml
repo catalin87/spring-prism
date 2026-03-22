@@ -6,7 +6,36 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Spring Prism Parent</name>
-    <description>Reversible PII pseudonymization firewall for Spring AI and LangChain4j</description>
+    <description>Reversible PII pseudonymization firewall for Spring AI, with planned LangChain4j support.</description>
+    <url>https://github.com/catalin87/spring-prism</url>
+
+    <licenses>
+        <license>
+            <name>European Union Public Licence v1.2</name>
+            <url>https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <organization>
+        <name>Spring Prism</name>
+        <url>https://github.com/catalin87/spring-prism</url>
+    </organization>
+
+    <developers>
+        <developer>
+            <id>catalin87</id>
+            <name>Catalin Dordea</name>
+            <url>https://github.com/catalin87</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/catalin87/spring-prism.git</connection>
+        <developerConnection>scm:git:git@github.com:catalin87/spring-prism.git</developerConnection>
+        <url>https://github.com/catalin87/spring-prism</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <modules>
         <module>prism-bom</module>
@@ -204,6 +233,19 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.11.2</version>
+                <configuration>
+                    <doclint>none</doclint>
+                </configuration>
             </plugin>
         </plugins>
     </build>
