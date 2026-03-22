@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Spring Prism is configured using standard Spring Boot property files (e.g., `application.yml`).
+Spring Prism is configured using standard Spring Boot property files such as `application.yml`.
 
 ## Configuration Properties
 
@@ -8,30 +8,54 @@ Spring Prism is configured using standard Spring Boot property files (e.g., `app
 |---|---|---|
 | `spring.prism.enabled` | `true` | Globally enable or disable Spring Prism. |
 | `spring.prism.security-strict-mode` | `false` | If true, any failure in detection or vaulting will result in a hard failure (Fail Closed). |
-| `spring.prism.security-salt` | (random) | The salt used for deterministic HMAC signature calculation. This value MUST be kept secret. |
-| `spring.prism.vault-ttl-seconds` | `3600` | The Time-to-Live for PII in the vault. |
-| `spring.prism.rule-pack` | `UNIVERSAL` | The active rule set: `UNIVERSAL` or `EUROPE`. |
+| `spring.prism.app-secret` | `spring-prism-change-me` | The HMAC secret used to sign Prism tokens. Override this in every real deployment. |
+| `spring.prism.ttl` | `30m` | The time-to-live for vault entries. Invalid values fall back to the starter default. |
+| `spring.prism.locales` | `UNIVERSAL` | The active locale set. Common values include `UNIVERSAL`, `EU`, `RO`, `PL`, `DE`, `GB`, `EN`, and `US`. |
+| `spring.prism.disabled-rules` | empty | Entity types to suppress from the resolved rule packs, such as `EMAIL` or `SSN`. |
+| `spring.prism.custom-rules[n].name` | empty | Entity type name for a property-backed custom regex detector. |
+| `spring.prism.custom-rules[n].pattern` | empty | Regex pattern for a property-backed custom regex detector. Blank custom rules are ignored. |
 
-## Spring AI Integration
+## Starter-First Setup
 
-To use Spring Prism with your `ChatClient`, use the `PrismChatClientAdvisor`:
+Add the starter dependency:
 
-```java
-ChatClient chatClient = ChatClient.builder(chatModel)
-    .defaultAdvisors(
-        new PrismChatClientAdvisor(List.of(rulePack), prismVault, ObservationRegistry.NOOP))
-    .build();
-
-String response = chatClient.prompt()
-    .user("My email is user@corp.local")
-    .call()
-    .content();
+```xml
+<dependency>
+  <groupId>io.github.catalin87.prism</groupId>
+  <artifactId>prism-spring-boot-starter</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+</dependency>
 ```
 
-The underlying text sent to the LLM will be:
+Then configure the starter:
+
+```yaml
+spring:
+  prism:
+    app-secret: ${PRISM_APP_SECRET}
+    security-strict-mode: false
+    ttl: 30m
+    locales: EU,EN
+    disabled-rules: SSN
+    custom-rules:
+      - name: INTERNAL_ID
+        pattern: "ID-\\d{5}"
+```
+
+The starter auto-configures:
+- the active `PrismRulePack` list
+- the `PrismVault`
+- the `PrismChatClientAdvisor`
+- the runtime metrics endpoint at `/actuator/prism`
+
+When a `StringRedisTemplate` bean is present, the starter switches to the Redis-backed vault automatically. Otherwise it keeps the default in-memory vault.
+
+## Spring AI Runtime Behavior
+
+Once configured, Prism sanitizes the outbound chat content before dispatching it to the LLM and restores Prism tokens on the way back. The underlying text sent to the model will look like:
 
 ```text
 My email is <PRISM_EMAIL_h8a2...]
 ```
 
-But the `response` string returned to the `chatClient` will have the original email restored.
+The response returned to the application has the original values restored transparently.
