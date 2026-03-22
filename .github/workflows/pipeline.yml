@@ -1,0 +1,69 @@
+name: "Spring Prism Continuous Delivery Pipeline"
+
+on:
+  push:
+    branches: 
+      - main
+  pull_request:
+
+jobs:
+  dco-verification:
+    name: "Developer Certificate of Origin Check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository History"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Strict DCO Trailer Check"
+        # Enforces that every commit block contains the exact regex formula for Signed-off-by
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            REVS="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            # On direct push to main, check the pushes since last deploy or against HEAD
+            REVS="HEAD~1..HEAD"
+          fi
+          
+          for commit in $(git rev-list $REVS); do
+            if ! git show -s --format=%B $commit | grep -iE "Signed-off-by: .+ <.+@.+>"; then
+              echo "::error title=DCO Signed-off-by Missing::Commit $commit is missing the 'Signed-off-by: Name <email>' legal trailer."
+              exit 1
+            fi
+          done
+
+  build-and-secure:
+    name: "JDK 21 Engine Build & CVE Scanner"
+    runs-on: ubuntu-latest
+    needs: dco-verification
+    
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Provision JDK 21 (Temurin)"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: "Code Style Guardrails (Spotless)"
+        run: mvn spotless:check --batch-mode
+
+      - name: "Architectural Compilation & Verification"
+        run: mvn clean verify --batch-mode
+
+      - name: "OWASP Dependency Vulnerability Scan"
+        # Executes deep CVE inspection exclusively for our 3rd-party integration layers (Dashboard, Spring AI extensions)
+        # Prism-core strictly skips this footprint implicitly because of our zero-dependency enforcer block.
+        run: mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 --batch-mode
+
+      - name: "Store JaCoCo Coverage Evidence"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage-reports
+          path: "**/target/site/jacoco/"
+          retention-days: 30

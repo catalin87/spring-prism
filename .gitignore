@@ -1,0 +1,84 @@
+# Created by Antigravity
+# I will actively maintain this file as we add new modules and technologies to Spring Prism.
+
+# =========================
+# Build & Compiled Output
+# =========================
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# =========================
+# Logs and Databases
+# =========================
+*.log
+build.log
+*.sqlite
+*.db
+
+# =========================
+# IDEs & Workspaces
+# =========================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse
+.classpath
+.project
+.settings/
+.metadata/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# =========================
+# OS Generated Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =========================
+# Node.js (Future Dashboard)
+# =========================
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# Temporary & Cache
+# =========================
+.cache/
+tmp/
+temp/
+*~
+*.swp
+*.swo

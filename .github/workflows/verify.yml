@@ -1,0 +1,43 @@
+name: "Spring Prism Continuous Verification"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Architecture-And-Compliance:
+    name: "Zero-Dependency Core & JDK 21 Guardrails"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to fetch full commit history for DCO parsing
+
+      - name: "DCO Compliance (Signed-off-by Trailer Check)"
+        run: |
+          echo "Verifying strictly enforced Developer Certificate of Origin (DCO)..."
+          for commit in $(git rev-list ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}); do
+            if ! git show -s --format=%B $commit | grep -iq "Signed-off-by:"; then
+              echo "::error title=DCO Verification Failed::Commit $commit is missing the 'Signed-off-by:' trailer required by the EUPL 1.2 license."
+              exit 1
+            fi
+          done
+
+      - name: "Initialize JDK 21 Environment (Temurin)"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: "Enforce Google Java Formatting & Checkstyle"
+        run: mvn spotless:check checkstyle:check --batch-mode
+
+      - name: "Compile Architecture & Execute Jqwik Property Tests"
+        run: mvn clean verify --batch-mode
+        
+      - name: "Ensure 90% Minimum JaCoCo Core Coverage"
+        run: mvn jacoco:check -pl prism-core --batch-mode
