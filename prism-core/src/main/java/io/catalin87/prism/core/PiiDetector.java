@@ -25,6 +25,9 @@ import org.jspecify.annotations.NonNull;
 public interface PiiDetector {
 
   /**
+   * Determines the classification descriptor allocated to fragments resolved natively by this
+   * framework component.
+   *
    * @return The canonical name of the entity being detected (e.g., "EMAIL", "CREDIT_CARD",
    *     "EU_VAT").
    */
