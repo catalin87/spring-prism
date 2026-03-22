@@ -97,6 +97,24 @@ Use the starter-first path as the default integration model and see `website/doc
 for the current Spring AI constructor shape, LangChain4j wrapper behavior, and Redis auto-selection
 defaults.
 
+## 📦 Release Readiness
+
+The current supported library surface is:
+
+- `prism-core`
+- `prism-spring-ai`
+- `prism-langchain4j`
+- `prism-spring-boot-starter`
+- `prism-examples`
+
+Deferred surfaces:
+
+- `prism-dashboard`
+- MCP support
+
+See `website/docs/release-readiness.md` for the current verification baseline, release-profile
+expectations, and the shipped-vs-deferred support boundary.
+
 ---
 
 ## 🔒 Security Posture & Architecture Guarantee
