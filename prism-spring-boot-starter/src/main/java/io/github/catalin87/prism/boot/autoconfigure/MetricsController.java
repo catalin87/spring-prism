@@ -33,6 +33,7 @@ public class MetricsController {
   private final List<PrismRulePack> springPrismRulePacks;
   private final PrismVault prismVault;
 
+  /** Creates the metrics controller with the active rule packs, vault, and runtime counters. */
   public MetricsController(
       PrismRuntimeMetrics prismRuntimeMetrics,
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
@@ -42,6 +43,7 @@ public class MetricsController {
     this.prismVault = prismVault;
   }
 
+  /** Returns the current Spring Prism runtime snapshot for actuator and dashboard consumers. */
   @GetMapping
   public MetricsSnapshot metrics() {
     List<String> activeRulePacks =
@@ -56,6 +58,7 @@ public class MetricsController {
         vaultType);
   }
 
+  /** Immutable dashboard-facing metrics payload summarizing current Prism runtime activity. */
   public record MetricsSnapshot(
       long tokenizedCount,
       long detokenizedCount,

@@ -63,6 +63,7 @@ public class PrismRuntimeMetrics implements PrismMetricsSink {
     return detectionErrorCount.get();
   }
 
+  /** Returns an immutable snapshot of detection counts grouped by rule pack and entity type. */
   public Map<String, Long> detectionCounts() {
     return detectionCounts.entrySet().stream()
         .collect(
