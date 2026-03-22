@@ -1,0 +1,4 @@
+spring:
+  prism:
+    app-secret: example-spring-ai-secret
+    locales: UNIVERSAL

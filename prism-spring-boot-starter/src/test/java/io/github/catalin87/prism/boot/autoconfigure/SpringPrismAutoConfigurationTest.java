@@ -158,6 +158,17 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void autoConfigurationStillLoadsWithoutRedisOnClasspath() {
+    contextRunner
+        .withClassLoader(new FilteredClassLoader("org.springframework.data.redis"))
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismVault.class);
+              assertThat(context.getBean(PrismVault.class)).isInstanceOf(DefaultPrismVault.class);
+            });
+  }
+
+  @Test
   void metricsControllerExposesRuntimeSnapshot() {
     contextRunner.run(
         context -> {

@@ -48,27 +48,54 @@ sequenceDiagram
 
 ## 🚀 Quick Start Snippet
 
-Inject Spring Prism onto your Spring AI `ChatClient` using the current advisor integration:
+Use the starter-first path in your Spring Boot app:
 
 ```java
 @Configuration
 public class AiConfiguration {
 
     @Bean
-    public ChatClient protectedChatClient(
-            ChatClient.Builder builder,
-            PrismRulePack europeRulePack,
-            PrismVault memoryVault) {
-
-        // Refract the data transparently into the Vault, and Restore seamlessly on return!
-        return builder
-            .defaultAdvisors(
-                new PrismChatClientAdvisor(
-                    List.of(europeRulePack), memoryVault, ObservationRegistry.NOOP))
-            .build();
+    ChatClient protectedChatClient(ChatClient.Builder builder) {
+        return builder.build();
     }
 }
 ```
+
+```yaml
+spring:
+  prism:
+    enabled: true
+    app-secret: change-me
+    locales: UNIVERSAL
+```
+
+For manual wiring, advanced rule-pack selection, and both integration paths, start with the
+example apps under `prism-examples/` and the docs in `website/docs/`.
+
+## ✅ Compatibility
+
+| Surface | Version |
+| --- | --- |
+| Java | `21` |
+| Spring Boot | `3.4.x` |
+| Spring AI | `1.0.0-M5` |
+| LangChain4j | `1.0.1` |
+
+## 🧪 Runnable Examples
+
+Spring Prism now ships with two minimal sample apps under `prism-examples/`:
+
+- `spring-ai-example`: starter + Spring AI `ChatClient`
+- `langchain4j-example`: starter + LangChain4j `ChatModel`
+
+Each example boots with Java 21, avoids real API keys, and includes an integration test proving
+that the delegate sees tokenized content while the caller receives restored PII.
+
+## 🔁 Upgrade Notes
+
+Use the starter-first path as the default integration model and see `website/docs/migration-guide.md`
+for the current Spring AI constructor shape, LangChain4j wrapper behavior, and Redis auto-selection
+defaults.
 
 ---
 
@@ -90,6 +117,7 @@ Spring Prism executes strict isolation through a robust Maven multi-module archi
 | `prism-spring-ai` | Spring AI advisor integration for synchronous and streaming chat interception. |
 | `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` decorators for tokenization and restoration. |
 | `prism-spring-boot-starter` | Instantly initializes Spring AI auto-configurations and exposes cleanly configurable `application.yml` localization boundaries. |
+| `prism-examples` | Runnable Spring Boot examples for the Spring AI and LangChain4j integration paths. |
 | `prism-dashboard` | An optional, self-hosted visual interface rendering Micrometer usage statistics on exactly what PII parameters were prevented from escaping to the LLM. |
 
 ## 📜 Governance & Licensing
