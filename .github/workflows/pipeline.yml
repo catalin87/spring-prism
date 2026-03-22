@@ -65,7 +65,7 @@ jobs:
           if [ -z "$NVD_API_KEY" ]; then
             echo "::warning title=CVE Scanner Disabled::Skipping OWASP dependency-check. Please add NVD_API_KEY to GitHub Secrets to prevent 429 API rate limits!"
           else
-            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY --batch-mode
+            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY -DossIndexAnalyzerEnabled=false --batch-mode
           fi
 
       - name: "Store JaCoCo Coverage Evidence"

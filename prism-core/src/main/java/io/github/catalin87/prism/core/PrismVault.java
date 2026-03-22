@@ -13,7 +13,7 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.catalin87.prism.core;
+package io.github.catalin87.prism.core;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
