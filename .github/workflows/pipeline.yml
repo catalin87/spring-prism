@@ -30,7 +30,7 @@ jobs:
             REVS="HEAD~1..HEAD"
           fi
           
-          for commit in $(git rev-list $REVS); do
+          for commit in $(git rev-list --no-merges $REVS); do
             if ! git show -s --format=%B $commit | grep -iE "Signed-off-by: .+ <.+@.+>"; then
               echo "::error title=DCO Signed-off-by Missing::Commit $commit is missing the 'Signed-off-by: Name <email>' legal trailer."
               exit 1
