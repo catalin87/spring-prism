@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Introduction
 
-Spring Prism is a reversible PII (Personally Identifiable Information) pseudonymization firewall for **Spring AI**, with **LangChain4j** planned as the next integration milestone.
+Spring Prism is a reversible PII (Personally Identifiable Information) pseudonymization firewall for **Spring AI** and **LangChain4j**.
 
 In the era of LLMs, data privacy is paramount. Spring Prism acts as a transparent layer that detects, redacts, and pseudonymizes sensitive data before it leaves your infrastructure, and restores it when it returns.
 
@@ -13,7 +13,7 @@ In the era of LLMs, data privacy is paramount. Spring Prism acts as a transparen
 - **Automated Detection**: Built-in support for multiple locales (US, EU, Universal).
 - **Reversible Tokens**: Non-reversible HMAC-SHA256 signatures ensure data security while allowing seamless restoration.
 - **Spring AI Integration**: Plugs directly into `ChatClient` via Advisors.
-- **LangChain4j Roadmap**: A dedicated LangChain4j module is planned, but not shipped in the current release line.
+- **LangChain4j Integration**: Wraps `ChatModel` and `StreamingChatModel` without leaking Spring dependencies into `prism-core`.
 - **Type-Safe & Performance-Oriented**: Built with Java 21, utilizing Virtual Threads for efficient I/O-bound scanning.
 - **Decoupled Architecture**: `prism-core` is zero-dependency, making it portable and lightweight.
 

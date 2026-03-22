@@ -6,7 +6,7 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Spring Prism Parent</name>
-    <description>Reversible PII pseudonymization firewall for Spring AI, with planned LangChain4j support.</description>
+    <description>Reversible PII pseudonymization firewall for Spring AI and LangChain4j.</description>
     <url>https://github.com/catalin87/spring-prism</url>
 
     <licenses>
@@ -41,6 +41,7 @@
         <module>prism-bom</module>
         <module>prism-core</module>
         <module>prism-spring-ai</module>
+        <module>prism-langchain4j</module>
         <module>prism-spring-boot-starter</module>
         <module>prism-dashboard</module>
         <module>prism-examples</module>
@@ -54,6 +55,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring-boot.version>3.4.0</spring-boot.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
+        <langchain4j.version>1.0.1</langchain4j.version>
         <jspecify.version>1.0.0</jspecify.version>
         <spotless.version>2.43.0</spotless.version>
         <enforcer.version>3.5.0</enforcer.version>

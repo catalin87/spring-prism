@@ -67,7 +67,18 @@ jobs:
           if [ -z "$NVD_API_KEY" ]; then
             echo "::warning title=CVE Scanner Disabled::Skipping OWASP dependency-check. Please add NVD_API_KEY to GitHub Secrets to prevent 429 API rate limits!"
           else
-            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY -DossIndexAnalyzerEnabled=false --batch-mode
+            set +e
+            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY -DossIndexAnalyzerEnabled=false --batch-mode | tee dependency-check.log
+            status=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$status" -ne 0 ]; then
+              if grep -Eq "Error updating the NVD Data|connectionPool\" is null|Failed to process CVE-|NVD Returned Status Code: 403" dependency-check.log; then
+                echo "::warning title=CVE Scanner Infrastructure Failure::OWASP dependency-check could not update NVD data. Check the NVD_API_KEY secret or retry the workflow; continuing without blocking this build."
+              else
+                exit "$status"
+              fi
+            fi
           fi
 
       - name: "Store JaCoCo Coverage Evidence"
