@@ -39,7 +39,7 @@ The Spring Boot 3 autoconfiguration bridge.
 The embedded observability surface.
 - **Packaging**: Static assets are served from `META-INF/resources/prism/` inside the dashboard jar.
 - **Data Source**: Reads the Prism runtime snapshot from `/actuator/prism` when Actuator is present and falls back to `/prism/metrics` otherwise.
-- **Current Scope**: Dashboard shell, top-redacted metrics, vault/runtime health, and a visual refraction-flow explainer.
+- **Current Scope**: Dashboard shell, top-redacted metrics, vault/runtime health, rule-pack activity bars, a masked recent-activity audit feed, and a visual refraction-flow explainer.
 
 ## The Request Lifecycle
 

@@ -2,6 +2,7 @@ const endpoints = ["/actuator/prism", "/prism/metrics"];
 
 const statusPanel = document.getElementById("status-panel");
 const cardsGrid = document.getElementById("cards-grid");
+const analyticsGrid = document.getElementById("analytics-grid");
 const refreshButton = document.getElementById("refresh-button");
 
 async function fetchMetrics() {
@@ -59,6 +60,58 @@ function renderTopDetections(detections) {
   });
 }
 
+function renderRulePackMetrics(rulePackMetrics) {
+  const container = document.getElementById("rule-pack-metrics");
+  container.replaceChildren();
+
+  const maxDetections = Math.max(1, ...rulePackMetrics.map(metric => metric.totalDetections));
+  rulePackMetrics.forEach(metric => {
+    const row = document.createElement("div");
+    row.className = "bar-row";
+
+    const label = document.createElement("div");
+    label.className = "bar-label";
+    label.innerHTML =
+        `<strong>${metric.name}</strong><span>${metric.totalDetections} detections · ${metric.detectorCount} detectors</span>`;
+
+    const track = document.createElement("div");
+    track.className = "bar-track";
+    const fill = document.createElement("div");
+    fill.className = "bar-fill";
+    fill.style.width = `${Math.max(10, (metric.totalDetections / maxDetections) * 100)}%`;
+    track.append(fill);
+
+    row.append(label, track);
+    container.append(row);
+  });
+}
+
+function renderAuditLog(auditEvents) {
+  const auditLog = document.getElementById("audit-log");
+  auditLog.replaceChildren();
+
+  if (!auditEvents || auditEvents.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "audit-empty";
+    empty.textContent = "No masked Prism activity has been recorded yet.";
+    auditLog.append(empty);
+    return;
+  }
+
+  auditEvents.forEach(event => {
+    const item = document.createElement("li");
+    item.className = "audit-item";
+    item.innerHTML = `
+      <div>
+        <strong>${event.action.toUpperCase()} ${event.subject}</strong>
+        <p>${event.count} event(s) from ${event.source}</p>
+      </div>
+      <time>${new Date(event.timestamp).toLocaleTimeString()}</time>
+    `;
+    auditLog.append(item);
+  });
+}
+
 function renderMetrics(endpoint, metrics) {
   const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
       ?? metrics.durationMetrics?.["langchain4j:scan"];
@@ -75,11 +128,14 @@ function renderMetrics(endpoint, metrics) {
   document.getElementById("endpoint-used").textContent = endpoint;
 
   renderTopDetections(topDetections(metrics.detectionCounts));
+  renderRulePackMetrics(metrics.rulePackMetrics ?? []);
+  renderAuditLog(metrics.auditEvents ?? []);
 
   statusPanel.innerHTML =
       `<strong>Connected.</strong> Reading live Prism metrics from <code>${endpoint}</code>.`;
   statusPanel.classList.remove("error-panel");
   cardsGrid.classList.remove("hidden");
+  analyticsGrid.classList.remove("hidden");
 }
 
 function renderError(error) {
@@ -90,6 +146,7 @@ function renderError(error) {
   `;
   statusPanel.classList.add("error-panel");
   cardsGrid.classList.add("hidden");
+  analyticsGrid.classList.add("hidden");
 }
 
 async function refresh() {

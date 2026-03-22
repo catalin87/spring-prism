@@ -15,17 +15,5 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
-import java.util.List;
-import java.util.Map;
-
-/** Immutable runtime snapshot shared by the fallback endpoint and actuator endpoint. */
-public record PrismMetricsSnapshot(
-    long tokenizedCount,
-    long detokenizedCount,
-    long detectionErrorCount,
-    Map<String, Long> detectionCounts,
-    Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics,
-    List<RulePackMetric> rulePackMetrics,
-    List<PrismRuntimeMetrics.AuditEvent> auditEvents,
-    List<String> activeRulePacks,
-    String vaultType) {}
+/** Immutable dashboard metric summarizing detections associated with a rule pack. */
+public record RulePackMetric(String name, int detectorCount, long totalDetections) {}
