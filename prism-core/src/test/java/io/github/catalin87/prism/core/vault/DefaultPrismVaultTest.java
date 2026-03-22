@@ -13,13 +13,16 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.github.catalin87.prism.core;
+package io.github.catalin87.prism.core.vault;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.catalin87.prism.core.PrismToken;
+import io.github.catalin87.prism.core.TokenGenerator;
+import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import org.junit.jupiter.api.Test;
 
 class DefaultPrismVaultTest {

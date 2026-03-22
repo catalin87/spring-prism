@@ -13,8 +13,11 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.github.catalin87.prism.core;
+package io.github.catalin87.prism.core.token;
 
+import io.github.catalin87.prism.core.PiiCandidate;
+import io.github.catalin87.prism.core.PrismToken;
+import io.github.catalin87.prism.core.TokenGenerator;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;

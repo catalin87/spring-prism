@@ -13,8 +13,10 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.github.catalin87.prism.core;
+package io.github.catalin87.prism.core.detector.universal;
 
+import io.github.catalin87.prism.core.PiiCandidate;
+import io.github.catalin87.prism.core.PiiDetector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
