@@ -214,7 +214,7 @@
             <id>strict-core-compliance</id>
             <activation>
                 <file>
-                    <exists>src/main/java/io/catalin87/prism/core/PiiDetector.java</exists>
+                    <exists>src/main/java/io/github/catalin87/prism/core/PiiDetector.java</exists>
                 </file>
             </activation>
             <build>
