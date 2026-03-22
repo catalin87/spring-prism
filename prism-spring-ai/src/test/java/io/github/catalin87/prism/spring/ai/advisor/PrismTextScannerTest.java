@@ -149,6 +149,23 @@ class PrismTextScannerTest {
         .hasMessageContaining("Strict mode blocked Prism processing");
   }
 
+  @Test
+  void tokenizeAndDetokenizeRecordTimingMetrics() {
+    RecordingMetricsSink metricsSink = new RecordingMetricsSink();
+    PrismTextScanner timedScanner =
+        new PrismTextScanner(
+            List.of(new UniversalRulePack()), vault, ObservationRegistry.NOOP, metricsSink, false);
+
+    String tokenized = timedScanner.tokenize("Contact user@example.com.");
+    timedScanner.detokenize(tokenized);
+
+    assertThat(metricsSink.scanDurationCalls).isEqualTo(1);
+    assertThat(metricsSink.tokenizeDurationCalls).isEqualTo(1);
+    assertThat(metricsSink.detokenizeDurationCalls).isEqualTo(1);
+    assertThat(metricsSink.lastIntegration).isEqualTo(PrismMetricsSink.SPRING_AI_INTEGRATION);
+    assertThat(metricsSink.lastRecordedNanos).isGreaterThanOrEqualTo(0L);
+  }
+
   private static final class FailingRulePack implements PrismRulePack {
     @Override
     public @NonNull List<PiiDetector> getDetectors() {
@@ -170,6 +187,47 @@ class PrismTextScannerTest {
     @Override
     public @NonNull List<PiiCandidate> detect(@NonNull String text) {
       throw new IllegalStateException("boom");
+    }
+  }
+
+  private static final class RecordingMetricsSink implements PrismMetricsSink {
+    private int scanDurationCalls;
+    private int tokenizeDurationCalls;
+    private int detokenizeDurationCalls;
+    private String lastIntegration = "";
+    private long lastRecordedNanos;
+
+    @Override
+    public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {}
+
+    @Override
+    public void onDetectionError(@NonNull String rulePackName, @NonNull String entityType) {}
+
+    @Override
+    public void onTokenized(int count) {}
+
+    @Override
+    public void onDetokenized(int count) {}
+
+    @Override
+    public void onScanDuration(@NonNull String integration, long nanos) {
+      scanDurationCalls++;
+      lastIntegration = integration;
+      lastRecordedNanos = nanos;
+    }
+
+    @Override
+    public void onVaultTokenizeDuration(@NonNull String integration, long nanos) {
+      tokenizeDurationCalls++;
+      lastIntegration = integration;
+      lastRecordedNanos = nanos;
+    }
+
+    @Override
+    public void onVaultDetokenizeDuration(@NonNull String integration, long nanos) {
+      detokenizeDurationCalls++;
+      lastIntegration = integration;
+      lastRecordedNanos = nanos;
     }
   }
 }

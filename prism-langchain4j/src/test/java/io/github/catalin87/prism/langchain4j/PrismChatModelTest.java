@@ -164,6 +164,37 @@ class PrismChatModelTest {
         .hasMessageContaining("Strict mode blocked Prism processing");
   }
 
+  @Test
+  void chatRecordsTimingMetrics() {
+    RecordingMetricsSink metricsSink = new RecordingMetricsSink();
+    RecordingChatModel delegate =
+        new RecordingChatModel(
+            request ->
+                ChatResponse.builder()
+                    .aiMessage(
+                        AiMessage.from(
+                            "Reply for " + vault.tokenize("user@example.com", "EMAIL").key()))
+                    .build());
+
+    PrismChatModel prismModel =
+        new PrismChatModel(
+            delegate,
+            List.of(new UniversalRulePack()),
+            vault,
+            ObservationRegistry.NOOP,
+            metricsSink,
+            false);
+
+    prismModel.chat(
+        ChatRequest.builder().messages(List.of(UserMessage.from("user@example.com"))).build());
+
+    assertThat(metricsSink.scanDurationCalls).isEqualTo(1);
+    assertThat(metricsSink.tokenizeDurationCalls).isEqualTo(1);
+    assertThat(metricsSink.detokenizeDurationCalls).isEqualTo(1);
+    assertThat(metricsSink.lastIntegration).isEqualTo(PrismMetricsSink.LANGCHAIN4J_INTEGRATION);
+    assertThat(metricsSink.lastRecordedNanos).isGreaterThanOrEqualTo(0L);
+  }
+
   private static final class RecordingChatModel implements ChatModel {
     private final ResponseFactory factory;
     private ChatRequest recordedRequest;
@@ -205,6 +236,47 @@ class PrismChatModelTest {
     @Override
     public @NonNull List<PiiCandidate> detect(@NonNull String text) {
       throw new IllegalStateException("boom");
+    }
+  }
+
+  private static final class RecordingMetricsSink implements PrismMetricsSink {
+    private int scanDurationCalls;
+    private int tokenizeDurationCalls;
+    private int detokenizeDurationCalls;
+    private String lastIntegration = "";
+    private long lastRecordedNanos;
+
+    @Override
+    public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {}
+
+    @Override
+    public void onDetectionError(@NonNull String rulePackName, @NonNull String entityType) {}
+
+    @Override
+    public void onTokenized(int count) {}
+
+    @Override
+    public void onDetokenized(int count) {}
+
+    @Override
+    public void onScanDuration(@NonNull String integration, long nanos) {
+      scanDurationCalls++;
+      lastIntegration = integration;
+      lastRecordedNanos = nanos;
+    }
+
+    @Override
+    public void onVaultTokenizeDuration(@NonNull String integration, long nanos) {
+      tokenizeDurationCalls++;
+      lastIntegration = integration;
+      lastRecordedNanos = nanos;
+    }
+
+    @Override
+    public void onVaultDetokenizeDuration(@NonNull String integration, long nanos) {
+      detokenizeDurationCalls++;
+      lastIntegration = integration;
+      lastRecordedNanos = nanos;
     }
   }
 }

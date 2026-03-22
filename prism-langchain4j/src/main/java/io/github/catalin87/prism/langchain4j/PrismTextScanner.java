@@ -35,6 +35,7 @@ import org.jspecify.annotations.Nullable;
 final class PrismTextScanner {
 
   private static final Pattern TOKEN_PATTERN = Pattern.compile("<PRISM_[a-zA-Z0-9_-]+>");
+  private static final String INTEGRATION = PrismMetricsSink.LANGCHAIN4J_INTEGRATION;
 
   private final List<PrismRulePack> rulePacks;
   private final PrismVault vault;
@@ -61,25 +62,33 @@ final class PrismTextScanner {
     }
 
     List<PiiCandidate> allCandidates = new ArrayList<>();
-    for (PrismRulePack pack : rulePacks) {
-      for (PiiDetector detector : pack.getDetectors()) {
-        try {
-          List<PiiCandidate> detected = detector.detect(text);
-          if (!detected.isEmpty()) {
-            metricsSink.onDetected(pack.getName(), detector.getEntityType(), detected.size());
-            allCandidates.addAll(detected);
+    long scanStartedAt = System.nanoTime();
+    try {
+      for (PrismRulePack pack : rulePacks) {
+        for (PiiDetector detector : pack.getDetectors()) {
+          if (!detector.mayMatch(text)) {
+            continue;
           }
-        } catch (Exception e) {
-          metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
-          if (strictMode) {
-            throw new IllegalStateException(
-                "Strict mode blocked Prism processing after detector failure: "
-                    + detector.getEntityType(),
-                e);
+          try {
+            List<PiiCandidate> detected = detector.detect(text);
+            if (!detected.isEmpty()) {
+              metricsSink.onDetected(pack.getName(), detector.getEntityType(), detected.size());
+              allCandidates.addAll(detected);
+            }
+          } catch (Exception e) {
+            metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
+            if (strictMode) {
+              throw new IllegalStateException(
+                  "Strict mode blocked Prism processing after detector failure: "
+                      + detector.getEntityType(),
+                  e);
+            }
+            observationRegistry.observationConfig().observationHandler(null);
           }
-          observationRegistry.observationConfig().observationHandler(null);
         }
       }
+    } finally {
+      metricsSink.onScanDuration(INTEGRATION, System.nanoTime() - scanStartedAt);
     }
 
     if (allCandidates.isEmpty()) {
@@ -91,10 +100,15 @@ final class PrismTextScanner {
 
     StringBuilder result = new StringBuilder(text);
     int redactedCount = 0;
-    for (PiiCandidate candidate : deduplicated) {
-      PrismToken token = vault.tokenize(candidate.text(), candidate.label());
-      result.replace(candidate.start(), candidate.end(), token.key());
-      redactedCount++;
+    long tokenizeStartedAt = System.nanoTime();
+    try {
+      for (PiiCandidate candidate : deduplicated) {
+        PrismToken token = vault.tokenize(candidate.text(), candidate.label());
+        result.replace(candidate.start(), candidate.end(), token.key());
+        redactedCount++;
+      }
+    } finally {
+      metricsSink.onVaultTokenizeDuration(INTEGRATION, System.nanoTime() - tokenizeStartedAt);
     }
 
     if (redactedCount > 0) {
@@ -113,16 +127,21 @@ final class PrismTextScanner {
     Matcher matcher = TOKEN_PATTERN.matcher(text);
     StringBuilder result = new StringBuilder(text.length());
     int detokenizedCount = 0;
-    while (matcher.find()) {
-      String tokenKey = matcher.group();
-      String original = vault.detokenize(tokenKey);
-      if (original != null) {
-        detokenizedCount++;
+    long detokenizeStartedAt = System.nanoTime();
+    try {
+      while (matcher.find()) {
+        String tokenKey = matcher.group();
+        String original = vault.detokenize(tokenKey);
+        if (original != null) {
+          detokenizedCount++;
+        }
+        matcher.appendReplacement(
+            result, Matcher.quoteReplacement(original != null ? original : tokenKey));
       }
-      matcher.appendReplacement(
-          result, Matcher.quoteReplacement(original != null ? original : tokenKey));
+      matcher.appendTail(result);
+    } finally {
+      metricsSink.onVaultDetokenizeDuration(INTEGRATION, System.nanoTime() - detokenizeStartedAt);
     }
-    matcher.appendTail(result);
     if (detokenizedCount > 0) {
       metricsSink.onDetokenized(detokenizedCount);
     }

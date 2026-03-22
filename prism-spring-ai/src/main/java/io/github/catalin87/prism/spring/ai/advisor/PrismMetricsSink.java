@@ -20,6 +20,8 @@ import org.jspecify.annotations.NonNull;
 /** Extension hook for collecting Prism runtime metrics without coupling core logic to a backend. */
 public interface PrismMetricsSink {
 
+  String SPRING_AI_INTEGRATION = "spring-ai";
+
   PrismMetricsSink NOOP = new NoOpPrismMetricsSink();
 
   void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count);
@@ -29,6 +31,12 @@ public interface PrismMetricsSink {
   void onTokenized(int count);
 
   void onDetokenized(int count);
+
+  void onScanDuration(@NonNull String integration, long nanos);
+
+  void onVaultTokenizeDuration(@NonNull String integration, long nanos);
+
+  void onVaultDetokenizeDuration(@NonNull String integration, long nanos);
 
   /** No-op sink used when callers do not need runtime metrics callbacks. */
   final class NoOpPrismMetricsSink implements PrismMetricsSink {
@@ -43,5 +51,14 @@ public interface PrismMetricsSink {
 
     @Override
     public void onDetokenized(int count) {}
+
+    @Override
+    public void onScanDuration(@NonNull String integration, long nanos) {}
+
+    @Override
+    public void onVaultTokenizeDuration(@NonNull String integration, long nanos) {}
+
+    @Override
+    public void onVaultDetokenizeDuration(@NonNull String integration, long nanos) {}
   }
 }

@@ -25,6 +25,17 @@ import org.jspecify.annotations.NonNull;
 public interface PiiDetector {
 
   /**
+   * Cheap pre-check used to skip expensive regex or checksum work when the input cannot possibly
+   * contain this detector's target data.
+   *
+   * @param text The source text to analyze.
+   * @return {@code true} when a full scan is worthwhile, otherwise {@code false}.
+   */
+  default boolean mayMatch(@NonNull String text) {
+    return !text.isEmpty();
+  }
+
+  /**
    * Determines the classification descriptor allocated to fragments resolved natively by this
    * framework component.
    *
@@ -40,4 +51,25 @@ public interface PiiDetector {
    * @return A list of {@link PiiCandidate} objects indicating exact locations in the text.
    */
   @NonNull List<PiiCandidate> detect(@NonNull String text);
+
+  /** Returns {@code true} when the text contains at least one decimal digit. */
+  static boolean containsDigit(@NonNull String text) {
+    for (int index = 0; index < text.length(); index++) {
+      if (Character.isDigit(text.charAt(index))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Returns {@code true} when either marker character occurs in the source text. */
+  static boolean containsEither(@NonNull String text, char first, char second) {
+    for (int index = 0; index < text.length(); index++) {
+      char current = text.charAt(index);
+      if (current == first || current == second) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

@@ -55,8 +55,13 @@ public class IpAddressDetector implements PiiDetector {
   }
 
   @Override
+  public boolean mayMatch(@NonNull String input) {
+    return PiiDetector.containsEither(input, '.', ':');
+  }
+
+  @Override
   public @NonNull List<PiiCandidate> detect(@NonNull String input) {
-    if (input.isEmpty()) {
+    if (!mayMatch(input)) {
       return List.of();
     }
 
