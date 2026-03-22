@@ -4,32 +4,32 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Easy to Use',
+    title: 'Privacy by Design',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Reverses PII into irreversible, cryptographically signed tokens using HMAC-SHA256,
+        ensuring sensitive data never leaves your enterprise boundary.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Zero-Dependency Core',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        The <code>prism-core</code> engine contains no 3rd-party dependencies,
+        minimizing your attack surface and ensuring high-performance execution.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Spring AI Native',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        Seamlessly integrates as a non-invasive Advisor for Spring AI and LangChain4j,
+        pseudonymizing prompts and restoring responses automatically.
       </>
     ),
   },
