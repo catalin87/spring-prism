@@ -23,11 +23,11 @@ const config = {
   url: 'https://catalin87.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/SpringPrism/',
+  baseUrl: '/spring-prism/',
 
   // GitHub pages deployment config.
   organizationName: 'catalin87',
-  projectName: 'SpringPrism',
+  projectName: 'spring-prism',
   deploymentBranch: 'gh-pages',
   trailingSlash: false,
 
@@ -47,7 +47,7 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           editUrl:
-            'https://github.com/catalin87/SpringPrism/tree/main/website/',
+            'https://github.com/catalin87/spring-prism/tree/main/website/',
         },
         blog: false, // Disabling blog for now
         theme: {
