@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+      - 'feature/*'
   pull_request:
     branches:
       - main
+      - 'feature/*'
+
+defaults:
+  run:
+    working-directory: spring-prism
 
 jobs:
   dco-verification:
