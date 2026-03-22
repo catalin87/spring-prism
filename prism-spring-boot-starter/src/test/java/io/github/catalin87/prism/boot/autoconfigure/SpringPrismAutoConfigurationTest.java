@@ -18,12 +18,20 @@ package io.github.catalin87.prism.boot.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.detector.universal.EmailDetector;
 import io.github.catalin87.prism.core.ruleset.EuropeRulePack;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
+import io.github.catalin87.prism.langchain4j.PrismChatModel;
+import io.github.catalin87.prism.langchain4j.PrismStreamingChatModel;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
@@ -31,6 +39,7 @@ import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -236,6 +245,65 @@ class SpringPrismAutoConfigurationTest {
             });
   }
 
+  @Test
+  void singleLangChainChatModelIsWrappedAsPrimaryBean() {
+    contextRunner
+        .withUserConfiguration(LangChainChatModelConfiguration.class)
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismChatModel.class);
+              assertThat(context.getBean(ChatModel.class)).isInstanceOf(PrismChatModel.class);
+            });
+  }
+
+  @Test
+  void singleLangChainStreamingChatModelIsWrappedAsPrimaryBean() {
+    contextRunner
+        .withUserConfiguration(LangChainStreamingChatModelConfiguration.class)
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismStreamingChatModel.class);
+              assertThat(context.getBean(StreamingChatModel.class))
+                  .isInstanceOf(PrismStreamingChatModel.class);
+            });
+  }
+
+  @Test
+  void multipleChatModelDelegatesWithoutPrimaryDoNotCreateWrapper() {
+    contextRunner
+        .withUserConfiguration(MultipleLangChainChatModelsConfiguration.class)
+        .run(
+            context -> {
+              assertThat(context).doesNotHaveBean(PrismChatModel.class);
+              assertThat(context.getBeansOfType(ChatModel.class)).hasSize(2);
+            });
+  }
+
+  @Test
+  void filteredLangChainClassesSkipLangChainAutoConfiguration() {
+    contextRunner
+        .withClassLoader(
+            new FilteredClassLoader("dev.langchain4j", "io.github.catalin87.prism.langchain4j"))
+        .run(
+            context -> {
+              assertThat(context).doesNotHaveBean("prismChatModel");
+              assertThat(context).doesNotHaveBean("prismStreamingChatModel");
+            });
+  }
+
+  @Test
+  void runtimeMetricsAlsoBackLangChainMetricsSink() {
+    contextRunner
+        .withUserConfiguration(LangChainChatModelConfiguration.class)
+        .run(
+            context -> {
+              assertThat(context.getBean(PrismRuntimeMetrics.class))
+                  .isSameAs(
+                      context.getBean(
+                          io.github.catalin87.prism.langchain4j.PrismMetricsSink.class));
+            });
+  }
+
   @SuppressWarnings("unchecked")
   private static List<PrismRulePack> getRulePacks(
       org.springframework.context.ApplicationContext context) {
@@ -277,6 +345,52 @@ class SpringPrismAutoConfigurationTest {
               return List.of();
             }
           });
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class LangChainChatModelConfiguration {
+
+    @Bean("delegateChatModel")
+    ChatModel delegateChatModel() {
+      return new EchoChatModel();
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class LangChainStreamingChatModelConfiguration {
+
+    @Bean("delegateStreamingChatModel")
+    StreamingChatModel delegateStreamingChatModel() {
+      return new NoOpStreamingChatModel();
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class MultipleLangChainChatModelsConfiguration {
+
+    @Bean
+    ChatModel firstChatModel() {
+      return new EchoChatModel();
+    }
+
+    @Bean
+    ChatModel secondChatModel() {
+      return new EchoChatModel();
+    }
+  }
+
+  static class EchoChatModel implements ChatModel {
+    @Override
+    public ChatResponse chat(ChatRequest chatRequest) {
+      return ChatResponse.builder().aiMessage(AiMessage.from("ok")).build();
+    }
+  }
+
+  static class NoOpStreamingChatModel implements StreamingChatModel {
+    @Override
+    public void chat(ChatRequest chatRequest, StreamingChatResponseHandler handler) {
+      handler.onCompleteResponse(ChatResponse.builder().aiMessage(AiMessage.from("ok")).build());
     }
   }
 }

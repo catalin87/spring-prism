@@ -33,8 +33,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /** Auto-configuration entry point for Spring Prism. */
@@ -144,5 +147,50 @@ public class SpringPrismAutoConfiguration {
 
   private static byte[] secretKey(SpringPrismProperties properties) {
     return properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(name = "dev.langchain4j.model.chat.ChatModel")
+  static class LangChain4jConfiguration {
+
+    @Bean
+    @Primary
+    @ConditionalOnMissingBean(io.github.catalin87.prism.langchain4j.PrismChatModel.class)
+    @ConditionalOnSingleCandidate(dev.langchain4j.model.chat.ChatModel.class)
+    io.github.catalin87.prism.langchain4j.PrismChatModel prismChatModel(
+        dev.langchain4j.model.chat.ChatModel delegateChatModel,
+        @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+        PrismVault prismVault,
+        ObservationRegistry observationRegistry,
+        PrismRuntimeMetrics prismRuntimeMetrics,
+        SpringPrismProperties properties) {
+      return new io.github.catalin87.prism.langchain4j.PrismChatModel(
+          delegateChatModel,
+          springPrismRulePacks,
+          prismVault,
+          observationRegistry,
+          prismRuntimeMetrics,
+          properties.isSecurityStrictMode());
+    }
+
+    @Bean
+    @Primary
+    @ConditionalOnMissingBean(io.github.catalin87.prism.langchain4j.PrismStreamingChatModel.class)
+    @ConditionalOnSingleCandidate(dev.langchain4j.model.chat.StreamingChatModel.class)
+    io.github.catalin87.prism.langchain4j.PrismStreamingChatModel prismStreamingChatModel(
+        dev.langchain4j.model.chat.StreamingChatModel delegateStreamingChatModel,
+        @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+        PrismVault prismVault,
+        ObservationRegistry observationRegistry,
+        PrismRuntimeMetrics prismRuntimeMetrics,
+        SpringPrismProperties properties) {
+      return new io.github.catalin87.prism.langchain4j.PrismStreamingChatModel(
+          delegateStreamingChatModel,
+          springPrismRulePacks,
+          prismVault,
+          observationRegistry,
+          prismRuntimeMetrics,
+          properties.isSecurityStrictMode());
+    }
   }
 }
