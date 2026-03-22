@@ -74,29 +74,28 @@ public class DefaultPrismVault implements PrismVault {
   }
 
   @Override
-  public @Nullable String detokenize(@NonNull PrismToken token) {
-    ExpirableValue record = storage.get(token.key());
+  public @Nullable String detokenize(@NonNull String tokenKey) {
+    ExpirableValue record = storage.get(tokenKey);
     if (record == null) {
       return null;
     }
 
     if (Instant.now().getEpochSecond() > record.expiresAt()) {
-      storage.remove(token.key());
+      storage.remove(tokenKey);
       return null;
     }
 
-    // Mathematical integrity verification: Does the submitted HMAC signature perfectly match the
-    // generated token state natively?
+    // Mathematical integrity verification: Does the generated expected key match the one returned?
     PiiCandidate verificationCandidate =
         new PiiCandidate(
             record.originalValue(),
             0,
             record.originalValue().length(),
-            getLabelFromToken(token.key()));
+            getLabelFromToken(tokenKey));
 
     PrismToken expectedIntegrity = tokenGenerator.generate(verificationCandidate, secretKey);
 
-    if (!expectedIntegrity.hmacSignature().equals(token.hmacSignature())) {
+    if (!expectedIntegrity.key().equals(tokenKey)) {
       // Security Event: Cryptographic Context Tampering Detected logically
       return null;
     }
@@ -120,9 +119,12 @@ public class DefaultPrismVault implements PrismVault {
     if (tokenKey == null || !tokenKey.startsWith("<PRISM_") || !tokenKey.endsWith(">")) {
       return "UNKNOWN";
     }
-    String[] parts = tokenKey.substring(1, tokenKey.length() - 1).split("_");
-    if (parts.length >= 3) {
-      return parts[1];
+    String inner = tokenKey.substring(1, tokenKey.length() - 1); // PRISM_LABEL_SUFFIX
+    int firstUnderscore = inner.indexOf('_');
+    int lastUnderscore = inner.lastIndexOf('_');
+
+    if (firstUnderscore != -1 && lastUnderscore != -1 && firstUnderscore < lastUnderscore) {
+      return inner.substring(firstUnderscore + 1, lastUnderscore);
     }
     return "UNKNOWN";
   }

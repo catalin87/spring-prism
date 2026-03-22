@@ -38,7 +38,7 @@ class DefaultPrismVaultTest {
     assertNotNull(token);
     assertTrue(token.key().startsWith("<PRISM_EMAIL_"));
 
-    String restored = vault.detokenize(token);
+    String restored = vault.detokenize(token.key());
     assertEquals("user@corp.local", restored);
   }
 
@@ -47,10 +47,9 @@ class DefaultPrismVaultTest {
     DefaultPrismVault vault = new DefaultPrismVault(generator, secretKey, 3600);
     PrismToken validToken = vault.tokenize("user@corp.local", "EMAIL");
 
-    PrismToken spoofedToken =
-        new PrismToken(validToken.key(), "user@corp.local", "Malicious123Signature");
+    String spoofedKey = validToken.key().substring(0, validToken.key().length() - 2) + "X>";
 
-    String restored = vault.detokenize(spoofedToken);
+    String restored = vault.detokenize(spoofedKey);
     assertNull(restored, "Vault must rigorously reject any forged signature natively.");
   }
 
@@ -60,7 +59,7 @@ class DefaultPrismVaultTest {
     DefaultPrismVault vault = new DefaultPrismVault(generator, secretKey, -1);
     PrismToken token = vault.tokenize("user@corp.local", "EMAIL");
 
-    String restored = vault.detokenize(token);
+    String restored = vault.detokenize(token.key());
     assertNull(
         restored,
         "Vault must permanently block data extraction after immediate TTL execution bounds.");
@@ -69,7 +68,7 @@ class DefaultPrismVaultTest {
   @Test
   void testUnknownLabelFailsSecurely() {
     DefaultPrismVault vault = new DefaultPrismVault(generator, secretKey, 3600);
-    PrismToken badKeyToken = new PrismToken("UNKNOWN_FORMAT_KEY", "user@corp.local", "fake-hash");
+    String badKeyToken = "<PRISM_UNKNOWN_FORMAT_KEY_123>";
     assertNull(vault.detokenize(badKeyToken));
   }
 }
