@@ -53,7 +53,22 @@ final class RulePackRegistrar {
     } else {
       packs.add(filtered(new UniversalRulePack(), properties.getDisabledRules()));
     }
+
+    CustomPropertyRulePack customPropertyRulePack = customPack(properties);
+    if (!customPropertyRulePack.getDetectors().isEmpty()) {
+      packs.add(filtered(customPropertyRulePack, properties.getDisabledRules()));
+    }
     return List.copyOf(packs);
+  }
+
+  private CustomPropertyRulePack customPack(SpringPrismProperties properties) {
+    List<PiiDetector> detectors =
+        properties.getCustomRules().stream()
+            .filter(rule -> rule.getName() != null && !rule.getName().isBlank())
+            .filter(rule -> rule.getPattern() != null && !rule.getPattern().isBlank())
+            .<PiiDetector>map(rule -> new CustomRegexDetector(rule.getName(), rule.getPattern()))
+            .toList();
+    return new CustomPropertyRulePack(detectors);
   }
 
   private PrismRulePack filtered(PrismRulePack delegate, Set<String> disabledRules) {

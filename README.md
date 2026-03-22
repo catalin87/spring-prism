@@ -56,13 +56,15 @@ public class AiConfiguration {
 
     @Bean
     public ChatClient protectedChatClient(
-            ChatClient.Builder builder, 
-            PrismRulePack europeRulePack, 
+            ChatClient.Builder builder,
+            PrismRulePack europeRulePack,
             PrismVault memoryVault) {
-            
+
         // Refract the data transparently into the Vault, and Restore seamlessly on return!
         return builder
-            .defaultAdvisors(new PrismChatClientAdvisor(memoryVault, europeRulePack))
+            .defaultAdvisors(
+                new PrismChatClientAdvisor(
+                    List.of(europeRulePack), memoryVault, ObservationRegistry.NOOP))
             .build();
     }
 }

@@ -21,15 +21,20 @@ import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
+import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /** Auto-configuration entry point for Spring Prism. */
 @AutoConfiguration
@@ -58,7 +63,30 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  @ConditionalOnBean(StringRedisTemplate.class)
+  PrismVault redisPrismVault(
+      TokenGenerator prismTokenGenerator,
+      SpringPrismProperties properties,
+      StringRedisTemplate stringRedisTemplate) {
+    Duration ttl = properties.getTtl().isNegative() ? Duration.ofSeconds(1) : properties.getTtl();
+    byte[] secret = properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+    return new RedisPrismVault(stringRedisTemplate, prismTokenGenerator, secret, ttl);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnMissingClass("org.springframework.data.redis.core.StringRedisTemplate")
   PrismVault prismVault(TokenGenerator prismTokenGenerator, SpringPrismProperties properties) {
+    long ttlSeconds = Math.max(1L, properties.getTtl().toSeconds());
+    byte[] secret = properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+    return new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(StringRedisTemplate.class)
+  PrismVault fallbackPrismVault(
+      TokenGenerator prismTokenGenerator, SpringPrismProperties properties) {
     long ttlSeconds = Math.max(1L, properties.getTtl().toSeconds());
     byte[] secret = properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
     return new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
@@ -72,10 +100,39 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  PrismRuntimeMetrics prismRuntimeMetrics() {
+    return new PrismRuntimeMetrics();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PrismMetricsSink prismMetricsSink(PrismRuntimeMetrics prismRuntimeMetrics) {
+    return prismRuntimeMetrics;
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   PrismChatClientAdvisor prismChatClientAdvisor(
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault,
-      ObservationRegistry observationRegistry) {
-    return new PrismChatClientAdvisor(springPrismRulePacks, prismVault, observationRegistry);
+      ObservationRegistry observationRegistry,
+      PrismMetricsSink prismMetricsSink,
+      SpringPrismProperties properties) {
+    return new PrismChatClientAdvisor(
+        springPrismRulePacks,
+        prismVault,
+        observationRegistry,
+        prismMetricsSink,
+        properties.isSecurityStrictMode());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(MetricsController.class)
+  MetricsController metricsController(
+      PrismRuntimeMetrics prismRuntimeMetrics,
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+      PrismVault prismVault) {
+    return new MetricsController(prismRuntimeMetrics, springPrismRulePacks, prismVault);
   }
 }

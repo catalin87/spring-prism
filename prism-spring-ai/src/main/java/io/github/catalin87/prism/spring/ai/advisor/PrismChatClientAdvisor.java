@@ -63,7 +63,26 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull List<PrismRulePack> rulePacks,
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry) {
-    this(rulePacks, vault, observationRegistry, DEFAULT_ORDER);
+    this(rulePacks, vault, observationRegistry, PrismMetricsSink.NOOP, false, DEFAULT_ORDER);
+  }
+
+  /** Creates a new advisor with the supplied rule packs, vault, metrics sink, and default order. */
+  public PrismChatClientAdvisor(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink) {
+    this(rulePacks, vault, observationRegistry, metricsSink, false, DEFAULT_ORDER);
+  }
+
+  /** Creates a new advisor with the supplied rule packs, vault, metrics sink, and strict mode. */
+  public PrismChatClientAdvisor(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode) {
+    this(rulePacks, vault, observationRegistry, metricsSink, strictMode, DEFAULT_ORDER);
   }
 
   /**
@@ -79,7 +98,22 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry,
       int order) {
-    this.scanner = new PrismTextScanner(rulePacks, vault, observationRegistry);
+    this(rulePacks, vault, observationRegistry, PrismMetricsSink.NOOP, false, order);
+  }
+
+  /**
+   * Creates a new advisor with the supplied rule packs, vault, metrics sink, and explicit advisor
+   * chain order.
+   */
+  public PrismChatClientAdvisor(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode,
+      int order) {
+    this.scanner =
+        new PrismTextScanner(rulePacks, vault, observationRegistry, metricsSink, strictMode);
     this.order = order;
   }
 

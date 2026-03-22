@@ -16,7 +16,10 @@
 package io.github.catalin87.prism.spring.ai.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.catalin87.prism.core.PiiCandidate;
+import io.github.catalin87.prism.core.PiiDetector;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -25,6 +28,7 @@ import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.List;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +45,7 @@ class PrismTextScannerTest {
     TokenGenerator generator = new HmacSha256TokenGenerator();
     vault = new DefaultPrismVault(generator, SECRET, 3600L);
     List<PrismRulePack> packs = List.of(new UniversalRulePack());
-    scanner = new PrismTextScanner(packs, vault, ObservationRegistry.NOOP);
+    scanner = new PrismTextScanner(packs, vault, ObservationRegistry.NOOP, PrismMetricsSink.NOOP);
   }
 
   @Test
@@ -58,6 +62,14 @@ class PrismTextScannerTest {
 
     assertThat(result).doesNotContain("4111111111111111");
     assertThat(result).containsPattern("<PRISM_CREDIT_CARD_[A-Za-z0-9_-]+>");
+  }
+
+  @Test
+  void tokenize_replacesPhoneNumberWithVaultToken() {
+    String result = scanner.tokenize("Call +40 712 345 678 for support.");
+
+    assertThat(result).doesNotContain("+40 712 345 678");
+    assertThat(result).containsPattern("<PRISM_PHONE_NUMBER_[A-Za-z0-9_-]+>");
   }
 
   @Test
@@ -107,5 +119,57 @@ class PrismTextScannerTest {
   @Test
   void detokenize_emptyStringReturnsEmpty() {
     assertThat(scanner.detokenize("")).isEmpty();
+  }
+
+  @Test
+  void tokenize_failOpenReturnsOriginalTextWhenDetectorFails() {
+    PrismTextScanner failOpenScanner =
+        new PrismTextScanner(
+            List.of(new FailingRulePack()),
+            vault,
+            ObservationRegistry.NOOP,
+            PrismMetricsSink.NOOP,
+            false);
+
+    assertThat(failOpenScanner.tokenize("safe input")).isEqualTo("safe input");
+  }
+
+  @Test
+  void tokenize_strictModeThrowsWhenDetectorFails() {
+    PrismTextScanner strictScanner =
+        new PrismTextScanner(
+            List.of(new FailingRulePack()),
+            vault,
+            ObservationRegistry.NOOP,
+            PrismMetricsSink.NOOP,
+            true);
+
+    assertThatThrownBy(() -> strictScanner.tokenize("safe input"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Strict mode blocked Prism processing");
+  }
+
+  private static final class FailingRulePack implements PrismRulePack {
+    @Override
+    public @NonNull List<PiiDetector> getDetectors() {
+      return List.of(new FailingDetector());
+    }
+
+    @Override
+    public @NonNull String getName() {
+      return "FAILING";
+    }
+  }
+
+  private static final class FailingDetector implements PiiDetector {
+    @Override
+    public @NonNull String getEntityType() {
+      return "FAIL";
+    }
+
+    @Override
+    public @NonNull List<PiiCandidate> detect(@NonNull String text) {
+      throw new IllegalStateException("boom");
+    }
   }
 }
