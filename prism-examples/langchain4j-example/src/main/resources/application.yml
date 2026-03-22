@@ -1,0 +1,4 @@
+spring:
+  prism:
+    app-secret: example-langchain4j-secret
+    locales: UNIVERSAL

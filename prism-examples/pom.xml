@@ -7,4 +7,10 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>prism-examples</artifactId>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>spring-ai-example</module>
+        <module>langchain4j-example</module>
+    </modules>
 </project>

@@ -29,6 +29,11 @@ To include Spring Prism in your project, add the following dependency (once publ
 </dependency>
 ```
 
+Then use the runnable examples in `prism-examples/` as the canonical onboarding path:
+
+- `spring-ai-example`
+- `langchain4j-example`
+
 ## How it Works
 
 1. **Scan**: Intercepts the prompt sent to the LLM.
