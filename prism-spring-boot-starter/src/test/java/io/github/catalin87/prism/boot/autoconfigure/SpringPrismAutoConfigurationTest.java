@@ -16,6 +16,7 @@
 package io.github.catalin87.prism.boot.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
@@ -29,6 +30,9 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /** Starter wiring tests for Spring Prism auto-configuration. */
 class SpringPrismAutoConfigurationTest {
@@ -92,6 +96,17 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void redisTemplateSwitchesVaultImplementation() {
+    contextRunner
+        .withUserConfiguration(RedisTemplateConfiguration.class)
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismVault.class);
+              assertThat(context.getBean(PrismVault.class)).isInstanceOf(RedisPrismVault.class);
+            });
+  }
+
+  @Test
   void customRulesProduceCustomRulePack() {
     contextRunner
         .withPropertyValues(
@@ -131,5 +146,14 @@ class SpringPrismAutoConfigurationTest {
   private static List<PrismRulePack> getRulePacks(
       org.springframework.context.ApplicationContext context) {
     return (List<PrismRulePack>) context.getBean("springPrismRulePacks");
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class RedisTemplateConfiguration {
+
+    @Bean
+    StringRedisTemplate stringRedisTemplate() {
+      return mock(StringRedisTemplate.class);
+    }
   }
 }
