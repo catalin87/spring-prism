@@ -1,6 +1,7 @@
 # 🌈 Spring Prism
 
 > **The Reversible Privacy Firewall for Generative AI in the Java Ecosystem.**
+> [📖 Read the Documentation](https://catalin87.github.io/SpringPrism/)
 
 Spring Prism is a rigorous, zero-dependency data privacy framework designed specifically for integration with **Spring AI** and **LangChain4j**. It seamlessly sits between your robust backend infrastructure and untrusted Large Language Model providers (OpenAI, Anthropic, Mistral), ensuring sensitive data mathematically *cannot* escape your enterprise boundaries.
 
