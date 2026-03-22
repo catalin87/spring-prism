@@ -31,6 +31,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -112,12 +113,23 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  @ConditionalOnClass(MetricsController.class)
+  @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
+  @ConditionalOnMissingClass("org.springframework.boot.actuate.endpoint.annotation.Endpoint")
   MetricsController metricsController(
       PrismRuntimeMetrics prismRuntimeMetrics,
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault) {
     return new MetricsController(prismRuntimeMetrics, springPrismRulePacks, prismVault);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
+  PrismActuatorEndpoint prismActuatorEndpoint(
+      PrismRuntimeMetrics prismRuntimeMetrics,
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+      PrismVault prismVault) {
+    return new PrismActuatorEndpoint(prismRuntimeMetrics, springPrismRulePacks, prismVault);
   }
 
   private static byte[] secretKey(SpringPrismProperties properties) {

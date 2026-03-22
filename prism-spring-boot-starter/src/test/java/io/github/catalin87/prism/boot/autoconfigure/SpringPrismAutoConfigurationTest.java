@@ -62,7 +62,8 @@ class SpringPrismAutoConfigurationTest {
           assertThat(context).hasSingleBean(ObservationRegistry.class);
           assertThat(context).hasSingleBean(PrismRuntimeMetrics.class);
           assertThat(context).hasSingleBean(PrismMetricsSink.class);
-          assertThat(context).hasSingleBean(MetricsController.class);
+          assertThat(context).hasSingleBean(PrismActuatorEndpoint.class);
+          assertThat(context).doesNotHaveBean(MetricsController.class);
 
           List<PrismRulePack> rulePacks = getRulePacks(context);
           assertThat(rulePacks).hasSize(1);
@@ -78,6 +79,7 @@ class SpringPrismAutoConfigurationTest {
             context -> {
               assertThat(context).doesNotHaveBean(PrismVault.class);
               assertThat(context).doesNotHaveBean(PrismChatClientAdvisor.class);
+              assertThat(context).doesNotHaveBean(PrismActuatorEndpoint.class);
               assertThat(context).doesNotHaveBean(MetricsController.class);
             });
   }
@@ -169,20 +171,37 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
-  void metricsControllerExposesRuntimeSnapshot() {
+  void actuatorEndpointExposesRuntimeSnapshot() {
     contextRunner.run(
         context -> {
           PrismRuntimeMetrics runtimeMetrics = context.getBean(PrismRuntimeMetrics.class);
           runtimeMetrics.onScanDuration("spring-ai", 15L);
           runtimeMetrics.onVaultTokenizeDuration("spring-ai", 30L);
-          MetricsController controller = context.getBean(MetricsController.class);
-          MetricsController.MetricsSnapshot snapshot = controller.metrics();
+          PrismActuatorEndpoint endpoint = context.getBean(PrismActuatorEndpoint.class);
+          PrismMetricsSnapshot snapshot = endpoint.metrics();
 
           assertThat(snapshot.activeRulePacks()).contains("UNIVERSAL");
           assertThat(snapshot.vaultType()).isNotBlank();
           assertThat(snapshot.durationMetrics())
               .containsKeys("spring-ai:scan", "spring-ai:vault-tokenize");
         });
+  }
+
+  @Test
+  void fallbackControllerLoadsWithoutActuatorOnClasspath() {
+    contextRunner
+        .withClassLoader(new FilteredClassLoader("org.springframework.boot.actuate.endpoint"))
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(MetricsController.class);
+              assertThat(context).doesNotHaveBean(PrismActuatorEndpoint.class);
+
+              PrismRuntimeMetrics runtimeMetrics = context.getBean(PrismRuntimeMetrics.class);
+              runtimeMetrics.onScanDuration("spring-ai", 15L);
+              PrismMetricsSnapshot snapshot = context.getBean(MetricsController.class).metrics();
+
+              assertThat(snapshot.durationMetrics()).containsKey("spring-ai:scan");
+            });
   }
 
   @Test

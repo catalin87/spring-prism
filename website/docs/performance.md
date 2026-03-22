@@ -13,8 +13,8 @@ restoration, especially when a distributed Redis vault is enabled.
 
 ## Runtime Timing Metrics
 
-The starter metrics endpoint at `/actuator/prism` now includes `durationMetrics` entries keyed by
-integration and operation:
+The starter metrics snapshot now includes `durationMetrics` entries keyed by integration and
+operation:
 
 - `spring-ai:scan`
 - `spring-ai:vault-tokenize`
@@ -28,6 +28,9 @@ Each entry reports:
 - `samples`
 - `totalNanos`
 - `averageNanos`
+
+When Spring Boot Actuator is present, the runtime snapshot is exposed from `/actuator/prism`.
+Without Actuator, the starter exposes the same payload from `/prism/metrics`.
 
 ## Benchmarks
 
