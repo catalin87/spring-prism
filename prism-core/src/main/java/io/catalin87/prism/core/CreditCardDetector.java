@@ -30,6 +30,11 @@ public class CreditCardDetector implements PiiDetector {
   private static final Pattern CC_PATTERN = Pattern.compile("\\b(?:\\d[ -]*?){13,16}\\b");
 
   @Override
+  public @NonNull String getEntityType() {
+    return "CREDIT_CARD";
+  }
+
+  @Override
   public @NonNull List<PiiCandidate> detect(@NonNull String input) {
     if (input.isEmpty()) {
       return List.of();
