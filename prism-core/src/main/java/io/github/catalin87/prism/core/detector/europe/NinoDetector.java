@@ -41,8 +41,13 @@ public class NinoDetector implements PiiDetector {
   }
 
   @Override
+  public boolean mayMatch(@NonNull String input) {
+    return PiiDetector.containsDigit(input);
+  }
+
+  @Override
   public @NonNull List<PiiCandidate> detect(@NonNull String input) {
-    if (input.isEmpty()) {
+    if (!mayMatch(input)) {
       return List.of();
     }
 

@@ -172,11 +172,16 @@ class SpringPrismAutoConfigurationTest {
   void metricsControllerExposesRuntimeSnapshot() {
     contextRunner.run(
         context -> {
+          PrismRuntimeMetrics runtimeMetrics = context.getBean(PrismRuntimeMetrics.class);
+          runtimeMetrics.onScanDuration("spring-ai", 15L);
+          runtimeMetrics.onVaultTokenizeDuration("spring-ai", 30L);
           MetricsController controller = context.getBean(MetricsController.class);
           MetricsController.MetricsSnapshot snapshot = controller.metrics();
 
           assertThat(snapshot.activeRulePacks()).contains("UNIVERSAL");
           assertThat(snapshot.vaultType()).isNotBlank();
+          assertThat(snapshot.durationMetrics())
+              .containsKeys("spring-ai:scan", "spring-ai:vault-tokenize");
         });
   }
 

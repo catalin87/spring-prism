@@ -43,6 +43,7 @@
         <module>prism-spring-ai</module>
         <module>prism-langchain4j</module>
         <module>prism-spring-boot-starter</module>
+        <module>prism-benchmarks</module>
         <module>prism-dashboard</module>
         <module>prism-examples</module>
     </modules>
@@ -56,6 +57,7 @@
         <spring-boot.version>3.4.13</spring-boot.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
         <langchain4j.version>1.0.1</langchain4j.version>
+        <jmh.version>1.37</jmh.version>
         <tomcat.version>10.1.52</tomcat.version>
         <log4j2.version>2.25.3</log4j2.version>
         <jspecify.version>1.0.0</jspecify.version>

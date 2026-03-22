@@ -54,6 +54,7 @@ public class MetricsController {
         prismRuntimeMetrics.detokenizedCount(),
         prismRuntimeMetrics.detectionErrorCount(),
         prismRuntimeMetrics.detectionCounts(),
+        prismRuntimeMetrics.durationMetrics(),
         activeRulePacks,
         vaultType);
   }
@@ -64,6 +65,7 @@ public class MetricsController {
       long detokenizedCount,
       long detectionErrorCount,
       Map<String, Long> detectionCounts,
+      Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics,
       List<String> activeRulePacks,
       String vaultType) {}
 }

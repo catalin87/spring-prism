@@ -29,6 +29,9 @@ public class PrismRuntimeMetrics
   private final AtomicLong detokenizedCount = new AtomicLong();
   private final AtomicLong detectionErrorCount = new AtomicLong();
   private final ConcurrentHashMap<String, AtomicLong> detectionCounts = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> durationTotalsNanos =
+      new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> durationSamples = new ConcurrentHashMap<>();
 
   @Override
   public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {
@@ -52,6 +55,21 @@ public class PrismRuntimeMetrics
     detokenizedCount.addAndGet(count);
   }
 
+  @Override
+  public void onScanDuration(@NonNull String integration, long nanos) {
+    recordDuration(integration, "scan", nanos);
+  }
+
+  @Override
+  public void onVaultTokenizeDuration(@NonNull String integration, long nanos) {
+    recordDuration(integration, "vault-tokenize", nanos);
+  }
+
+  @Override
+  public void onVaultDetokenizeDuration(@NonNull String integration, long nanos) {
+    recordDuration(integration, "vault-detokenize", nanos);
+  }
+
   public long tokenizedCount() {
     return tokenizedCount.get();
   }
@@ -72,7 +90,33 @@ public class PrismRuntimeMetrics
                 Map.Entry::getKey, e -> e.getValue().get()));
   }
 
+  /**
+   * Returns an immutable snapshot of timing totals and sample counts grouped by integration path.
+   */
+  public Map<String, DurationMetric> durationMetrics() {
+    return durationTotalsNanos.entrySet().stream()
+        .collect(
+            java.util.stream.Collectors.toUnmodifiableMap(
+                Map.Entry::getKey,
+                entry -> {
+                  long totalNanos = entry.getValue().get();
+                  long samples =
+                      durationSamples.getOrDefault(entry.getKey(), new AtomicLong()).get();
+                  long averageNanos = samples == 0 ? 0 : totalNanos / samples;
+                  return new DurationMetric(samples, totalNanos, averageNanos);
+                }));
+  }
+
   private String metricKey(String rulePackName, String entityType) {
     return rulePackName + ":" + entityType;
   }
+
+  private void recordDuration(String integration, String operation, long nanos) {
+    String key = integration + ":" + operation;
+    durationTotalsNanos.computeIfAbsent(key, ignored -> new AtomicLong()).addAndGet(nanos);
+    durationSamples.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
+  }
+
+  /** Immutable timing snapshot for a single Prism runtime operation. */
+  public record DurationMetric(long samples, long totalNanos, long averageNanos) {}
 }
