@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.catalin87.prism</groupId>
+    <groupId>io.github.catalin87.prism</groupId>
     <artifactId>prism-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -175,7 +175,7 @@
             <id>strict-core-compliance</id>
             <activation>
                 <file>
-                    <exists>src/main/java/io/catalin87/prism/core/PiiDetector.java</exists>
+                    <exists>src/main/java/io/github/catalin87/prism/core/PiiDetector.java</exists>
                 </file>
             </activation>
             <build>

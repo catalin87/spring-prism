@@ -13,7 +13,7 @@ Commits missing the `Signed-off-by` trailer will be automatically rejected by th
 ## How to Implement a PrismRulePack
 Spring Prism relies on a localized, zero-dependency plugin architecture for locating PII entities. To contribute a new regional bundle:
 
-1. **Implement `PrismRulePack`**: Create a concrete class in `io.catalin87.prism.core` implementing the interface.
+1. **Implement `PrismRulePack`**: Create a concrete class in `io.github.catalin87.prism.core` implementing the interface.
 2. **Define the Locale**: Implement `getLocale()` to return the regional grouping (e.g., `"EU"`, `"UK"`, `"UNIVERSAL"`).
 3. **Register Detectors**: Implement `getDetectors()` and expose your `List<PiiDetector>` implementations.
 4. **Build the Detectors**: Ensure your `PiiDetector` implementations accurately compute string offsets and return immutable `PiiCandidate` records.
