@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.detector.universal.EmailDetector;
 import io.github.catalin87.prism.core.ruleset.EuropeRulePack;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
@@ -87,6 +88,42 @@ class SpringPrismAutoConfigurationTest {
               SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
               assertThat(properties.isSecurityStrictMode()).isTrue();
               assertThat(properties.getTtl()).isEqualTo(Duration.ofMinutes(45));
+            });
+  }
+
+  @Test
+  void customRulesProduceCustomRulePack() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.custom-rules[0].name=INTERNAL_ID",
+            "spring.prism.custom-rules[0].pattern=ID-\\d{5}")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).hasSize(2);
+              assertThat(rulePacks.get(1).getName()).isEqualTo("CUSTOM");
+              assertThat(rulePacks.get(1).getDetectors())
+                  .extracting(detector -> detector.getEntityType())
+                  .containsExactly("INTERNAL_ID");
+            });
+  }
+
+  @Test
+  void disabledRulesAlsoFilterCustomRules() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.custom-rules[0].name=EMAIL",
+            "spring.prism.custom-rules[0].pattern=ID-\\d{5}",
+            "spring.prism.disabled-rules=EMAIL")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).isNotEmpty();
+              assertThat(rulePacks.stream().flatMap(pack -> pack.getDetectors().stream()))
+                  .extracting(detector -> detector.getEntityType())
+                  .doesNotContain(new EmailDetector().getEntityType());
             });
   }
 
