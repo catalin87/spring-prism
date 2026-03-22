@@ -2,6 +2,12 @@
 
 Spring Prism currently ships a production-ready library baseline for the privacy firewall itself.
 
+The current `main` branch validates this baseline with a full root:
+
+```bash
+mvn clean verify
+```
+
 ## Shipped Today
 
 The following modules are part of the supported library surface:
@@ -35,6 +41,7 @@ The current verification baseline covers:
 - LangChain4j wrapper tests
 - starter auto-configuration tests, including Redis-absent startup safety
 - runnable Spring AI and LangChain4j example applications that boot and prove redaction/restoration
+- a dedicated `prism-benchmarks` JMH module for scan, vault, streaming, and Redis-vault measurements
 
 ## Release Profile
 
@@ -56,3 +63,4 @@ mvn -Prelease -Dgpg.skip=true -DskipTests package
 - `spring.prism.app-secret` must be overridden in every real deployment.
 - Fail-open remains the default behavior; strict mode is opt-in through `spring.prism.security-strict-mode=true`.
 - Redis is the supported distributed vault path for this release boundary.
+- `prism-dashboard` remains intentionally deferred and is not part of the current release-complete claim.

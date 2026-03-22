@@ -41,10 +41,11 @@ sequenceDiagram
 
 ## ⚡ Core Properties
 
-*   **🌱 Java 21 Native:** Architected exclusively for high-throughput Virtual Threads (Project Loom) exploiting strictly non-blocking cryptography.
-*   **🛡️ Zero-Dependency Core:** `prism-core` contains absolute zero 3rd-party dependencies. No massive vulnerability exposure. Just mathematically pure Java.
-*   **🇪🇺 EU-First Detectors:** Ships out of the box with `PrismRulePacks` handling European standards natively: **IBAN** (Pan-EU), **PESEL** (PL), **CNP** (RO), **EU VAT**, alongside universal concepts.
-*   **🌊 Streaming Resilient:** The `StreamingBuffer` mathematically unifies split LLM chunk payloads, guaranteeing perfectly accurate Restoration even if a token arrives fragmented across multiple server-sent events.
+*   **🌱 Java 21 Baseline:** Built and validated on Java 21 with Spring Boot 3.4.x.
+*   **🛡️ Zero Spring or AI Dependencies in Core:** `prism-core` stays decoupled from Spring, Spring AI, and LangChain4j so the detection and vault engine remains portable.
+*   **🇪🇺 EU-First Detectors:** Ships with universal detectors plus European standards such as **IBAN** (Pan-EU), **PESEL** (PL), **CNP** (RO), and **EU VAT**.
+*   **🌊 Streaming Resilient:** `StreamingBuffer` restores tokens correctly even when model responses split them across multiple chunks.
+*   **📏 Measured Performance:** The repo now includes a `prism-benchmarks` JMH module plus runtime timing metrics for scan, tokenize, and detokenize paths.
 
 ---
 
@@ -117,6 +118,18 @@ Deferred surfaces:
 See `website/docs/release-readiness.md` for the current verification baseline, release-profile
 expectations, and the shipped-vs-deferred support boundary.
 
+The current `main` branch also passes:
+
+```bash
+mvn clean verify
+```
+
+and the performance benchmark module can be packaged with:
+
+```bash
+mvn -pl prism-benchmarks -am package -DskipTests
+```
+
 ---
 
 ## 🔒 Security Posture & Architecture Guarantee
@@ -136,9 +149,10 @@ Spring Prism executes strict isolation through a robust Maven multi-module archi
 | `prism-core` | The zero-dependency cryptographic Vault, generic `PiiDetector` interfaces, and string boundaries. |
 | `prism-spring-ai` | Spring AI advisor integration for synchronous and streaming chat interception. |
 | `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` decorators for tokenization and restoration. |
-| `prism-spring-boot-starter` | Instantly initializes Spring AI auto-configurations and exposes cleanly configurable `application.yml` localization boundaries. |
+| `prism-spring-boot-starter` | Boot auto-configuration, properties, metrics, custom rules, and Redis-backed vault selection. |
+| `prism-benchmarks` | JMH benchmarks for detector scanning, vault operations, streaming restoration, and Redis-vault overhead. |
 | `prism-examples` | Runnable Spring Boot examples for the Spring AI and LangChain4j integration paths. |
-| `prism-dashboard` | An optional, self-hosted visual interface rendering Micrometer usage statistics on exactly what PII parameters were prevented from escaping to the LLM. |
+| `prism-dashboard` | Deferred optional dashboard module for future observability UX work. |
 
 ## 📜 Governance & Licensing
 
