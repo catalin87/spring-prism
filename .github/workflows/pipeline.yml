@@ -10,10 +10,6 @@ on:
       - main
       - 'feature/*'
 
-defaults:
-  run:
-    working-directory: spring-prism
-
 jobs:
   dco-verification:
     name: "Developer Certificate of Origin Check"
