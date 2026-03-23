@@ -15,6 +15,12 @@
             <url>https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12</url>
             <distribution>repo</distribution>
         </license>
+        <license>
+            <name>Commercial License</name>
+            <url>https://github.com/catalin87/spring-prism/blob/main/LICENSE.md</url>
+            <distribution>manual</distribution>
+            <comments>Spring Prism is dual-licensed. Commercial licensing terms are documented in LICENSE.md.</comments>
+        </license>
     </licenses>
 
     <organization>
@@ -26,6 +32,7 @@
         <developer>
             <id>catalin87</id>
             <name>Catalin Dordea</name>
+            <email>catalin87@gmail.com</email>
             <url>https://github.com/catalin87</url>
         </developer>
     </developers>

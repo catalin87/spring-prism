@@ -15,6 +15,8 @@ You may use this software by choosing **one** of the two licensing options descr
 ### Option A: Open-Source Community License
 **License:** [European Union Public Licence (EUPL) version 1.2](https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
 
+Artifacts published to Maven Central are publicly distributed under the open-source EUPL 1.2 terms, while the repository and project itself remain available under the dual-licensing model documented in this file.
+
 This option is intended for developers and open-source projects. Please be aware of the following:
 * **Strong Reciprocity (Copyleft):** Any derivative works must be distributed under the same terms.
 * **Network Distribution (Closing the "SaaS Loophole"):** Under Article 1 of the EUPL 1.2, providing access to the software’s essential functionalities over a network (Software-as-a-Service model) constitutes a "Distribution" or "Communication to the Public." This triggers the obligation to make the source code of any modifications available to users.
@@ -346,4 +348,3 @@ Code from exclusive appropriation.
 
 All other changes or additions to this Appendix require the production of a new
 EUPL version.
-
