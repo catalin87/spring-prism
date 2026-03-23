@@ -35,7 +35,7 @@ Use either:
 - the **Open Demo Data** button in the UI
 - or `/prism/?demo=1`
 
-Demo mode loads the packaged [`demo-metrics.json`](/mnt/d/OpenSource/SpringPrism/spring-prism/prism-dashboard/src/main/resources/META-INF/resources/prism/demo-metrics.json) fixture and keeps all values masked.
+Demo mode loads the packaged `demo-metrics.json` fixture and keeps all values masked.
 
 ## Privacy boundary
 
