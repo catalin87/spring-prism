@@ -394,7 +394,8 @@ function renderIntegrationSummary(metrics) {
   }
 
   integrations.forEach(integration => {
-    const title = integration.name === "spring-ai" ? "Spring AI" : "LangChain4j";
+    const title = integrationLabel(integration.name);
+    const scanSamples = integration.scan?.samples ?? 0;
     const card = document.createElement("article");
     card.className = "integration-card";
     card.innerHTML = `
@@ -402,6 +403,7 @@ function renderIntegrationSummary(metrics) {
       <strong>${formatMilliseconds(integration.scan)}</strong>
       <span>Scan avg</span>
       <dl class="mini-metrics">
+        <div><dt>Samples</dt><dd>${scanSamples}</dd></div>
         <div><dt>Tokenize</dt><dd>${formatMilliseconds(integration.tokenize)}</dd></div>
         <div><dt>Detokenize</dt><dd>${formatMilliseconds(integration.detokenize)}</dd></div>
       </dl>
@@ -418,8 +420,7 @@ function renderAlerts(metrics) {
   const container = document.getElementById("alert-cards");
   container.replaceChildren();
 
-  const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
-      ?? metrics.durationMetrics?.["langchain4j:scan"];
+  const scanMetric = highestScanMetric(metrics.integrationMetrics ?? []);
   const scanMs = averageMilliseconds(scanMetric);
   const tokenGap = metrics.tokenBacklog ?? Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0));
   const errorCount = metrics.detectionErrorCount ?? 0;
@@ -468,6 +469,28 @@ function renderAlerts(metrics) {
     `;
     container.append(card);
   });
+}
+
+function highestScanMetric(integrationMetrics) {
+  return integrationMetrics
+      .map(integration => integration.scan)
+      .filter(metric => metric && (metric.samples ?? 0) > 0)
+      .sort((left, right) => averageMilliseconds(right) - averageMilliseconds(left))[0];
+}
+
+function integrationLabel(name) {
+  switch (name) {
+    case "spring-ai":
+      return "Spring AI";
+    case "langchain4j":
+      return "LangChain4j";
+    case "mcp-stdio":
+      return "MCP Stdio";
+    case "mcp-streamable-http":
+      return "MCP Streamable HTTP";
+    default:
+      return name;
+  }
 }
 
 function renderEntityDrilldowns(metrics) {
