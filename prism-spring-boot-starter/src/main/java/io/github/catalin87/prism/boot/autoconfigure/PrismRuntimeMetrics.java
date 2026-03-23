@@ -26,7 +26,8 @@ import org.jspecify.annotations.NonNull;
 /** In-memory runtime metrics collector for dashboard and actuator-style reads. */
 public class PrismRuntimeMetrics
     implements io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink,
-        io.github.catalin87.prism.langchain4j.PrismMetricsSink {
+        io.github.catalin87.prism.langchain4j.PrismMetricsSink,
+        io.github.catalin87.prism.mcp.PrismMcpMetricsSink {
 
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();

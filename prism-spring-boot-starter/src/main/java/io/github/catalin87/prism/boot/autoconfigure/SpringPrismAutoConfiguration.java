@@ -20,10 +20,15 @@ import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
+import io.github.catalin87.prism.mcp.PrismMcpClient;
+import io.github.catalin87.prism.mcp.PrismMcpClientBuilder;
+import io.github.catalin87.prism.mcp.PrismMcpMetricsSink;
+import io.github.catalin87.prism.mcp.PrismMcpTransport;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -93,6 +98,12 @@ public class SpringPrismAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   PrismMetricsSink prismMetricsSink(PrismRuntimeMetrics prismRuntimeMetrics) {
+    return prismRuntimeMetrics;
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PrismMcpMetricsSink prismMcpMetricsSink(PrismRuntimeMetrics prismRuntimeMetrics) {
     return prismRuntimeMetrics;
   }
 
@@ -182,6 +193,49 @@ public class SpringPrismAutoConfiguration {
           observationRegistry,
           prismRuntimeMetrics,
           properties.isSecurityStrictMode());
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(PrismMcpClient.class)
+  @ConditionalOnProperty(prefix = "spring.prism.mcp", name = "enabled", havingValue = "true")
+  static class McpConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    PrismMcpClient prismMcpClient(
+        @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+        PrismVault prismVault,
+        ObservationRegistry observationRegistry,
+        PrismMcpMetricsSink prismMcpMetricsSink,
+        SpringPrismProperties properties) {
+      SpringPrismProperties.Mcp mcp = properties.getMcp();
+      PrismMcpTransport transport = PrismMcpTransport.fromProperty(mcp.getTransport());
+      PrismMcpClientBuilder builder =
+          PrismMcpClientBuilder.builder()
+              .withTransport(transport)
+              .withRulePacks(springPrismRulePacks)
+              .withVault(prismVault)
+              .withObservationRegistry(observationRegistry)
+              .withMetricsSink(prismMcpMetricsSink)
+              .withStrictMode(mcp.resolveSecurityStrictMode(properties.isSecurityStrictMode()));
+      return switch (transport) {
+        case STDIO ->
+            builder
+                .withCommand(mcp.getStdio().getCommand())
+                .withArgs(mcp.getStdio().getArgs())
+                .withEnv(mcp.getStdio().getEnv())
+                .withWorkingDirectory(resolveWorkingDirectory(mcp.getStdio().getWorkingDirectory()))
+                .build();
+        case STREAMABLE_HTTP -> builder.withBaseUrl(mcp.getHttp().getBaseUrl()).build();
+      };
+    }
+
+    private static Path resolveWorkingDirectory(String workingDirectory) {
+      if (workingDirectory == null || workingDirectory.isBlank()) {
+        return Path.of(".");
+      }
+      return Path.of(workingDirectory);
     }
   }
 

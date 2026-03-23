@@ -32,6 +32,10 @@ import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
 import io.github.catalin87.prism.langchain4j.PrismChatModel;
 import io.github.catalin87.prism.langchain4j.PrismStreamingChatModel;
+import io.github.catalin87.prism.mcp.PrismHttpMcpClient;
+import io.github.catalin87.prism.mcp.PrismMcpClient;
+import io.github.catalin87.prism.mcp.PrismMcpMetricsSink;
+import io.github.catalin87.prism.mcp.PrismStdioMcpClient;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
@@ -62,8 +66,10 @@ class SpringPrismAutoConfigurationTest {
           assertThat(context).hasSingleBean(ObservationRegistry.class);
           assertThat(context).hasSingleBean(PrismRuntimeMetrics.class);
           assertThat(context).hasSingleBean(PrismMetricsSink.class);
+          assertThat(context).hasSingleBean(PrismMcpMetricsSink.class);
           assertThat(context).hasSingleBean(PrismActuatorEndpoint.class);
           assertThat(context).doesNotHaveBean(MetricsController.class);
+          assertThat(context).doesNotHaveBean(PrismMcpClient.class);
 
           List<PrismRulePack> rulePacks = getRulePacks(context);
           assertThat(rulePacks).hasSize(1);
@@ -81,6 +87,7 @@ class SpringPrismAutoConfigurationTest {
               assertThat(context).doesNotHaveBean(PrismChatClientAdvisor.class);
               assertThat(context).doesNotHaveBean(PrismActuatorEndpoint.class);
               assertThat(context).doesNotHaveBean(MetricsController.class);
+              assertThat(context).doesNotHaveBean(PrismMcpClient.class);
             });
   }
 
@@ -260,6 +267,61 @@ class SpringPrismAutoConfigurationTest {
               assertThat(rulePacks.get(1).getDetectors())
                   .extracting(detector -> detector.getEntityType())
                   .containsExactly("INTERNAL_ID");
+            });
+  }
+
+  @Test
+  void mcpDefaultsToDisabledUntilExplicitlyEnabled() {
+    contextRunner.run(context -> assertThat(context).doesNotHaveBean(PrismMcpClient.class));
+  }
+
+  @Test
+  void mcpHttpConfigurationCreatesHttpClient() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.mcp.enabled=true",
+            "spring.prism.mcp.transport=streamable-http",
+            "spring.prism.mcp.http.base-url=http://localhost:8181/mcp")
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismMcpClient.class);
+              assertThat(context.getBean(PrismMcpClient.class))
+                  .isInstanceOf(PrismHttpMcpClient.class);
+            });
+  }
+
+  @Test
+  void mcpStdioConfigurationCreatesStdioClient() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.mcp.enabled=true",
+            "spring.prism.mcp.transport=stdio",
+            "spring.prism.mcp.stdio.command=echo")
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismMcpClient.class);
+              assertThat(context.getBean(PrismMcpClient.class))
+                  .isInstanceOf(PrismStdioMcpClient.class);
+            });
+  }
+
+  @Test
+  void mcpOverridesStrictModeWhenConfigured() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.security-strict-mode=false",
+            "spring.prism.mcp.enabled=true",
+            "spring.prism.mcp.security-strict-mode=true",
+            "spring.prism.mcp.transport=streamable-http",
+            "spring.prism.mcp.http.base-url=http://localhost:8181/mcp")
+        .run(
+            context -> {
+              SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
+              assertThat(
+                      properties
+                          .getMcp()
+                          .resolveSecurityStrictMode(properties.isSecurityStrictMode()))
+                  .isTrue();
             });
   }
 

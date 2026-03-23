@@ -71,7 +71,7 @@ final class PrismMetricsSnapshotFactory {
     Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics =
         prismRuntimeMetrics.durationMetrics();
     List<IntegrationMetric> integrationMetrics =
-        Stream.of("spring-ai", "langchain4j")
+        Stream.of("spring-ai", "langchain4j", "mcp-stdio", "mcp-streamable-http")
             .map(
                 integration ->
                     new IntegrationMetric(
