@@ -74,6 +74,18 @@ Its integration test uses a fake local stdio MCP server to prove:
 - the application receives restored PII on the way back in
 - the embedded dashboard and `/actuator/prism` surface still work with MCP traffic in the mix
 
+## Tooling Guides
+
+Spring Prism now ships dedicated setup guides for real developer tooling and deployment shapes:
+
+- [MCP Tooling Guides](./mcp-tooling)
+- [VS Code MCP Setup](./mcp-vscode)
+- [JetBrains MCP Setup](./mcp-jetbrains)
+- [GitHub Copilot MCP Setup](./mcp-copilot)
+- [Docker and Hosted MCP Setup](./mcp-docker-hosted)
+
+These guides are intentionally practical and focus on repeatable setup, verification, and troubleshooting rather than protocol theory.
+
 ## Current Boundary
 
 This milestone intentionally covers the **MCP client role** first.

@@ -33,6 +33,15 @@ Then use the runnable examples in `prism-examples/` as the canonical onboarding 
 
 - `spring-ai-example`
 - `langchain4j-example`
+- `mcp-example`
+
+If you are adopting MCP in editor and agent tooling, start with the dedicated guides:
+
+- [MCP Tooling Guides](./mcp-tooling)
+- [VS Code MCP Setup](./mcp-vscode)
+- [JetBrains MCP Setup](./mcp-jetbrains)
+- [GitHub Copilot MCP Setup](./mcp-copilot)
+- [Docker and Hosted MCP Setup](./mcp-docker-hosted)
 
 ## How it Works
 

@@ -43,6 +43,7 @@ The current verification baseline covers:
 - MCP stdio + Streamable HTTP transport tests with structured payload sanitization/restoration
 - starter auto-configuration tests, including Redis-absent startup safety
 - runnable Spring AI, LangChain4j, and MCP example applications that boot and prove redaction/restoration
+- MCP deployment and tooling guides for VS Code, JetBrains IDEs, GitHub Copilot workflows, and Docker/hosted HTTP usage
 - a dedicated `prism-benchmarks` JMH module for scan, vault, streaming, and Redis-vault measurements
 
 ## Release Profile
