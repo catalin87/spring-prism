@@ -1,28 +1,61 @@
 # Spring Prism Licensing
 
-Spring Prism is distributed under a **Dual Licensing** model to meet the needs of both the open-source community and enterprise environments.
+Copyright (c) 2024-2026 [Your Name / Legal Entity]. All rights reserved.
 
-## 1. Commercial Enterprise License
-
-For enterprise environments, banks, and corporations that cannot use copyleft licenses due to internal compliance, security policies, or legal restrictions, Spring Prism is available under a **Commercial License**.
-
-The Commercial License provides:
-* Exemption from all copyleft restrictions (you do not have to open-source your proprietary code).
-* The right to integrate Spring Prism into closed-source, proprietary products and services.
-* Dedicated SLA, priority bug fixes, and direct support.
-* Access to premium/custom PII Detection Rule Packs (upon request).
-
-To inquire about purchasing a Commercial License, please contact: **catalin87@gmail.com**
+**SPDX-License-Identifier: EUPL-1.2 OR LicenseRef-Commercial**
 
 ---
 
-## 2. Open Source License (EUPL 1.2)
+## 1. Dual Licensing Strategy
 
-For open-source projects, non-profits, students, and organizations that can fully comply with copyleft terms, Spring Prism is completely free to use under the **European Union Public Licence (EUPL) v1.2**.
+Spring Prism is distributed under a **Dual Licensing** model. This approach allows the project to support the open-source community while providing the legal certainty and liability protections required by highly regulated B2B Enterprise environments (Banking, Healthcare, Insurance).
 
-*Note: If you use this software under the EUPL 1.2, any derivative works or services provided over a network (SaaS) that integrate this software must also be distributed under a compatible open-source license.*
+You may use this software by choosing **one** of the two licensing options described below:
 
-The full text of the EUPL 1.2 is provided below.
+### Option A: Open-Source Community License
+**License:** [European Union Public Licence (EUPL) version 1.2](https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12)
+
+This option is intended for developers and open-source projects. Please be aware of the following:
+* **Strong Reciprocity (Copyleft):** Any derivative works must be distributed under the same terms.
+* **Network Distribution (Closing the "SaaS Loophole"):** Under Article 1 of the EUPL 1.2, providing access to the software’s essential functionalities over a network (Software-as-a-Service model) constitutes a "Distribution" or "Communication to the Public." This triggers the obligation to make the source code of any modifications available to users.
+
+### Option B: Commercial Enterprise License
+**License:** Closed-Source B2B Agreement
+
+This option is **mandatory** for corporations and institutions that wish to:
+* Integrate Spring Prism into proprietary, closed-source architectures.
+* Use the software without the copyleft obligations or the requirement to disclose internal source code.
+* Benefit from dedicated Service Level Agreements (SLA), indemnification against patent infringement, and liability caps.
+* Ensure specific compliance with GDPR and the EU AI Act through a formal provider-client relationship.
+
+**To obtain a Commercial License, please contact:** `[Your Contact Email / Website Link]`
+
+---
+
+## 2. Contributor License Agreement (CLA)
+
+By submitting a contribution (Pull Request) to this repository, you ("Contributor") agree to the terms of our **Asymmetric CLA**:
+
+1.  **Ownership:** You retain the copyright to your original contribution.
+2.  **Grant of License:** You grant the Project Owner a perpetual, worldwide, non-exclusive, irrevocable, and royalty-free license to use, modify, and **sublicense** your contribution.
+3.  **Multi-Licensing Rights:** You expressly agree that the Project Owner has the right to distribute your contribution under both the open-source EUPL 1.2 and proprietary commercial licenses.
+4.  **Jurisdiction:** Any legal proceedings initiated by the Contributor shall be subject to the exclusive jurisdiction of the courts in **[City/County, Romania]**.
+
+*Your submission of a Pull Request constitutes electronic acceptance of these terms under EU Regulation 910/2014 (eIDAS).*
+
+---
+
+## 3. Disclaimer and Limitation of Liability
+
+**UNLESS EXPRESSLY STIPULATED IN A SEPARATE COMMERCIAL AGREEMENT, THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.**
+
+* **No Compliance Guarantee:** While designed for PII protection (HMAC-SHA256), the Project Owner does not guarantee that the use of this software automatically ensures compliance with GDPR or the EU AI Act. The user (Deployer) remains the sole Data Controller.
+* **Third-Party Models:** The Project Owner is not responsible for the behavior, accuracy, or data handling policies of external Large Language Models (LLMs) connected to Spring Prism.
+* **Liability Cap:** To the maximum extent permitted by law, the Project Owner shall not be liable for any indirect, incidental, or consequential damages resulting from the use of the community version of this software.
+
+---
+
+**Legal Notice:** Unauthorized commercial use of this software without a valid Commercial License constitutes a violation of copyright law and defaults the user to the strict copyleft obligations of the EUPL v1.2.
 
 ========================================================================
 
