@@ -23,7 +23,10 @@ If Actuator is not on the classpath, it falls back to:
 - Runtime pulse and tracked timer count
 - Rule-pack activity bars
 - Trend cards for leading pack, total detections, slowest timer, and audit retention
+- Integration drill-down cards for Spring AI and LangChain4j timing paths
 - Masked recent-activity audit feed with action/source/limit filters
+- Browser-side history charts for detections, errors, and scan latency
+- Polling controls plus snapshot export
 - Refraction-flow explainer
 
 ## Demo mode
@@ -42,3 +45,4 @@ Demo mode loads the packaged `demo-metrics.json` fixture and keeps all values ma
 - The dashboard only renders aggregate counters, timing summaries, and masked audit events.
 - It does not expose raw PII.
 - Audit history is intentionally bounded in memory and currently retains the most recent 12 masked events.
+- Browser history and exported snapshots only contain the same masked dashboard payload already visible in the UI.
