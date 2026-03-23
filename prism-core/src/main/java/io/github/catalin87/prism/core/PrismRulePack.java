@@ -29,7 +29,7 @@ public interface PrismRulePack {
    *
    * @return A list of actively registered detectors provided by this rule pack.
    */
-  @NonNull List<PiiDetector> getDetectors();
+  @NonNull List<@NonNull PiiDetector> getDetectors();
 
   /**
    * Evaluates the standard geographical or contextual identifier of this matrix node.

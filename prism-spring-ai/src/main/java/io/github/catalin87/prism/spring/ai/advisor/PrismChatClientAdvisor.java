@@ -20,6 +20,8 @@ import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.vault.StreamingBuffer;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NonNull;
 import org.springframework.ai.chat.client.advisor.api.AdvisedRequest;
@@ -122,10 +124,11 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
   // -----------------------------------------------------------------------
 
   @Override
-  public AdvisedResponse aroundCall(AdvisedRequest advisedRequest, CallAroundAdvisorChain chain) {
+  public @NonNull AdvisedResponse aroundCall(
+      @NonNull AdvisedRequest advisedRequest, @NonNull CallAroundAdvisorChain chain) {
 
     AdvisedRequest sanitized = tokenizeRequest(advisedRequest);
-    AdvisedResponse response = chain.nextAroundCall(sanitized);
+    AdvisedResponse response = Objects.requireNonNull(chain.nextAroundCall(sanitized));
     return detokenizeResponse(response);
   }
 
@@ -134,8 +137,8 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
   // -----------------------------------------------------------------------
 
   @Override
-  public Flux<AdvisedResponse> aroundStream(
-      AdvisedRequest advisedRequest, StreamAroundAdvisorChain chain) {
+  public @NonNull Flux<AdvisedResponse> aroundStream(
+      @NonNull AdvisedRequest advisedRequest, @NonNull StreamAroundAdvisorChain chain) {
 
     AdvisedRequest sanitized = tokenizeRequest(advisedRequest);
     StreamingBuffer buffer = new StreamingBuffer();
@@ -167,8 +170,8 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
   // -----------------------------------------------------------------------
 
   @Override
-  public String getName() {
-    return PrismChatClientAdvisor.class.getSimpleName();
+  public @NonNull String getName() {
+    return Objects.requireNonNull(PrismChatClientAdvisor.class.getSimpleName());
   }
 
   @Override
@@ -181,29 +184,30 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
   // -----------------------------------------------------------------------
 
   /** Scans user and system text fields in the request and replaces PII with vault tokens. */
-  private AdvisedRequest tokenizeRequest(AdvisedRequest original) {
+  private @NonNull AdvisedRequest tokenizeRequest(@NonNull AdvisedRequest original) {
     String sanitizedUserText = scanner.tokenize(original.userText());
     String sanitizedSystemText = scanner.tokenize(original.systemText());
 
-    return AdvisedRequest.from(original)
-        .userText(sanitizedUserText)
-        .systemText(sanitizedSystemText)
-        .build();
+    return Objects.requireNonNull(
+        AdvisedRequest.from(original)
+            .userText(sanitizedUserText)
+            .systemText(sanitizedSystemText)
+            .build());
   }
 
   /** Restores vault tokens found in the synchronous response back to their original values. */
-  private AdvisedResponse detokenizeResponse(AdvisedResponse original) {
+  private @NonNull AdvisedResponse detokenizeResponse(@NonNull AdvisedResponse original) {
     String raw = extractText(original);
     String restored = scanner.detokenize(raw);
     return rebuildWithText(original, restored);
   }
 
   /** Extracts the plain-text content from the first generation in the response, if available. */
-  private static String extractText(AdvisedResponse response) {
-    if (response == null || response.response() == null) {
+  private static @NonNull String extractText(@NonNull AdvisedResponse response) {
+    ChatResponse chatResponse = response.response();
+    if (chatResponse == null) {
       return "";
     }
-    ChatResponse chatResponse = response.response();
     if (chatResponse.getResults() == null || chatResponse.getResults().isEmpty()) {
       return "";
     }
@@ -219,11 +223,12 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
    * Rebuilds an {@link AdvisedResponse} preserving all metadata but replacing the first
    * generation's text content with the supplied {@code newText}.
    */
-  private static AdvisedResponse rebuildWithText(AdvisedResponse original, String newText) {
-    if (original == null || original.response() == null) {
+  private static @NonNull AdvisedResponse rebuildWithText(
+      @NonNull AdvisedResponse original, @NonNull String newText) {
+    ChatResponse oldChat = original.response();
+    if (oldChat == null) {
       return original;
     }
-    ChatResponse oldChat = original.response();
     List<Generation> newGenerations =
         oldChat.getResults().stream()
             .map(
@@ -236,13 +241,14 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
             .collect(Collectors.toList());
 
     ChatResponse newChat = new ChatResponse(newGenerations, oldChat.getMetadata());
-    return new AdvisedResponse(newChat, original.adviseContext());
+    Map<String, Object> adviseContext = Objects.requireNonNull(original.adviseContext());
+    return new AdvisedResponse(newChat, adviseContext);
   }
 
   /**
    * Creates a minimal synthetic {@link AdvisedResponse} carrying only a text payload (for flush).
    */
-  private static AdvisedResponse syntheticResponse(String text) {
+  private static @NonNull AdvisedResponse syntheticResponse(@NonNull String text) {
     List<Generation> gens = List.of(new Generation(new AssistantMessage(text)));
     ChatResponse chat = new ChatResponse(gens);
     return new AdvisedResponse(chat, java.util.Map.of());

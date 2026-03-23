@@ -19,6 +19,8 @@ import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -74,17 +76,17 @@ public class EuVatDetector implements PiiDetector {
   }
 
   @Override
-  public @NonNull List<PiiCandidate> detect(@NonNull String input) {
+  public @NonNull List<@NonNull PiiCandidate> detect(@NonNull String input) {
     if (!mayMatch(input)) {
       return List.of();
     }
 
-    List<PiiCandidate> matches = new ArrayList<>();
-    Matcher matcher = VAT_PATTERN.matcher(input.toUpperCase());
+    List<@NonNull PiiCandidate> matches = new ArrayList<>();
+    Matcher matcher = VAT_PATTERN.matcher(input.toUpperCase(Locale.ROOT));
 
     while (matcher.find()) {
       // Map back to original input positions (toUpperCase is length-preserving for ASCII)
-      String original = input.substring(matcher.start(), matcher.end());
+      String original = Objects.requireNonNull(input.substring(matcher.start(), matcher.end()));
       matches.add(new PiiCandidate(original, matcher.start(), matcher.end(), getEntityType()));
     }
 

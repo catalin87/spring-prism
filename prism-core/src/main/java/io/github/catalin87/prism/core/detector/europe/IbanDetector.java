@@ -20,6 +20,8 @@ import io.github.catalin87.prism.core.PiiDetector;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -52,22 +54,22 @@ public class IbanDetector implements PiiDetector {
   }
 
   @Override
-  public @NonNull List<PiiCandidate> detect(@NonNull String input) {
+  public @NonNull List<@NonNull PiiCandidate> detect(@NonNull String input) {
     if (!mayMatch(input)) {
       return List.of();
     }
 
-    List<PiiCandidate> matches = new ArrayList<>();
+    List<@NonNull PiiCandidate> matches = new ArrayList<>();
     scanWith(IBAN_COMPACT.matcher(input), matches);
     scanWith(IBAN_SPACED.matcher(input), matches);
 
     return matches;
   }
 
-  private void scanWith(Matcher matcher, List<PiiCandidate> matches) {
+  private void scanWith(Matcher matcher, List<@NonNull PiiCandidate> matches) {
     while (matcher.find()) {
-      String rawMatch = matcher.group();
-      String cleanIban = rawMatch.replaceAll("\\s", "").toUpperCase();
+      String rawMatch = Objects.requireNonNull(matcher.group());
+      String cleanIban = rawMatch.replaceAll("\\s", "").toUpperCase(Locale.ROOT);
       if (isValidIban(cleanIban)) {
         matches.add(new PiiCandidate(rawMatch, matcher.start(), matcher.end(), getEntityType()));
       }

@@ -15,6 +15,7 @@
  */
 package io.github.catalin87.prism.core.vault;
 
+import java.util.Objects;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -42,7 +43,7 @@ public class StreamingBuffer {
     }
 
     fragmentationBuffer.append(chunk);
-    String currentContext = fragmentationBuffer.toString();
+    String currentContext = Objects.requireNonNull(fragmentationBuffer.toString());
 
     // The boundary metric for our cryptographic tokens is strictly defined utilizing '<' and '>'.
     int lastOpenBracket = currentContext.lastIndexOf('<');
@@ -59,8 +60,8 @@ public class StreamingBuffer {
     // instantly,
     // and securely lock the dangling sequence natively inside the internal buffer bounds.
 
-    String safelyFlushable = currentContext.substring(0, lastOpenBracket);
-    String danglingTail = currentContext.substring(lastOpenBracket);
+    String safelyFlushable = Objects.requireNonNull(currentContext.substring(0, lastOpenBracket));
+    String danglingTail = Objects.requireNonNull(currentContext.substring(lastOpenBracket));
 
     fragmentationBuffer.setLength(0);
     fragmentationBuffer.append(danglingTail);
@@ -76,7 +77,7 @@ public class StreamingBuffer {
    */
   @NonNull
   public String flush() {
-    String remainder = fragmentationBuffer.toString();
+    String remainder = Objects.requireNonNull(fragmentationBuffer.toString());
     fragmentationBuffer.setLength(0);
     return remainder;
   }

@@ -21,6 +21,7 @@ import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -50,7 +51,7 @@ public class DefaultPrismVault implements PrismVault {
       @NonNull TokenGenerator tokenGenerator, byte @NonNull [] secretKey, long ttlSeconds) {
 
     this.tokenGenerator = tokenGenerator;
-    this.secretKey = secretKey;
+    this.secretKey = secretKey.clone();
     this.ttlSeconds = ttlSeconds;
   }
 
@@ -116,15 +117,16 @@ public class DefaultPrismVault implements PrismVault {
 
   private String getLabelFromToken(String tokenKey) {
     // String format boundary checks exclusively extracting the literal sequence label
-    if (tokenKey == null || !tokenKey.startsWith("<PRISM_") || !tokenKey.endsWith(">")) {
+    if (!tokenKey.startsWith("<PRISM_") || !tokenKey.endsWith(">")) {
       return "UNKNOWN";
     }
-    String inner = tokenKey.substring(1, tokenKey.length() - 1); // PRISM_LABEL_SUFFIX
+    String inner =
+        Objects.requireNonNull(tokenKey.substring(1, tokenKey.length() - 1)); // PRISM_LABEL_SUFFIX
     int firstUnderscore = inner.indexOf('_');
     int lastUnderscore = inner.lastIndexOf('_');
 
     if (firstUnderscore != -1 && lastUnderscore != -1 && firstUnderscore < lastUnderscore) {
-      return inner.substring(firstUnderscore + 1, lastUnderscore);
+      return Objects.requireNonNull(inner.substring(firstUnderscore + 1, lastUnderscore));
     }
     return "UNKNOWN";
   }

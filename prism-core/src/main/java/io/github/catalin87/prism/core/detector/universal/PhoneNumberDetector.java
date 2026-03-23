@@ -19,6 +19,7 @@ import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -43,15 +44,15 @@ public class PhoneNumberDetector implements PiiDetector {
   }
 
   @Override
-  public @NonNull List<PiiCandidate> detect(@NonNull String input) {
+  public @NonNull List<@NonNull PiiCandidate> detect(@NonNull String input) {
     if (!mayMatch(input)) {
       return List.of();
     }
 
-    List<PiiCandidate> matches = new ArrayList<>();
+    List<@NonNull PiiCandidate> matches = new ArrayList<>();
     Matcher matcher = PHONE_CANDIDATE_PATTERN.matcher(input);
     while (matcher.find()) {
-      String candidate = matcher.group();
+      String candidate = Objects.requireNonNull(matcher.group());
       if (isValidPhoneCandidate(candidate)) {
         matches.add(new PiiCandidate(candidate, matcher.start(), matcher.end(), getEntityType()));
       }

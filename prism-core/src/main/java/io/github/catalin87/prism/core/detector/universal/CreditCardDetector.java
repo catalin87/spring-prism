@@ -19,6 +19,7 @@ import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -42,16 +43,16 @@ public class CreditCardDetector implements PiiDetector {
   }
 
   @Override
-  public @NonNull List<PiiCandidate> detect(@NonNull String input) {
+  public @NonNull List<@NonNull PiiCandidate> detect(@NonNull String input) {
     if (!mayMatch(input)) {
       return List.of();
     }
 
-    List<PiiCandidate> matches = new ArrayList<>();
+    List<@NonNull PiiCandidate> matches = new ArrayList<>();
     Matcher matcher = CC_PATTERN.matcher(input);
 
     while (matcher.find()) {
-      String rawMatch = matcher.group();
+      String rawMatch = Objects.requireNonNull(matcher.group());
       // Sequentially strip visual boundaries (spaces and dashes) to isolate native cardinality
       String cleanedNumbers = rawMatch.replaceAll("[ -]", "");
 

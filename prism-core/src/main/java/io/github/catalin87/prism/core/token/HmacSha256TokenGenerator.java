@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Locale;
+import java.util.Objects;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.jspecify.annotations.NonNull;
@@ -42,10 +44,17 @@ public final class HmacSha256TokenGenerator implements TokenGenerator {
       mac.init(keySpec);
 
       byte[] digest = mac.doFinal(candidate.text().getBytes(StandardCharsets.UTF_8));
-      String signature = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+      String signature =
+          Objects.requireNonNull(Base64.getUrlEncoder().withoutPadding().encodeToString(digest));
       String suffix = toHex(digest).substring(0, 8);
 
-      String tokenKey = String.format("<PRISM_%s_%s>", candidate.label().toUpperCase(), suffix);
+      String tokenKey =
+          Objects.requireNonNull(
+              String.format(
+                  Locale.ROOT,
+                  "<PRISM_%s_%s>",
+                  candidate.label().toUpperCase(Locale.ROOT),
+                  suffix));
 
       return new PrismToken(tokenKey, candidate.text(), signature);
     } catch (NoSuchAlgorithmException | InvalidKeyException e) {
@@ -53,7 +62,7 @@ public final class HmacSha256TokenGenerator implements TokenGenerator {
     }
   }
 
-  private static String toHex(byte[] digest) {
+  private static @NonNull String toHex(byte @NonNull [] digest) {
     StringBuilder builder = new StringBuilder(digest.length * 2);
     for (byte value : digest) {
       builder.append(Character.forDigit((value >> 4) & 0xF, 16));
