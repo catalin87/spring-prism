@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.catalin87.prism</groupId>
     <artifactId>prism-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>Spring Prism Parent</name>
     <description>Reversible PII pseudonymization firewall for Spring AI and LangChain4j.</description>
