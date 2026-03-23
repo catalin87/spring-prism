@@ -158,7 +158,7 @@ Spring Prism executes strict isolation through a robust Maven multi-module archi
 
 ## 📜 Governance & Strategic Licensing
 
-Spring Prism is built for the long-term stability of the Java ecosystem. To ensure both community growth and enterprise-grade reliability, the project operates under a **Strategic Dual Licensing** model.
+Spring Prism is built for the long-term stability of the Java ecosystem. To ensure both community growth and enterprise-grade reliability, the project operates under a **Strategic Dual Licensing** model. See [LICENSE.md](./LICENSE.md) for details.
 
 ### 1. Open Source (EUPL 1.2)
 For open-source enthusiasts, students, and non-profit projects, Spring Prism is available under the **European Union Public Licence (EUPL) v1.2**. 
