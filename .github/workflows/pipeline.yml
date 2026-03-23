@@ -82,7 +82,7 @@ jobs:
             echo "::warning title=CVE Scanner Disabled::Skipping OWASP dependency-check. Please add NVD_API_KEY to GitHub Secrets to prevent 429 API rate limits!"
           else
             set +e
-            mvn org.owasp:dependency-check-maven:check \
+            mvn org.owasp:dependency-check-maven:aggregate \
               -DfailBuildOnCVSS=7 \
               -DnvdApiKey=$NVD_API_KEY \
               -DossIndexAnalyzerEnabled=false \
