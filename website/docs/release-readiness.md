@@ -22,6 +22,16 @@ The following modules are part of the supported library surface:
 | `prism-dashboard` | Embedded dashboard with retained history, filters, exports, and alerts | Supported |
 | `prism-examples` | Runnable Spring Boot sample apps for Spring AI, LangChain4j, and MCP | Supported |
 
+## 1.0.0 Release Scope
+
+Spring Prism `1.0.0` now covers the intended first production release surface:
+
+- zero-dependency core redaction and restoration primitives
+- Spring AI, LangChain4j, and MCP client-side integrations
+- Redis-backed distributed vault support through the starter
+- an embedded operator dashboard with live history, alerts, exports, and the redesigned Privacy Score
+- runnable example applications and Docusaurus documentation for the supported transports and tooling flows
+
 ## Deferred
 
 The following surfaces are intentionally outside the current release boundary:
@@ -67,3 +77,4 @@ mvn -Prelease -Dgpg.skip=true -DskipTests package
 - Fail-open remains the default behavior; strict mode is opt-in through `spring.prism.security-strict-mode=true`.
 - Redis is the supported distributed vault path for this release boundary.
 - MCP support in this release boundary covers the client role first. Server-side MCP interception remains a later milestone.
+- Prism tokens remain HMAC-SHA256 signed, and restoration only succeeds for valid vault-backed tokens produced inside the trusted application boundary.

@@ -123,15 +123,15 @@ class PrismTextScannerTest {
 
   @Test
   void tokenize_failOpenReturnsOriginalTextWhenDetectorFails() {
+    RecordingMetricsSink metricsSink = new RecordingMetricsSink();
     PrismTextScanner failOpenScanner =
         new PrismTextScanner(
-            List.of(new FailingRulePack()),
-            vault,
-            ObservationRegistry.NOOP,
-            PrismMetricsSink.NOOP,
-            false);
+            List.of(new FailingRulePack()), vault, ObservationRegistry.NOOP, metricsSink, false);
 
     assertThat(failOpenScanner.tokenize("safe input")).isEqualTo("safe input");
+    assertThat(metricsSink.detectionErrorCalls).isEqualTo(1);
+    assertThat(metricsSink.lastRulePackName).isEqualTo("FAILING");
+    assertThat(metricsSink.lastEntityType).isEqualTo("FAIL");
   }
 
   @Test
@@ -194,14 +194,21 @@ class PrismTextScannerTest {
     private int scanDurationCalls;
     private int tokenizeDurationCalls;
     private int detokenizeDurationCalls;
+    private int detectionErrorCalls;
     private String lastIntegration = "";
+    private String lastRulePackName = "";
+    private String lastEntityType = "";
     private long lastRecordedNanos;
 
     @Override
     public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {}
 
     @Override
-    public void onDetectionError(@NonNull String rulePackName, @NonNull String entityType) {}
+    public void onDetectionError(@NonNull String rulePackName, @NonNull String entityType) {
+      detectionErrorCalls++;
+      lastRulePackName = rulePackName;
+      lastEntityType = entityType;
+    }
 
     @Override
     public void onTokenized(int count) {}
