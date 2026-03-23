@@ -23,15 +23,39 @@ If Actuator is not on the classpath, it falls back to:
 - Runtime pulse and tracked timer count
 - Rule-pack activity bars
 - Trend cards for leading pack, total detections, slowest timer, and audit retention
+- Server-side rollup cards for recent, 5 minute, 15 minute, and 1 hour windows
 - Integration drill-down cards for Spring AI and LangChain4j timing paths
-- Alert cards for detection errors, scan latency, token backlog, and vault mode
+- Threshold-aware alert cards for detection errors, scan latency, token backlog, and vault mode
 - Entity drill-down cards grouped by rule pack and detector type
 - Vault insight cards describing local vs Redis posture, shared-vs-local topology, and restore pressure
+- Admin cards showing current retention, polling, and alert-threshold settings
 - Masked recent-activity audit feed with action/source/limit filters
 - Server-side retained history charts for detections, errors, scan latency, and token backlog
-- Polling controls plus snapshot export
-- Operational filters for integration, rule pack, and entity type
+- Polling controls plus JSON, CSV, and incident-summary export
+- Operational filters for integration, rule pack, entity type, and trend window
 - Refraction-flow explainer
+
+## Dashboard configuration
+
+The embedded UI now reads its defaults and alert thresholds from `spring.prism.dashboard.*`:
+
+```yaml
+spring:
+  prism:
+    dashboard:
+      default-polling-seconds: 30
+      audit-retention: 12
+      history-retention: 120
+      alert-thresholds:
+        scan-latency-warn-ms: 25
+        scan-latency-critical-ms: 75
+        token-backlog-warn: 5
+        token-backlog-critical: 20
+        detection-error-warn: 1
+        detection-error-critical: 5
+```
+
+These values shape both the server-side snapshot and the UI rendering, which keeps the dashboard behavior truthful to the running app configuration.
 
 ## Live example integration
 
@@ -71,3 +95,13 @@ Demo mode loads the packaged `demo-metrics.json` fixture and keeps all values ma
 - Treat `/prism/`, `/prism/metrics`, and `/actuator/prism` as operational surfaces.
 - In production, protect them with your application authentication, reverse-proxy controls, or network policy.
 - Spring Prism keeps the payload masked, but the endpoints still expose meaningful operational metadata and should not be left broadly public.
+
+For Spring Security-based applications, a simple pattern is to require an operator role for the dashboard routes:
+
+```java
+http.authorizeHttpRequests(authorize -> authorize
+    .requestMatchers("/prism/**", "/actuator/prism").hasRole("PRISM_OPERATOR")
+    .anyRequest().authenticated());
+```
+
+If you do not use Spring Security, place the routes behind an internal gateway, VPN, or ingress rule instead.

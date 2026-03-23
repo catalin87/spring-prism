@@ -114,12 +114,26 @@ class SpringPrismAutoConfigurationTest {
   @Test
   void propertiesBindingSupportsTtlAndStrictMode() {
     contextRunner
-        .withPropertyValues("spring.prism.security-strict-mode=true", "spring.prism.ttl=45m")
+        .withPropertyValues(
+            "spring.prism.security-strict-mode=true",
+            "spring.prism.ttl=45m",
+            "spring.prism.dashboard.audit-retention=20",
+            "spring.prism.dashboard.history-retention=240",
+            "spring.prism.dashboard.default-polling-seconds=45",
+            "spring.prism.dashboard.alert-thresholds.scan-latency-warn-ms=40",
+            "spring.prism.dashboard.alert-thresholds.token-backlog-critical=30")
         .run(
             context -> {
               SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
               assertThat(properties.isSecurityStrictMode()).isTrue();
               assertThat(properties.getTtl()).isEqualTo(Duration.ofMinutes(45));
+              assertThat(properties.getDashboard().getAuditRetention()).isEqualTo(20);
+              assertThat(properties.getDashboard().getHistoryRetention()).isEqualTo(240);
+              assertThat(properties.getDashboard().getDefaultPollingSeconds()).isEqualTo(45);
+              assertThat(properties.getDashboard().getAlertThresholds().getScanLatencyWarnMs())
+                  .isEqualTo(40d);
+              assertThat(properties.getDashboard().getAlertThresholds().getTokenBacklogCritical())
+                  .isEqualTo(30L);
             });
   }
 
@@ -135,6 +149,8 @@ class SpringPrismAutoConfigurationTest {
               assertThat(properties.getTtl()).isEqualTo(Duration.ofMinutes(30));
               assertThat(properties.getAppSecret()).isEqualTo("spring-prism-change-me");
               assertThat(properties.getLocales()).containsExactly("UNIVERSAL");
+              assertThat(properties.getDashboard().getAuditRetention()).isEqualTo(12);
+              assertThat(properties.getDashboard().getHistoryRetention()).isEqualTo(120);
               assertThat(context.getBean(PrismVault.class)).isInstanceOf(DefaultPrismVault.class);
             });
   }
@@ -194,11 +210,15 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.integrationMetrics())
               .extracting(IntegrationMetric::name)
               .contains("spring-ai", "langchain4j");
+          assertThat(snapshot.historyRollups())
+              .extracting(HistoryRollup::key)
+              .contains("recent", "5m", "15m", "1h");
           assertThat(snapshot.historySamples()).isNotEmpty();
           assertThat(snapshot.historyRetentionLimit()).isEqualTo(120);
           assertThat(snapshot.auditEvents()).isNotEmpty();
           assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
           assertThat(snapshot.tokenBacklog()).isGreaterThanOrEqualTo(0);
+          assertThat(snapshot.dashboardConfiguration().defaultPollingSeconds()).isEqualTo(30);
         });
   }
 

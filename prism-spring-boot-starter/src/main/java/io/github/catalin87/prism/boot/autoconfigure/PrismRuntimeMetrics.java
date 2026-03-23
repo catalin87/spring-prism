@@ -28,9 +28,6 @@ public class PrismRuntimeMetrics
     implements io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink,
         io.github.catalin87.prism.langchain4j.PrismMetricsSink {
 
-  private static final int MAX_AUDIT_EVENTS = 12;
-  private static final int MAX_HISTORY_SAMPLES = 120;
-
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
   private final AtomicLong detectionErrorCount = new AtomicLong();
@@ -40,6 +37,17 @@ public class PrismRuntimeMetrics
   private final ConcurrentHashMap<String, AtomicLong> durationSamples = new ConcurrentHashMap<>();
   private final Deque<AuditEvent> auditEvents = new ArrayDeque<>();
   private final Deque<HistorySample> historySamples = new ArrayDeque<>();
+  private final int auditRetentionLimit;
+  private final int historyRetentionLimit;
+
+  public PrismRuntimeMetrics() {
+    this(12, 120);
+  }
+
+  public PrismRuntimeMetrics(int auditRetentionLimit, int historyRetentionLimit) {
+    this.auditRetentionLimit = Math.max(1, auditRetentionLimit);
+    this.historyRetentionLimit = Math.max(10, historyRetentionLimit);
+  }
 
   @Override
   public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {
@@ -126,7 +134,7 @@ public class PrismRuntimeMetrics
 
   /** Returns the maximum number of masked audit events retained in memory. */
   public int auditRetentionLimit() {
-    return MAX_AUDIT_EVENTS;
+    return auditRetentionLimit;
   }
 
   /** Returns a recent bounded server-side history of aggregate dashboard snapshots. */
@@ -136,7 +144,7 @@ public class PrismRuntimeMetrics
 
   /** Returns the maximum number of server-side history samples retained in memory. */
   public int historyRetentionLimit() {
-    return MAX_HISTORY_SAMPLES;
+    return historyRetentionLimit;
   }
 
   /** Captures a single aggregate sample so dashboard trends survive browser refreshes. */
@@ -155,7 +163,7 @@ public class PrismRuntimeMetrics
             detokenized,
             Math.max(0, tokenized - detokenized),
             vaultType));
-    while (historySamples.size() > MAX_HISTORY_SAMPLES) {
+    while (historySamples.size() > historyRetentionLimit) {
       historySamples.removeFirst();
     }
   }
@@ -183,7 +191,7 @@ public class PrismRuntimeMetrics
 
   private synchronized void recordEvent(String action, String subject, long count, String source) {
     auditEvents.addFirst(new AuditEvent(Instant.now().toString(), action, subject, count, source));
-    while (auditEvents.size() > MAX_AUDIT_EVENTS) {
+    while (auditEvents.size() > auditRetentionLimit) {
       auditEvents.removeLast();
     }
   }

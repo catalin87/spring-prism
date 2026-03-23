@@ -85,8 +85,9 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  PrismRuntimeMetrics prismRuntimeMetrics() {
-    return new PrismRuntimeMetrics();
+  PrismRuntimeMetrics prismRuntimeMetrics(SpringPrismProperties properties) {
+    SpringPrismProperties.Dashboard dashboard = properties.getDashboard();
+    return new PrismRuntimeMetrics(dashboard.getAuditRetention(), dashboard.getHistoryRetention());
   }
 
   @Bean
@@ -118,8 +119,9 @@ public class SpringPrismAutoConfiguration {
   MetricsController metricsController(
       PrismRuntimeMetrics prismRuntimeMetrics,
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
-      PrismVault prismVault) {
-    return new MetricsController(prismRuntimeMetrics, springPrismRulePacks, prismVault);
+      PrismVault prismVault,
+      SpringPrismProperties properties) {
+    return new MetricsController(prismRuntimeMetrics, springPrismRulePacks, prismVault, properties);
   }
 
   @Bean
@@ -128,8 +130,10 @@ public class SpringPrismAutoConfiguration {
   PrismActuatorEndpoint prismActuatorEndpoint(
       PrismRuntimeMetrics prismRuntimeMetrics,
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
-      PrismVault prismVault) {
-    return new PrismActuatorEndpoint(prismRuntimeMetrics, springPrismRulePacks, prismVault);
+      PrismVault prismVault,
+      SpringPrismProperties properties) {
+    return new PrismActuatorEndpoint(
+        prismRuntimeMetrics, springPrismRulePacks, prismVault, properties);
   }
 
   private static byte[] secretKey(SpringPrismProperties properties) {
