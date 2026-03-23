@@ -47,5 +47,13 @@ class LangChain4jExampleApplicationTest {
     UserMessage recorded =
         (UserMessage) delegateChatModel.requests().getLast().messages().getLast();
     assertThat(recorded.singleText()).contains("<PRISM_EMAIL_").doesNotContain(email);
+
+    String dashboard =
+        restTemplate.getForObject("http://localhost:" + port + "/prism/index.html", String.class);
+    String metrics =
+        restTemplate.getForObject("http://localhost:" + port + "/actuator/prism", String.class);
+
+    assertThat(dashboard).contains("Spring Prism Dashboard");
+    assertThat(metrics).contains("\"integrationMetrics\"");
   }
 }

@@ -78,6 +78,9 @@ final class PrismMetricsSnapshotFactory {
                         durationMetrics.get(integration + ":vault-detokenize")))
             .toList();
     String vaultType = prismVault.getClass().getSimpleName();
+    prismRuntimeMetrics.captureHistorySample(vaultType);
+    long tokenBacklog =
+        Math.max(0, prismRuntimeMetrics.tokenizedCount() - prismRuntimeMetrics.detokenizedCount());
     return new PrismMetricsSnapshot(
         prismRuntimeMetrics.tokenizedCount(),
         prismRuntimeMetrics.detokenizedCount(),
@@ -87,9 +90,13 @@ final class PrismMetricsSnapshotFactory {
         rulePackMetrics,
         entityMetrics,
         integrationMetrics,
+        prismRuntimeMetrics.recentHistorySamples(),
+        prismRuntimeMetrics.historyRetentionLimit(),
         prismRuntimeMetrics.recentAuditEvents(),
         prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
-        vaultType);
+        vaultType,
+        vaultType.toLowerCase().contains("redis"),
+        tokenBacklog);
   }
 }

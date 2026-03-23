@@ -15,18 +15,22 @@ const pollingToggleButton = document.getElementById("polling-toggle");
 const pollingIntervalSelect = document.getElementById("polling-interval");
 const historyLimitSelect = document.getElementById("history-limit");
 const pollingStatus = document.getElementById("polling-status");
+const filterStatus = document.getElementById("filter-status");
 const modePill = document.getElementById("mode-pill");
+const integrationFilter = document.getElementById("integration-filter");
+const rulePackFilter = document.getElementById("rule-pack-filter");
+const entityFilter = document.getElementById("entity-filter");
 const auditActionFilter = document.getElementById("audit-action-filter");
 const auditSourceFilter = document.getElementById("audit-source-filter");
 const auditLimitFilter = document.getElementById("audit-limit-filter");
 const auditRetentionNote = document.getElementById("audit-retention-note");
+const historyRetentionNote = document.getElementById("history-retention-note");
 
 let currentMetrics = null;
 let currentEndpoint = null;
 let demoMode = searchParams.get("demo") === "1";
 let pollingSeconds = Number(searchParams.get("poll")) || defaultPollingSeconds;
 let pollingTimer = null;
-let historySamples = [];
 
 pollingIntervalSelect.value = `${pollingSeconds}`;
 
@@ -154,8 +158,9 @@ function renderRulePackMetrics(rulePackMetrics) {
   const container = document.getElementById("rule-pack-metrics");
   container.replaceChildren();
 
-  const maxDetections = Math.max(1, ...rulePackMetrics.map(metric => metric.totalDetections));
-  rulePackMetrics.forEach(metric => {
+  const visibleMetrics = filteredRulePackMetrics(rulePackMetrics);
+  const maxDetections = Math.max(1, ...visibleMetrics.map(metric => metric.totalDetections));
+  visibleMetrics.forEach(metric => {
     const row = document.createElement("div");
     row.className = "bar-row";
 
@@ -225,7 +230,7 @@ function renderIntegrationSummary(metrics) {
   const container = document.getElementById("integration-summary");
   container.replaceChildren();
 
-  (metrics.integrationMetrics ?? []).forEach(integration => {
+  filteredIntegrationMetrics(metrics.integrationMetrics ?? []).forEach(integration => {
     const title = integration.name === "spring-ai" ? "Spring AI" : "LangChain4j";
     const card = document.createElement("article");
     card.className = "integration-card";
@@ -286,7 +291,7 @@ function renderEntityDrilldowns(metrics) {
   const container = document.getElementById("entity-drilldowns");
   container.replaceChildren();
 
-  const entityMetrics = metrics.entityMetrics ?? [];
+  const entityMetrics = filteredEntityMetrics(metrics.entityMetrics ?? []);
   if (entityMetrics.length === 0) {
     const empty = document.createElement("article");
     empty.className = "entity-card";
@@ -324,13 +329,20 @@ function renderVaultInsights(metrics) {
       note: isRedis ? "Distributed restore path" : "Local restore path"
     },
     {
+      label: "Topology",
+      value: metrics.distributedVault ? "Shared" : "Single node",
+      note: metrics.distributedVault
+          ? "Best fit for horizontally scaled restore flows"
+          : "Optimized for local in-memory protection"
+    },
+    {
       label: "Retention",
-      value: `${metrics.auditRetentionLimit ?? 0} events`,
-      note: "Bounded masked audit memory"
+      value: `${metrics.auditRetentionLimit ?? 0} audit / ${metrics.historyRetentionLimit ?? 0} history`,
+      note: "Bounded server-side dashboard memory"
     },
     {
       label: "Token balance",
-      value: `${Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0))}`,
+      value: `${metrics.tokenBacklog ?? Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0))}`,
       note: "Outstanding restore delta"
     }
   ];
@@ -345,6 +357,51 @@ function renderVaultInsights(metrics) {
     `;
     container.append(block);
   });
+}
+
+function selectedIntegration() {
+  return integrationFilter.value || "ALL";
+}
+
+function selectedRulePack() {
+  return rulePackFilter.value || "ALL";
+}
+
+function selectedEntity() {
+  return entityFilter.value || "ALL";
+}
+
+function updateOperationalFilters(metrics) {
+  renderFilterOptions(
+      integrationFilter,
+      (metrics.integrationMetrics ?? []).map(integration => integration.name));
+  renderFilterOptions(
+      rulePackFilter,
+      (metrics.rulePackMetrics ?? []).map(rulePack => rulePack.name));
+  renderFilterOptions(
+      entityFilter,
+      [...new Set((metrics.entityMetrics ?? []).map(entity => entity.entityType))].sort());
+
+  filterStatus.textContent =
+      `${selectedIntegration() === "ALL" ? "All integrations" : selectedIntegration()} · `
+      + `${selectedRulePack() === "ALL" ? "all rule packs" : selectedRulePack()} · `
+      + `${selectedEntity() === "ALL" ? "all entity types" : selectedEntity()}`;
+}
+
+function filteredIntegrationMetrics(integrationMetrics) {
+  return integrationMetrics.filter(
+      integration => selectedIntegration() === "ALL" || integration.name === selectedIntegration());
+}
+
+function filteredRulePackMetrics(rulePackMetrics) {
+  return rulePackMetrics.filter(
+      metric => selectedRulePack() === "ALL" || metric.name === selectedRulePack());
+}
+
+function filteredEntityMetrics(entityMetrics) {
+  return entityMetrics.filter(entity =>
+    (selectedRulePack() === "ALL" || entity.rulePackName === selectedRulePack())
+    && (selectedEntity() === "ALL" || entity.entityType === selectedEntity()));
 }
 
 function renderFilterOptions(select, values) {
@@ -435,23 +492,10 @@ function healthSignal(metrics) {
   return "Healthy";
 }
 
-function pushHistorySample(endpoint, metrics) {
-  historySamples.push({
-    capturedAt: new Date().toISOString(),
-    endpoint,
-    totalDetections: sumDetections(metrics.detectionCounts),
-    detectionErrors: metrics.detectionErrorCount ?? 0,
-    scanMilliseconds: averageMilliseconds(
-        metrics.durationMetrics?.["spring-ai:scan"] ?? metrics.durationMetrics?.["langchain4j:scan"])
-  });
-  if (historySamples.length > maxHistoryEntries) {
-    historySamples = historySamples.slice(-maxHistoryEntries);
-  }
-}
-
 function limitedHistory() {
   const limit = Number(historyLimitSelect.value || "25");
-  return historySamples.slice(-limit);
+  const serverHistory = currentMetrics?.historySamples ?? [];
+  return serverHistory.slice(-Math.min(limit, maxHistoryEntries));
 }
 
 function renderSparkline(svgId, values, stroke) {
@@ -495,9 +539,12 @@ function renderHistory() {
     return;
   }
 
+  historyRetentionNote.textContent =
+      `Server-side history retains the latest ${currentMetrics?.historyRetentionLimit ?? points.length} sample(s).`;
   renderSparkline("history-detections", points.map(point => point.totalDetections), "#0f766e");
   renderSparkline("history-errors", points.map(point => point.detectionErrors), "#b42318");
   renderSparkline("history-scan", points.map(point => point.scanMilliseconds), "#1d4ed8");
+  renderSparkline("history-backlog", points.map(point => point.tokenBacklog ?? 0), "#7c3aed");
   historyPanel.classList.remove("hidden");
 }
 
@@ -529,7 +576,6 @@ function exportSnapshot() {
 function renderMetrics(endpoint, metrics) {
   currentMetrics = metrics;
   currentEndpoint = endpoint;
-  pushHistorySample(endpoint, metrics);
 
   const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
       ?? metrics.durationMetrics?.["langchain4j:scan"];
@@ -546,6 +592,7 @@ function renderMetrics(endpoint, metrics) {
       `${Object.keys(metrics.durationMetrics ?? {}).length}`;
   document.getElementById("endpoint-used").textContent = endpoint;
 
+  updateOperationalFilters(metrics);
   renderTopDetections(topDetections(metrics.detectionCounts));
   renderRulePackMetrics(metrics.rulePackMetrics ?? []);
   renderTrendCards(metrics);
@@ -624,6 +671,9 @@ pollingIntervalSelect.addEventListener("change", () => {
   setPolling(Number(pollingIntervalSelect.value || "0"));
 });
 historyLimitSelect.addEventListener("change", rerenderHistoryFromCurrentState);
+integrationFilter.addEventListener("change", () => currentMetrics && renderMetrics(currentEndpoint, currentMetrics));
+rulePackFilter.addEventListener("change", () => currentMetrics && renderMetrics(currentEndpoint, currentMetrics));
+entityFilter.addEventListener("change", () => currentMetrics && renderMetrics(currentEndpoint, currentMetrics));
 [auditActionFilter, auditSourceFilter, auditLimitFilter].forEach(element => {
   element.addEventListener("change", rerenderAuditFromCurrentState);
 });

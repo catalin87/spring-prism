@@ -194,8 +194,11 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.integrationMetrics())
               .extracting(IntegrationMetric::name)
               .contains("spring-ai", "langchain4j");
+          assertThat(snapshot.historySamples()).isNotEmpty();
+          assertThat(snapshot.historyRetentionLimit()).isEqualTo(120);
           assertThat(snapshot.auditEvents()).isNotEmpty();
           assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
+          assertThat(snapshot.tokenBacklog()).isGreaterThanOrEqualTo(0);
         });
   }
 
@@ -217,6 +220,7 @@ class SpringPrismAutoConfigurationTest {
               assertThat(snapshot.integrationMetrics())
                   .extracting(IntegrationMetric::name)
                   .contains("spring-ai");
+              assertThat(snapshot.historySamples()).isNotEmpty();
               assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
             });
   }
