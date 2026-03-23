@@ -44,11 +44,11 @@ sequenceDiagram
 
 ## ⚡ Core Properties
 
-*   **🌱 Java 21 Baseline:** Built and validated on Java 21 with Spring Boot 3.4.x.
-*   **🛡️ Zero Spring or AI Dependencies in Core:** `prism-core` stays decoupled from Spring, Spring AI, and LangChain4j so the detection and vault engine remains portable.
-*   **🇪🇺 EU-First Detectors:** Ships with universal detectors plus European standards such as **IBAN** (Pan-EU), **PESEL** (PL), **CNP** (RO), and **EU VAT**.
-*   **🌊 Streaming Resilient:** `StreamingBuffer` restores tokens correctly even when model responses split them across multiple chunks.
-*   **📏 Measured Performance:** The repo now includes a `prism-benchmarks` JMH module plus runtime timing metrics for scan, tokenize, and detokenize paths.
+* **🌱 Java 21 Baseline:** Built and validated on Java 21 with Spring Boot 3.4.x.
+* **🛡️ Zero Spring or AI Dependencies in Core:** `prism-core` stays decoupled from Spring, Spring AI, and LangChain4j so the detection and vault engine remains portable.
+* **🇪🇺 EU-First Detectors:** Ships with universal detectors plus European standards such as **IBAN** (Pan-EU), **PESEL** (PL), **CNP** (RO), and **EU VAT**.
+* **🌊 Streaming Resilient:** `StreamingBuffer` restores tokens correctly even when model responses split them across multiple chunks.
+* **📏 Measured Performance:** The repo now includes a `prism-benchmarks` JMH module plus runtime timing metrics for scan, tokenize, and detokenize paths.
 
 ---
 
@@ -161,8 +161,42 @@ Spring Prism executes strict isolation through a robust Maven multi-module archi
 | `prism-examples` | Runnable Spring Boot examples for Spring AI, LangChain4j, and MCP client flows. |
 | `prism-dashboard` | Embedded observability dashboard with retained history, exports, alerts, and operator filters. |
 
-## 📜 Governance & Licensing
+---
 
-Spring Prism is rigorously protected under the **EUPL 1.2 (European Union Public Licence)**. The original author (Catalin Dordea) maintains explicit sovereign control over core project mergers to perpetually guarantee full GDPR and EU AI Act algorithmic alignment.
+## 📜 Governance & Strategic Licensing
+
+Spring Prism is built for the long-term stability of the Java ecosystem. To ensure both community growth and enterprise-grade reliability, the project operates under a **Strategic Dual Licensing** model. See [LICENSE.md](./LICENSE.md) for details.
+
+### 1. Open Source (EUPL 1.2)
+For open-source enthusiasts, students, and non-profit projects, Spring Prism is available under the **European Union Public Licence (EUPL) v1.2**. 
+* **Copyleft:** Services provided over a network (SaaS) or derivative works must remain open-source under a compatible license.
+* **Compliance:** The EUPL is the official license of the European Commission, perfectly aligned with the **GDPR** and **EU AI Act** terminology.
+
+### 2. Commercial Enterprise License
+For banks, financial institutions, and corporate environments that cannot accept copyleft restrictions or require internal proprietary integration, we offer a **Commercial License**.
+* **Benefits:** Exemption from EUPL copyleft clauses, dedicated SLA, priority support, and access to premium/custom PII Rule Packs.
+* **Contact:** To discuss enterprise licensing or custom implementations, contact **catalin87@gmail.com**.
+
+### 🤝 Contributing & CLA
+We welcome contributions! To maintain the project's legal integrity and support our dual-licensing model, all contributors must sign our automated **Contributor License Agreement (CLA)**. 
+* When you open your first Pull Request, our bot will guide you through the 3-second "Click-to-Sign" process.
+* For details on how to get involved, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+### 🏛️ Project Governance
+Decisions regarding the core architecture, security standards, and the roadmap are managed under a transparent governance model led by the founder, **Catalin Dordea**. For more information on roles and decision-making, see [GOVERNANCE.md](./GOVERNANCE.md).
+
+## ⚠️ Disclaimer & Limitation of Liability
+
+**Spring Prism is provided on an "AS IS" basis, without warranties or conditions of any kind.**
+
+While Spring Prism utilizes high-precision detection rules (Regex, Heuristics, and Locales), **no automated PII detection system is 100% foolproof.** Language is inherently ambiguous, and new patterns of data exposure emerge constantly.
+
+- **Accuracy:** The Project Lead and contributors do not guarantee that all sensitive data will be detected and redacted in every scenario. 
+- **User Responsibility:** Users are solely responsible for auditing their specific PII detection requirements and ensuring that the configured `PrismRulePack` meets their compliance standards (GDPR, HIPAA, EU AI Act, etc.).
+- **Limitation of Liability:** Under no circumstances shall the author(s) or the Project be liable for any direct, indirect, incidental, or consequential damages resulting from the use of, or inability to use, this software, including but not limited to data leaks or regulatory fines.
+
+**Always perform a thorough security audit of your Generative AI workflows before moving to production.**
+
+---
 
 *Notice of Non-Affiliation: Spring Prism is an independent privacy firewall and is not affiliated, sponsored, or endorsed by VMware, Broadcom, or the Spring Framework.*
