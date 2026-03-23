@@ -257,6 +257,52 @@ code {
   font-size: 1.1rem;
 }
 
+.alert-grid,
+.entity-grid,
+.vault-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.alert-card,
+.entity-card,
+.vault-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(29, 24, 20, 0.08);
+}
+
+.alert-card p,
+.alert-card span,
+.entity-card p,
+.entity-card span,
+.vault-card p,
+.vault-card span {
+  margin: 0;
+  color: var(--muted);
+}
+
+.alert-card strong,
+.entity-card strong,
+.vault-card strong {
+  font-size: 1.05rem;
+}
+
+.alert-warn {
+  border-color: rgba(180, 35, 24, 0.22);
+}
+
+.alert-healthy {
+  border-color: rgba(15, 118, 110, 0.22);
+}
+
+.alert-info {
+  border-color: rgba(29, 78, 216, 0.18);
+}
+
 .integration-grid {
   display: grid;
   gap: 12px;

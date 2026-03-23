@@ -188,6 +188,12 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.rulePackMetrics())
               .extracting(RulePackMetric::name)
               .contains("UNIVERSAL");
+          assertThat(snapshot.entityMetrics())
+              .extracting(EntityMetric::entityType)
+              .contains("EMAIL");
+          assertThat(snapshot.integrationMetrics())
+              .extracting(IntegrationMetric::name)
+              .contains("spring-ai", "langchain4j");
           assertThat(snapshot.auditEvents()).isNotEmpty();
           assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
         });
@@ -208,6 +214,9 @@ class SpringPrismAutoConfigurationTest {
 
               assertThat(snapshot.durationMetrics()).containsKey("spring-ai:scan");
               assertThat(snapshot.rulePackMetrics()).isNotEmpty();
+              assertThat(snapshot.integrationMetrics())
+                  .extracting(IntegrationMetric::name)
+                  .contains("spring-ai");
               assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
             });
   }
