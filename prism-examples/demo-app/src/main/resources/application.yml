@@ -1,0 +1,20 @@
+spring:
+  prism:
+    app-secret: example-demo-app-secret
+    locales:
+      - UNIVERSAL
+      - EUROPE
+    mcp:
+      enabled: false
+    dashboard:
+      default-polling-seconds: 15
+      audit-retention: 24
+      history-retention: 240
+      alert-thresholds:
+        scan-latency-warn-ms: 20
+        scan-latency-critical-ms: 60
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prism
