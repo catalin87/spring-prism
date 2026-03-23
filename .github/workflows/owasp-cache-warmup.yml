@@ -1,0 +1,55 @@
+name: Warm OWASP Dependency-Check Cache
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  warm-dependency-check-cache:
+    name: Warm Dependency-Check Cache
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Provision JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compute OWASP cache week
+        id: dependency-check-week
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache OWASP Dependency-Check data
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-${{ steps.dependency-check-week.outputs.week }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-
+
+      - name: Warm OWASP Dependency-Check database
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::warning title=OWASP Cache Warmup Skipped::Skipping dependency-check cache warmup because NVD_API_KEY is not configured."
+          else
+            mvn org.owasp:dependency-check-maven:update-only \
+              -DnvdApiKey=$NVD_API_KEY \
+              -DossIndexAnalyzerEnabled=false \
+              -DdataDirectory=$HOME/.m2/repository/org/owasp/dependency-check-data \
+              --batch-mode
+          fi
