@@ -55,13 +55,16 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: "Compute OWASP cache week"
+        id: dependency-check-week
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
       - name: "Cache OWASP Dependency-Check data"
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: ${{ runner.os }}-dependency-check-${{ github.ref_name }}
+          key: ${{ runner.os }}-dependency-check-${{ steps.dependency-check-week.outputs.week }}
           restore-keys: |
-            ${{ runner.os }}-dependency-check-main
             ${{ runner.os }}-dependency-check-
 
       - name: "Code Style Guardrails (Spotless + Checkstyle)"
