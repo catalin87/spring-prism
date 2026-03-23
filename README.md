@@ -168,7 +168,7 @@ For open-source enthusiasts, students, and non-profit projects, Spring Prism is 
 ### 2. Commercial Enterprise License
 For banks, financial institutions, and corporate environments that cannot accept copyleft restrictions or require internal proprietary integration, we offer a **Commercial License**.
 * **Benefits:** Exemption from EUPL copyleft clauses, dedicated SLA, priority support, and access to premium/custom PII Rule Packs.
-* **Contact:** To discuss enterprise licensing or custom implementations, contact **[ADRESA_TA_DE_EMAIL]**.
+* **Contact:** To discuss enterprise licensing or custom implementations, contact **catalin87@gmail.com**.
 
 ### 🤝 Contributing & CLA
 We welcome contributions! To maintain the project's legal integrity and support our dual-licensing model, all contributors must sign our automated **Contributor License Agreement (CLA)**. 
