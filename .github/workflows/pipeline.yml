@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
-      - 'feature/*'
   pull_request:
     branches:
       - main
-      - 'feature/*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   dco-verification:
@@ -53,11 +55,20 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: "Cache OWASP Dependency-Check data"
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-dependency-check-${{ github.ref_name }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-main
+            ${{ runner.os }}-dependency-check-
+
       - name: "Code Style Guardrails (Spotless + Checkstyle)"
         run: mvn spotless:check checkstyle:check --batch-mode
 
       - name: "Architectural Compilation & Verification"
-        run: mvn clean install --batch-mode
+        run: mvn clean verify --batch-mode
 
       - name: "OWASP Dependency Vulnerability Scan"
         # Executes deep CVE inspection exclusively for our 3rd-party integration layers
@@ -68,7 +79,12 @@ jobs:
             echo "::warning title=CVE Scanner Disabled::Skipping OWASP dependency-check. Please add NVD_API_KEY to GitHub Secrets to prevent 429 API rate limits!"
           else
             set +e
-            mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 -DnvdApiKey=$NVD_API_KEY -DossIndexAnalyzerEnabled=false --batch-mode | tee dependency-check.log
+            mvn org.owasp:dependency-check-maven:check \
+              -DfailBuildOnCVSS=7 \
+              -DnvdApiKey=$NVD_API_KEY \
+              -DossIndexAnalyzerEnabled=false \
+              -DdataDirectory=$HOME/.m2/repository/org/owasp/dependency-check-data \
+              --batch-mode | tee dependency-check.log
             status=${PIPESTATUS[0]}
             set -e
 

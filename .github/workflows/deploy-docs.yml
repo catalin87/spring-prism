@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - main
-      - 'feature/*'
     paths:
       - 'website/**'
   pull_request:
     branches:
       - main
-      - 'feature/*'
     paths:
       - 'website/**'
   workflow_dispatch:
@@ -21,7 +19,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -50,9 +48,7 @@ jobs:
           path: ./website/build
 
   deploy:
-    # Per AGENTS.md: auto-deploy to GitHub Pages ONLY on push to main or manual trigger.
-    # Feature branches should be allowed for testing if explicitly defined, but we ensure PRs don't deploy.
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
