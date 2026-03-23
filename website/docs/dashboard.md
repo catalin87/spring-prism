@@ -24,6 +24,9 @@ If Actuator is not on the classpath, it falls back to:
 - Rule-pack activity bars
 - Trend cards for leading pack, total detections, slowest timer, and audit retention
 - Integration drill-down cards for Spring AI and LangChain4j timing paths
+- Alert cards for detection errors, scan latency, token backlog, and vault mode
+- Entity drill-down cards grouped by rule pack and detector type
+- Vault insight cards describing local vs Redis posture and restore pressure
 - Masked recent-activity audit feed with action/source/limit filters
 - Browser-side history charts for detections, errors, and scan latency
 - Polling controls plus snapshot export

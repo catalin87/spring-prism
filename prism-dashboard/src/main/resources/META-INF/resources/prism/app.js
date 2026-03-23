@@ -221,35 +221,129 @@ function renderTrendCards(metrics) {
   });
 }
 
-function integrationMetrics(durationMetrics, integration) {
-  return {
-    scan: durationMetrics?.[`${integration}:scan`],
-    tokenize: durationMetrics?.[`${integration}:vault-tokenize`],
-    detokenize: durationMetrics?.[`${integration}:vault-detokenize`]
-  };
-}
-
 function renderIntegrationSummary(metrics) {
   const container = document.getElementById("integration-summary");
   container.replaceChildren();
 
-  [
-    {name: "spring-ai", title: "Spring AI"},
-    {name: "langchain4j", title: "LangChain4j"}
-  ].forEach(integration => {
-    const values = integrationMetrics(metrics.durationMetrics, integration.name);
+  (metrics.integrationMetrics ?? []).forEach(integration => {
+    const title = integration.name === "spring-ai" ? "Spring AI" : "LangChain4j";
     const card = document.createElement("article");
     card.className = "integration-card";
     card.innerHTML = `
-      <p>${integration.title}</p>
-      <strong>${formatMilliseconds(values.scan)}</strong>
+      <p>${title}</p>
+      <strong>${formatMilliseconds(integration.scan)}</strong>
       <span>Scan avg</span>
       <dl class="mini-metrics">
-        <div><dt>Tokenize</dt><dd>${formatMilliseconds(values.tokenize)}</dd></div>
-        <div><dt>Detokenize</dt><dd>${formatMilliseconds(values.detokenize)}</dd></div>
+        <div><dt>Tokenize</dt><dd>${formatMilliseconds(integration.tokenize)}</dd></div>
+        <div><dt>Detokenize</dt><dd>${formatMilliseconds(integration.detokenize)}</dd></div>
       </dl>
     `;
     container.append(card);
+  });
+}
+
+function alertLevel(label, state, description) {
+  return {label, state, description};
+}
+
+function renderAlerts(metrics) {
+  const container = document.getElementById("alert-cards");
+  container.replaceChildren();
+
+  const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
+      ?? metrics.durationMetrics?.["langchain4j:scan"];
+  const scanMs = averageMilliseconds(scanMetric);
+  const tokenGap = Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0));
+  const errorCount = metrics.detectionErrorCount ?? 0;
+  const isRedis = (metrics.vaultType ?? "").toLowerCase().includes("redis");
+
+  [
+    errorCount > 0
+        ? alertLevel("Detection errors", "warn", `${errorCount} detection error event(s) observed.`)
+        : alertLevel("Detection errors", "healthy", "No detection errors recorded."),
+    scanMs > 25
+        ? alertLevel("Scan latency", "warn", `${scanMs.toFixed(2)} ms average scan time.`)
+        : alertLevel("Scan latency", "healthy", `${scanMs.toFixed(2)} ms average scan time.`),
+    tokenGap > 5
+        ? alertLevel("Token backlog", "warn", `${tokenGap} more tokenizations than restorations.`)
+        : alertLevel("Token backlog", "healthy", "Tokenize/detokenize activity is balanced."),
+    isRedis
+        ? alertLevel("Vault mode", "info", "Redis-backed vault active for shared restore paths.")
+        : alertLevel("Vault mode", "info", "Local in-memory vault active for single-node operation.")
+  ].forEach(alert => {
+    const card = document.createElement("article");
+    card.className = `alert-card alert-${alert.state}`;
+    card.innerHTML = `
+      <p>${alert.label}</p>
+      <strong>${alert.state.toUpperCase()}</strong>
+      <span>${alert.description}</span>
+    `;
+    container.append(card);
+  });
+}
+
+function renderEntityDrilldowns(metrics) {
+  const container = document.getElementById("entity-drilldowns");
+  container.replaceChildren();
+
+  const entityMetrics = metrics.entityMetrics ?? [];
+  if (entityMetrics.length === 0) {
+    const empty = document.createElement("article");
+    empty.className = "entity-card";
+    empty.innerHTML = `
+      <p>No detector activity yet</p>
+      <strong>Waiting for redactions</strong>
+      <span>Entity drill-downs will appear once Prism sees live detections.</span>
+    `;
+    container.append(empty);
+    return;
+  }
+
+  entityMetrics.slice(0, 6).forEach(metric => {
+    const card = document.createElement("article");
+    card.className = "entity-card";
+    card.innerHTML = `
+      <p>${metric.rulePackName}</p>
+      <strong>${metric.entityType}</strong>
+      <span>${metric.detections} detection(s)</span>
+    `;
+    container.append(card);
+  });
+}
+
+function renderVaultInsights(metrics) {
+  const container = document.getElementById("vault-insights");
+  container.replaceChildren();
+
+  const vaultType = metrics.vaultType || "Unknown";
+  const isRedis = vaultType.toLowerCase().includes("redis");
+  const items = [
+    {
+      label: "Mode",
+      value: vaultType,
+      note: isRedis ? "Distributed restore path" : "Local restore path"
+    },
+    {
+      label: "Retention",
+      value: `${metrics.auditRetentionLimit ?? 0} events`,
+      note: "Bounded masked audit memory"
+    },
+    {
+      label: "Token balance",
+      value: `${Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0))}`,
+      note: "Outstanding restore delta"
+    }
+  ];
+
+  items.forEach(item => {
+    const block = document.createElement("article");
+    block.className = "vault-card";
+    block.innerHTML = `
+      <p>${item.label}</p>
+      <strong>${item.value}</strong>
+      <span>${item.note}</span>
+    `;
+    container.append(block);
   });
 }
 
@@ -455,7 +549,10 @@ function renderMetrics(endpoint, metrics) {
   renderTopDetections(topDetections(metrics.detectionCounts));
   renderRulePackMetrics(metrics.rulePackMetrics ?? []);
   renderTrendCards(metrics);
+  renderAlerts(metrics);
   renderIntegrationSummary(metrics);
+  renderEntityDrilldowns(metrics);
+  renderVaultInsights(metrics);
   updateAuditFilters(metrics.auditEvents ?? [], metrics.auditRetentionLimit ?? 0);
   renderAuditLog(metrics.auditEvents ?? [], metrics.auditRetentionLimit ?? 0);
   renderHistory();

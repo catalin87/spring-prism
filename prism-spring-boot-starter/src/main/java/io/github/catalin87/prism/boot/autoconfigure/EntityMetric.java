@@ -15,20 +15,5 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
-import java.util.List;
-import java.util.Map;
-
-/** Immutable runtime snapshot shared by the fallback endpoint and actuator endpoint. */
-public record PrismMetricsSnapshot(
-    long tokenizedCount,
-    long detokenizedCount,
-    long detectionErrorCount,
-    Map<String, Long> detectionCounts,
-    Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics,
-    List<RulePackMetric> rulePackMetrics,
-    List<EntityMetric> entityMetrics,
-    List<IntegrationMetric> integrationMetrics,
-    List<PrismRuntimeMetrics.AuditEvent> auditEvents,
-    int auditRetentionLimit,
-    List<String> activeRulePacks,
-    String vaultType) {}
+/** Immutable detector/entity drill-down metric summarizing redaction counts within a rule pack. */
+public record EntityMetric(String rulePackName, String entityType, long detections) {}

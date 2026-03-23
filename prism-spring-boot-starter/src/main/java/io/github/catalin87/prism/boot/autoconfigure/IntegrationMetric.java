@@ -15,20 +15,9 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
-import java.util.List;
-import java.util.Map;
-
-/** Immutable runtime snapshot shared by the fallback endpoint and actuator endpoint. */
-public record PrismMetricsSnapshot(
-    long tokenizedCount,
-    long detokenizedCount,
-    long detectionErrorCount,
-    Map<String, Long> detectionCounts,
-    Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics,
-    List<RulePackMetric> rulePackMetrics,
-    List<EntityMetric> entityMetrics,
-    List<IntegrationMetric> integrationMetrics,
-    List<PrismRuntimeMetrics.AuditEvent> auditEvents,
-    int auditRetentionLimit,
-    List<String> activeRulePacks,
-    String vaultType) {}
+/** Immutable integration timing summary used by the dashboard operator drill-down panels. */
+public record IntegrationMetric(
+    String name,
+    PrismRuntimeMetrics.DurationMetric scan,
+    PrismRuntimeMetrics.DurationMetric tokenize,
+    PrismRuntimeMetrics.DurationMetric detokenize) {}

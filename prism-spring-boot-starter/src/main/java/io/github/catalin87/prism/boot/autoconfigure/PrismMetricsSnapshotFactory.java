@@ -20,6 +20,7 @@ import io.github.catalin87.prism.core.PrismVault;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /** Builds the dashboard and actuator runtime snapshot from the active Prism beans. */
 final class PrismMetricsSnapshotFactory {
@@ -33,6 +34,21 @@ final class PrismMetricsSnapshotFactory {
     Map<String, Long> detectionCounts = prismRuntimeMetrics.detectionCounts();
     List<String> activeRulePacks =
         springPrismRulePacks.stream().map(PrismRulePack::getName).toList();
+    List<EntityMetric> entityMetrics =
+        springPrismRulePacks.stream()
+            .flatMap(
+                rulePack ->
+                    rulePack.getDetectors().stream()
+                        .map(
+                            detector ->
+                                new EntityMetric(
+                                    rulePack.getName(),
+                                    detector.getEntityType(),
+                                    detectionCounts.getOrDefault(
+                                        rulePack.getName() + ":" + detector.getEntityType(), 0L))))
+            .filter(entityMetric -> entityMetric.detections() > 0)
+            .sorted(Comparator.comparingLong(EntityMetric::detections).reversed())
+            .toList();
     List<RulePackMetric> rulePackMetrics =
         springPrismRulePacks.stream()
             .map(
@@ -49,14 +65,28 @@ final class PrismMetricsSnapshotFactory {
                 })
             .sorted(Comparator.comparingLong(RulePackMetric::totalDetections).reversed())
             .toList();
+    Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics =
+        prismRuntimeMetrics.durationMetrics();
+    List<IntegrationMetric> integrationMetrics =
+        Stream.of("spring-ai", "langchain4j")
+            .map(
+                integration ->
+                    new IntegrationMetric(
+                        integration,
+                        durationMetrics.get(integration + ":scan"),
+                        durationMetrics.get(integration + ":vault-tokenize"),
+                        durationMetrics.get(integration + ":vault-detokenize")))
+            .toList();
     String vaultType = prismVault.getClass().getSimpleName();
     return new PrismMetricsSnapshot(
         prismRuntimeMetrics.tokenizedCount(),
         prismRuntimeMetrics.detokenizedCount(),
         prismRuntimeMetrics.detectionErrorCount(),
         detectionCounts,
-        prismRuntimeMetrics.durationMetrics(),
+        durationMetrics,
         rulePackMetrics,
+        entityMetrics,
+        integrationMetrics,
         prismRuntimeMetrics.recentAuditEvents(),
         prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
