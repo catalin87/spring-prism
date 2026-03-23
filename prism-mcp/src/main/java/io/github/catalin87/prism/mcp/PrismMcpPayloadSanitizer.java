@@ -15,6 +15,9 @@
  */
 package io.github.catalin87.prism.mcp;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
 import io.github.catalin87.prism.core.PrismRulePack;
@@ -25,14 +28,23 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** Recursively sanitizes and restores textual values inside JSON-like MCP payloads. */
 public final class PrismMcpPayloadSanitizer {
 
   private static final Pattern TOKEN_PATTERN = Pattern.compile("<PRISM_[a-zA-Z0-9_-]+>");
+  private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+  private static final TypeReference<List<Object>> LIST_TYPE = new TypeReference<>() {};
+  private static final Set<String> STRUCTURAL_STRING_KEYS =
+      Set.of("jsonrpc", "id", "method", "type", "role", "name", "uri", "mimeType", "model");
+  private static final Set<String> JSON_STRING_KEYS = Set.of("arguments", "structuredContent");
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   private final List<PrismRulePack> rulePacks;
   private final PrismVault vault;
@@ -72,13 +84,13 @@ public final class PrismMcpPayloadSanitizer {
   /** Returns a recursively sanitized copy of the outbound request payload. */
   public @NonNull Map<String, Object> sanitizeRequest(
       @NonNull Map<String, Object> payload, @NonNull String integration) {
-    return castMap(transformValue(payload, integration, true));
+    return castMap(transformValue(payload, integration, true, null));
   }
 
   /** Returns a recursively restored copy of the inbound response payload. */
   public @NonNull Map<String, Object> restoreResponse(
       @NonNull Map<String, Object> payload, @NonNull String integration) {
-    return castMap(transformValue(payload, integration, false));
+    return castMap(transformValue(payload, integration, false, null));
   }
 
   @SuppressWarnings("unchecked")
@@ -86,27 +98,62 @@ public final class PrismMcpPayloadSanitizer {
     return (Map<String, Object>) value;
   }
 
-  private Object transformValue(Object value, String integration, boolean outbound) {
+  private Object transformValue(
+      Object value, String integration, boolean outbound, @Nullable String fieldName) {
     if (value instanceof String text) {
+      if (fieldName != null && STRUCTURAL_STRING_KEYS.contains(fieldName)) {
+        return text;
+      }
+      if (fieldName != null && JSON_STRING_KEYS.contains(fieldName)) {
+        Object parsed = tryParseStructuredJson(text);
+        if (parsed != null) {
+          try {
+            return objectMapper.writeValueAsString(
+                transformValue(parsed, integration, outbound, fieldName));
+          } catch (JsonProcessingException exception) {
+            if (strictMode) {
+              throw new IllegalStateException(
+                  "Strict mode blocked Prism MCP processing after JSON serialization failure",
+                  exception);
+            }
+            return outbound
+                ? tokenizeString(text, integration)
+                : detokenizeString(text, integration);
+          }
+        }
+      }
       return outbound ? tokenizeString(text, integration) : detokenizeString(text, integration);
     }
     if (value instanceof Map<?, ?> map) {
       Map<String, Object> transformed = new LinkedHashMap<>();
       for (Map.Entry<?, ?> entry : map.entrySet()) {
-        transformed.put(
-            String.valueOf(entry.getKey()),
-            transformValue(entry.getValue(), integration, outbound));
+        String key = String.valueOf(entry.getKey());
+        transformed.put(key, transformValue(entry.getValue(), integration, outbound, key));
       }
       return transformed;
     }
     if (value instanceof List<?> list) {
       List<Object> transformed = new ArrayList<>(list.size());
       for (Object element : list) {
-        transformed.add(transformValue(element, integration, outbound));
+        transformed.add(transformValue(element, integration, outbound, fieldName));
       }
       return transformed;
     }
     return value;
+  }
+
+  private @Nullable Object tryParseStructuredJson(String text) {
+    String trimmed = text.trim();
+    if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
+      return null;
+    }
+    try {
+      return trimmed.startsWith("{")
+          ? objectMapper.readValue(trimmed, MAP_TYPE)
+          : objectMapper.readValue(trimmed, LIST_TYPE);
+    } catch (JsonProcessingException exception) {
+      return null;
+    }
   }
 
   private String tokenizeString(String text, String integration) {

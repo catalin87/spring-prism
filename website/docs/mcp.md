@@ -9,6 +9,7 @@ The current MCP support lives in `prism-mcp` and focuses on the client boundary 
 - outbound payload sanitization before JSON-RPC requests leave the trusted application
 - inbound token restoration after MCP responses return
 - recursive walking of strings inside nested maps, lists, prompt fields, tool arguments, and textual result payloads
+- protocol-aware handling for common MCP shapes such as tool arguments, message content blocks, and JSON-encoded structured argument payloads
 - stronger `Streamable HTTP` event parsing for multi-line `data:` frames and `[DONE]` style trailers
 - fail-open behavior by default, with strict mode available through starter properties
 - runtime metrics aligned with the existing Spring AI and LangChain4j integrations
