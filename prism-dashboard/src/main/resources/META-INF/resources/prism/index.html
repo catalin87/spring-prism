@@ -88,7 +88,9 @@
             <button id="polling-toggle" class="secondary-button" type="button">Pause Polling</button>
             <button id="export-button" class="secondary-button" type="button">Export JSON</button>
             <button id="export-csv-button" class="secondary-button" type="button">Export CSV</button>
-            <button id="export-summary-button" class="secondary-button" type="button">Incident Summary</button>
+            <button id="export-summary-button" class="secondary-button" type="button">
+              Incident Summary
+            </button>
           </div>
         </div>
         <p id="polling-status" class="ops-note">Auto-refresh is enabled every 30 seconds.</p>
@@ -126,26 +128,47 @@
                 <article class="score-breakdown-card">
                   <div class="score-breakdown-header">
                     <span>Coverage</span>
-                    <strong id="privacy-coverage-score">0%</strong>
+                    <div class="score-breakdown-meta">
+                      <strong id="privacy-coverage-score">0%</strong>
+                      <span class="info-chip" aria-label="Coverage details">
+                        i
+                        <span id="privacy-coverage-detail" class="info-tooltip">
+                          Waiting for recent protected traffic.
+                        </span>
+                      </span>
+                    </div>
                   </div>
                   <div class="score-bar"><span id="privacy-coverage-bar"></span></div>
-                  <p id="privacy-coverage-detail">Waiting for recent protected traffic.</p>
                 </article>
                 <article class="score-breakdown-card">
                   <div class="score-breakdown-header">
                     <span>Reliability</span>
-                    <strong id="privacy-reliability-score">0%</strong>
+                    <div class="score-breakdown-meta">
+                      <strong id="privacy-reliability-score">0%</strong>
+                      <span class="info-chip" aria-label="Reliability details">
+                        i
+                        <span id="privacy-reliability-detail" class="info-tooltip">
+                          Runtime error posture is still warming up.
+                        </span>
+                      </span>
+                    </div>
                   </div>
                   <div class="score-bar"><span id="privacy-reliability-bar"></span></div>
-                  <p id="privacy-reliability-detail">Runtime error posture is still warming up.</p>
                 </article>
                 <article class="score-breakdown-card">
                   <div class="score-breakdown-header">
                     <span>Posture</span>
-                    <strong id="privacy-posture-score">0%</strong>
+                    <div class="score-breakdown-meta">
+                      <strong id="privacy-posture-score">0%</strong>
+                      <span class="info-chip" aria-label="Posture details">
+                        i
+                        <span id="privacy-posture-detail" class="info-tooltip">
+                          Deployment posture details will appear here.
+                        </span>
+                      </span>
+                    </div>
                   </div>
                   <div class="score-bar"><span id="privacy-posture-bar"></span></div>
-                  <p id="privacy-posture-detail">Deployment posture details will appear here.</p>
                 </article>
               </div>
             </div>
