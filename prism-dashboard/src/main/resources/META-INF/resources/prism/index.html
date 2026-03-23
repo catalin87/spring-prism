@@ -38,9 +38,28 @@
           <label>
             History Window
             <select id="history-limit">
-              <option value="10">10 points</option>
-              <option value="25" selected>25 points</option>
-              <option value="50">50 points</option>
+              <option value="10">10 samples</option>
+              <option value="25" selected>25 samples</option>
+              <option value="50">50 samples</option>
+              <option value="120">Full retention</option>
+            </select>
+          </label>
+          <label>
+            Integration
+            <select id="integration-filter">
+              <option value="ALL">All</option>
+            </select>
+          </label>
+          <label>
+            Rule Pack
+            <select id="rule-pack-filter">
+              <option value="ALL">All</option>
+            </select>
+          </label>
+          <label>
+            Entity
+            <select id="entity-filter">
+              <option value="ALL">All</option>
             </select>
           </label>
           <div class="ops-actions">
@@ -49,6 +68,7 @@
           </div>
         </div>
         <p id="polling-status" class="ops-note">Auto-refresh is enabled every 30 seconds.</p>
+        <p id="filter-status" class="ops-note">All integrations, rule packs, and entity types are visible.</p>
       </section>
 
       <section id="status-panel" class="panel status-panel">
@@ -182,6 +202,7 @@
             <p class="label">History</p>
             <h2>Recent runtime changes</h2>
           </div>
+          <p id="history-retention-note" class="history-note"></p>
         </div>
         <div class="history-grid">
           <article class="history-card">
@@ -195,6 +216,10 @@
           <article class="history-card">
             <p>Scan latency</p>
             <svg id="history-scan" viewBox="0 0 320 120" role="img" aria-label="Scan latency history chart"></svg>
+          </article>
+          <article class="history-card">
+            <p>Token backlog</p>
+            <svg id="history-backlog" viewBox="0 0 320 120" role="img" aria-label="Token backlog history chart"></svg>
           </article>
         </div>
       </section>

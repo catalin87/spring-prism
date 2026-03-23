@@ -29,6 +29,7 @@ public class PrismRuntimeMetrics
         io.github.catalin87.prism.langchain4j.PrismMetricsSink {
 
   private static final int MAX_AUDIT_EVENTS = 12;
+  private static final int MAX_HISTORY_SAMPLES = 120;
 
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
@@ -38,6 +39,7 @@ public class PrismRuntimeMetrics
       new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> durationSamples = new ConcurrentHashMap<>();
   private final Deque<AuditEvent> auditEvents = new ArrayDeque<>();
+  private final Deque<HistorySample> historySamples = new ArrayDeque<>();
 
   @Override
   public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {
@@ -127,6 +129,37 @@ public class PrismRuntimeMetrics
     return MAX_AUDIT_EVENTS;
   }
 
+  /** Returns a recent bounded server-side history of aggregate dashboard snapshots. */
+  public synchronized java.util.List<HistorySample> recentHistorySamples() {
+    return java.util.List.copyOf(historySamples);
+  }
+
+  /** Returns the maximum number of server-side history samples retained in memory. */
+  public int historyRetentionLimit() {
+    return MAX_HISTORY_SAMPLES;
+  }
+
+  /** Captures a single aggregate sample so dashboard trends survive browser refreshes. */
+  public synchronized void captureHistorySample(String vaultType) {
+    long totalDetections = detectionCounts().values().stream().mapToLong(Long::longValue).sum();
+    long detectionErrors = detectionErrorCount();
+    long tokenized = tokenizedCount();
+    long detokenized = detokenizedCount();
+    historySamples.addLast(
+        new HistorySample(
+            Instant.now().toString(),
+            totalDetections,
+            detectionErrors,
+            averageMilliseconds("spring-ai:scan", "langchain4j:scan"),
+            tokenized,
+            detokenized,
+            Math.max(0, tokenized - detokenized),
+            vaultType));
+    while (historySamples.size() > MAX_HISTORY_SAMPLES) {
+      historySamples.removeFirst();
+    }
+  }
+
   private String metricKey(String rulePackName, String entityType) {
     return rulePackName + ":" + entityType;
   }
@@ -135,6 +168,17 @@ public class PrismRuntimeMetrics
     String key = integration + ":" + operation;
     durationTotalsNanos.computeIfAbsent(key, ignored -> new AtomicLong()).addAndGet(nanos);
     durationSamples.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
+  }
+
+  private double averageMilliseconds(String... keys) {
+    for (String key : keys) {
+      AtomicLong totalNanos = durationTotalsNanos.get(key);
+      AtomicLong samples = durationSamples.get(key);
+      if (totalNanos != null && samples != null && samples.get() > 0) {
+        return (totalNanos.get() / (double) samples.get()) / 1_000_000d;
+      }
+    }
+    return 0d;
   }
 
   private synchronized void recordEvent(String action, String subject, long count, String source) {

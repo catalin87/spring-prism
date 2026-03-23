@@ -2,3 +2,8 @@ spring:
   prism:
     app-secret: example-spring-ai-secret
     locales: UNIVERSAL
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prism

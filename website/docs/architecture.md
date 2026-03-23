@@ -40,7 +40,8 @@ The embedded observability surface.
 - **Packaging**: Static assets are served from `META-INF/resources/prism/` inside the dashboard jar.
 - **Data Source**: Reads the Prism runtime snapshot from `/actuator/prism` when Actuator is present and falls back to `/prism/metrics` otherwise.
 - **Verification**: Includes a bundled `/prism/?demo=1` fixture mode for visual checks without a live runtime.
-- **Current Scope**: Dashboard shell, top-redacted metrics, vault/runtime health, rule-pack activity bars, integration timing cards, alert and vault posture cards, entity drill-downs, browser-side history charts, polling/export controls, a masked recent-activity audit feed with filters, and a visual refraction-flow explainer.
+- **Current Scope**: Dashboard shell, top-redacted metrics, vault/runtime health, rule-pack activity bars, integration timing cards, alert and vault posture cards, entity drill-downs, server-side retained history charts, operational filters, polling/export controls, a masked recent-activity audit feed with filters, and a visual refraction-flow explainer.
+- **Operational Guidance**: The dashboard payload stays masked, but the routes remain operational endpoints and should be protected by the host application's normal security boundary in production.
 
 ## The Request Lifecycle
 
