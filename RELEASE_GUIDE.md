@@ -11,7 +11,7 @@ Before you can publish to Maven Central, verify these are complete:
 1. **Sonatype Namespace Verified** — Go to [central.sonatype.com](https://central.sonatype.com) → Namespaces → confirm `io.github.catalin87` shows ✅ Verified.
    - If not: create a **public** temporary GitHub repo named with the verification key they provide, click Verify, then delete the repo.
 
-2. **GitHub Secrets Configured** — All four secrets must exist in **Settings → Secrets → Actions**:
+2. **GitHub Secrets Configured** — All four release secrets must exist in **Settings → Secrets → Actions**:
    - `OSSRH_USERNAME` — Sonatype Central Portal User Token username
    - `OSSRH_TOKEN` — Sonatype Central Portal User Token password
    - `GPG_PRIVATE_KEY` — Your armored GPG private key block
@@ -21,14 +21,13 @@ Before you can publish to Maven Central, verify these are complete:
 
 4. **Only release from `main`** — Merge all feature branches to `main` before tagging. Tags must point to `main` for the release workflow to produce a coherent artifact.
 
-Before your first release, add the following four secrets to **GitHub → Settings → Secrets and variables → Actions**:
+5. **Dry-Run Packaging Passes** — Before tagging, confirm:
 
-| Secret Name | Value |
-|---|---|
-| `OSSRH_USERNAME` | Your Sonatype OSSRH / Central Portal username |
-| `OSSRH_TOKEN` | Your Sonatype OSSRH / Central Portal token (not password) |
-| `GPG_PRIVATE_KEY` | Output of `gpg --armor --export-secret-keys YOUR_KEY_ID` |
-| `GPG_PASSPHRASE` | The passphrase protecting your GPG key |
+```bash
+mvn clean verify
+mvn -Prelease -Dgpg.skip=true -DskipTests package
+cd website && npm run build
+```
 
 Also create a GitHub **Environment** named `maven-central-release` (Settings → Environments). This acts as an optional manual approval gate before the publish job fires.
 
@@ -91,6 +90,6 @@ git push origin main
 
 ## Verifying the Release
 
-- **Sonatype Portal:** https://central.sonatype.com/artifact/io.catalin87.prism/prism-core
-- **Maven Central Search:** https://search.maven.org/search?q=g:io.catalin87.prism
+- **Sonatype Portal:** https://central.sonatype.com/artifact/io.github.catalin87.prism/prism-core
+- **Maven Central Search:** https://search.maven.org/search?q=g:io.github.catalin87.prism
 - Allow **15–30 minutes** for Central sync after the workflow completes.
