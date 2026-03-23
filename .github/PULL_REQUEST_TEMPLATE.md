@@ -11,7 +11,7 @@
 
 ### ⚖️ Legal & Compliance
 - [ ] **License headers present:** The EUPL 1.2 "Catalin Dordea" copyright header has been embedded on ALL new `.java` files.
-- [ ] **CLA Signed:** I have signed the [Spring Prism ICLA](https://gist.github.com/catalin87/URL_GIST_AICI) via the CLA Assistant bot.
+- [ ] **CLA Signed:** I have signed the [Spring Prism ICLA](https://gist.github.com/catalin87/7f82cf91cb1b8cca7f2919d39da0f636) via the CLA Assistant bot.
 - [ ] **Dual-License Agreement:** I acknowledge and agree that this contribution is governed by the project's **Dual Licensing** model (EUPL 1.2 and Commercial Enterprise License).
 - [ ] **DCO Signed:** All commits in this branch contain the `Signed-off-by` flag (DCO compliance).
 
