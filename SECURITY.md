@@ -16,3 +16,7 @@ If you discover a scenario where structured PII bypasses a `PrismRulePack`, an e
 1. Email the core maintainer exactly with the subject: `[SECURITY] Spring Prism Leakage Report`.
 2. Include a detailed Proof of Concept (PoC) demonstrating the leakage or vault fault.
 3. We will acknowledge the report within 48 hours and coordinate a private mitigation patch before publishing a CVE disclosure.
+
+## Verification:
+All releases are signed with GPG key 2456988305F327B2.
+You can find the public key in the /certs folder of this repository.
