@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** MCP client implementation for local subprocess servers over the standard stdio transport. */
 public final class PrismStdioMcpClient extends AbstractPrismMcpClient {
@@ -77,7 +78,8 @@ public final class PrismStdioMcpClient extends AbstractPrismMcpClient {
   }
 
   @Override
-  protected @NonNull String execute(@NonNull String requestJson) throws IOException {
+  protected @NonNull String execute(@NonNull String requestJson, @Nullable String requestId)
+      throws IOException {
     ProcessBuilder processBuilder = new ProcessBuilder(commandLine);
     processBuilder.redirectErrorStream(false);
     processBuilder.environment().putAll(env);

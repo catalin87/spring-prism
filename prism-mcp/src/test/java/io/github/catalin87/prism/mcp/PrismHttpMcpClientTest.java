@@ -110,4 +110,65 @@ class PrismHttpMcpClientTest {
     assertThat(String.valueOf(((Map<?, ?>) response.get("result")).get("message")))
         .contains("user@example.com");
   }
+
+  @Test
+  void exchangeUsesFinalMatchingSsePayloadWhenServerEmitsProgressFrames() throws IOException {
+    AtomicReference<String> recordedRequest = new AtomicReference<>();
+    server.createContext(
+        "/mcp",
+        exchange -> {
+          String requestJson =
+              new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+          recordedRequest.set(requestJson);
+          @SuppressWarnings("unchecked")
+          Map<String, Object> request = OBJECT_MAPPER.readValue(requestJson, MAP_TYPE);
+          @SuppressWarnings("unchecked")
+          Map<String, Object> params = (Map<String, Object>) request.get("params");
+          String prompt = String.valueOf(params.get("prompt"));
+          String body =
+              """
+              event: message
+              data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progress":50}}
+
+              event: message
+              data: {"jsonrpc":"2.0","id":"different","result":{"message":"ignore"}}
+
+              event: response
+              data: {"jsonrpc":"2.0","id":"%s","result":{"message":"%s"}}
+
+              data: [DONE]
+              """
+                  .formatted(request.get("id"), prompt);
+          exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
+          exchange.sendResponseHeaders(200, body.getBytes(StandardCharsets.UTF_8).length);
+          exchange.getResponseBody().write(body.getBytes(StandardCharsets.UTF_8));
+          exchange.close();
+        });
+    server.start();
+
+    PrismHttpMcpClient client =
+        new PrismHttpMcpClient(
+            "http://localhost:" + server.getAddress().getPort() + "/mcp",
+            java.util.List.of(new UniversalRulePack()),
+            vault,
+            ObservationRegistry.NOOP,
+            PrismMcpMetricsSink.NOOP,
+            false);
+
+    Map<String, Object> response =
+        client.exchange(
+            Map.of(
+                "jsonrpc",
+                "2.0",
+                "id",
+                "req-9",
+                "params",
+                Map.of("prompt", "Escalate to jane.doe@example.com")));
+
+    assertThat(recordedRequest.get())
+        .contains("<PRISM_EMAIL_")
+        .doesNotContain("jane.doe@example.com");
+    assertThat(String.valueOf(((Map<?, ?>) response.get("result")).get("message")))
+        .contains("jane.doe@example.com");
+  }
 }

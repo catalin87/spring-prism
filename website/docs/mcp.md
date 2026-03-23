@@ -10,7 +10,7 @@ The current MCP support lives in `prism-mcp` and focuses on the client boundary 
 - inbound token restoration after MCP responses return
 - recursive walking of strings inside nested maps, lists, prompt fields, tool arguments, and textual result payloads
 - protocol-aware handling for common MCP shapes such as tool arguments, message content blocks, and JSON-encoded structured argument payloads
-- stronger `Streamable HTTP` event parsing for multi-line `data:` frames and `[DONE]` style trailers
+- stronger `Streamable HTTP` event parsing for multi-line `data:` frames, progress events, request-id correlation, and `[DONE]` style trailers
 - fail-open behavior by default, with strict mode available through starter properties
 - runtime metrics aligned with the existing Spring AI and LangChain4j integrations
 
@@ -81,4 +81,4 @@ Deferred MCP work:
 
 - full server-side interception wiring, although a reusable server interceptor foundation now exists in `prism-mcp`
 - binary payload rewriting
-- richer long-lived streaming response session management beyond the current foundation transport support
+- richer long-lived streaming response session management beyond the current request-correlated transport support
