@@ -28,6 +28,19 @@ const auditSourceFilter = document.getElementById("audit-source-filter");
 const auditLimitFilter = document.getElementById("audit-limit-filter");
 const auditRetentionNote = document.getElementById("audit-retention-note");
 const historyRetentionNote = document.getElementById("history-retention-note");
+const privacyScoreValue = document.getElementById("privacy-score-value");
+const privacyScoreRing = document.getElementById("privacy-score-ring");
+const privacyScoreWindow = document.getElementById("privacy-score-window");
+const privacyScoreExplanation = document.getElementById("privacy-score-explanation");
+const privacyCoverageScore = document.getElementById("privacy-coverage-score");
+const privacyCoverageBar = document.getElementById("privacy-coverage-bar");
+const privacyCoverageDetail = document.getElementById("privacy-coverage-detail");
+const privacyReliabilityScore = document.getElementById("privacy-reliability-score");
+const privacyReliabilityBar = document.getElementById("privacy-reliability-bar");
+const privacyReliabilityDetail = document.getElementById("privacy-reliability-detail");
+const privacyPostureScore = document.getElementById("privacy-posture-score");
+const privacyPostureBar = document.getElementById("privacy-posture-bar");
+const privacyPostureDetail = document.getElementById("privacy-posture-detail");
 
 let currentMetrics = null;
 let currentEndpoint = null;
@@ -127,6 +140,13 @@ function formatMilliseconds(durationMetric) {
     return "0 ms";
   }
   return `${(durationMetric.averageNanos / 1_000_000).toFixed(2)} ms`;
+}
+
+function setScoreBar(element, score) {
+  if (!element) {
+    return;
+  }
+  element.style.width = `${Math.max(0, Math.min(100, score))}%`;
 }
 
 function averageMilliseconds(durationMetric) {
@@ -261,6 +281,32 @@ function renderTopDetections(metrics) {
     item.append(label, value);
     topList.append(item);
   });
+}
+
+function renderPrivacyScore(metrics) {
+  const privacyScore = metrics.privacyScore;
+  if (!privacyScore) {
+    privacyScoreValue.textContent = "0";
+    privacyScoreRing.style.setProperty("--score", "0");
+    return;
+  }
+
+  privacyScoreValue.textContent = `${privacyScore.score ?? 0}`;
+  privacyScoreRing.style.setProperty("--score", `${privacyScore.score ?? 0}`);
+  privacyScoreWindow.textContent = privacyScore.windowLabel ?? "Last 60 minutes";
+  privacyScoreExplanation.textContent = privacyScore.explanation ?? "";
+
+  privacyCoverageScore.textContent = `${privacyScore.coverage?.score ?? 0}%`;
+  setScoreBar(privacyCoverageBar, privacyScore.coverage?.score ?? 0);
+  privacyCoverageDetail.textContent = privacyScore.coverage?.detail ?? "";
+
+  privacyReliabilityScore.textContent = `${privacyScore.reliability?.score ?? 0}%`;
+  setScoreBar(privacyReliabilityBar, privacyScore.reliability?.score ?? 0);
+  privacyReliabilityDetail.textContent = privacyScore.reliability?.detail ?? "";
+
+  privacyPostureScore.textContent = `${privacyScore.posture?.score ?? 0}%`;
+  setScoreBar(privacyPostureBar, privacyScore.posture?.score ?? 0);
+  privacyPostureDetail.textContent = privacyScore.posture?.detail ?? "";
 }
 
 function renderRulePackMetrics(rulePackMetrics) {
@@ -667,8 +713,7 @@ function healthSignal(metrics) {
   if ((metrics.detectionErrorCount ?? 0) > 0) {
     return "Attention";
   }
-  const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
-      ?? metrics.durationMetrics?.["langchain4j:scan"];
+  const scanMetric = highestScanMetric(metrics.integrationMetrics ?? []);
   if (averageMilliseconds(scanMetric) >= thresholds.scanLatencyCriticalMs) {
     return "Critical";
   }
@@ -806,8 +851,7 @@ function renderMetrics(endpoint, metrics) {
   currentEndpoint = endpoint;
   initializePollingFromMetrics(metrics);
 
-  const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
-      ?? metrics.durationMetrics?.["langchain4j:scan"];
+  const scanMetric = highestScanMetric(metrics.integrationMetrics ?? []);
 
   document.getElementById("vault-type").textContent = metrics.vaultType || "-";
   document.getElementById("tokenized-count").textContent = `${metrics.tokenizedCount ?? 0}`;
@@ -821,6 +865,7 @@ function renderMetrics(endpoint, metrics) {
       `${Object.keys(metrics.durationMetrics ?? {}).length}`;
   document.getElementById("endpoint-used").textContent = endpoint;
 
+  renderPrivacyScore(metrics);
   updateOperationalFilters(metrics);
   renderTopDetections(metrics);
   renderRulePackMetrics(metrics.rulePackMetrics ?? []);

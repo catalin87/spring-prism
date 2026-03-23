@@ -204,6 +204,9 @@ class SpringPrismAutoConfigurationTest {
           PrismActuatorEndpoint endpoint = context.getBean(PrismActuatorEndpoint.class);
           PrismMetricsSnapshot snapshot = endpoint.metrics();
 
+          assertThat(snapshot.privacyScore()).isNotNull();
+          assertThat(snapshot.privacyScore().score()).isBetween(0, 100);
+          assertThat(snapshot.privacyScore().coverage().label()).isEqualTo("Coverage");
           assertThat(snapshot.activeRulePacks()).contains("UNIVERSAL");
           assertThat(snapshot.vaultType()).isNotBlank();
           assertThat(snapshot.durationMetrics())

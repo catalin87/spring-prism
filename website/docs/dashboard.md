@@ -18,6 +18,7 @@ If Actuator is not on the classpath, it falls back to:
 
 ## Current panels
 
+- Global Privacy Score with live Coverage, Reliability, and Posture subscores over the last 60 minutes
 - Vault health and tokenization counts
 - Top redacted entity types
 - Runtime pulse and tracked timer count
@@ -34,6 +35,28 @@ If Actuator is not on the classpath, it falls back to:
 - Polling controls plus JSON, CSV, and incident-summary export
 - Operational filters for integration, rule pack, entity type, and trend window
 - Refraction-flow explainer
+
+## Privacy Score
+
+The dashboard now renders a live `Privacy Score` as the primary hero signal.
+
+It is calculated from the last 60 minutes of retained dashboard history using:
+
+```text
+PrivacyScore = 100 * (
+  0.50 * Coverage +
+  0.30 * Reliability +
+  0.20 * Posture
+)
+```
+
+Where:
+
+- `Coverage` reflects recent protected activity
+- `Reliability` penalizes recent detector and restore errors
+- `Posture` reflects strict-mode, vault mode, secret hygiene, and backlog posture
+
+The goal is not to pretend the score is a universal security grade. It is a live operational signal that makes Prism's recent value and runtime health immediately visible.
 
 ## Dashboard configuration
 

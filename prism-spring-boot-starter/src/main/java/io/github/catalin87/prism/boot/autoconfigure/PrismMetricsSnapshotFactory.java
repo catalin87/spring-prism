@@ -87,10 +87,13 @@ final class PrismMetricsSnapshotFactory {
         Math.max(0, prismRuntimeMetrics.tokenizedCount() - prismRuntimeMetrics.detokenizedCount());
     DashboardConfiguration dashboardConfiguration =
         dashboardConfiguration(prismRuntimeMetrics, properties);
+    PrivacyScore privacyScore =
+        privacyScore(historySamples, tokenBacklog, prismVault, properties, prismRuntimeMetrics);
     return new PrismMetricsSnapshot(
         prismRuntimeMetrics.tokenizedCount(),
         prismRuntimeMetrics.detokenizedCount(),
         prismRuntimeMetrics.detectionErrorCount(),
+        privacyScore,
         detectionCounts,
         durationMetrics,
         rulePackMetrics,
@@ -161,5 +164,122 @@ final class PrismMetricsSnapshotFactory {
         errorEvents,
         averageScanMilliseconds,
         peakTokenBacklog);
+  }
+
+  private static PrivacyScore privacyScore(
+      List<HistorySample> historySamples,
+      long tokenBacklog,
+      PrismVault prismVault,
+      SpringPrismProperties properties,
+      PrismRuntimeMetrics prismRuntimeMetrics) {
+    Instant now = Instant.now();
+    List<HistorySample> lastHourSamples = within(historySamples, now, Duration.ofHours(1));
+    List<HistorySample> scoringSamples =
+        lastHourSamples.isEmpty() ? historySamples : lastHourSamples;
+
+    long protectedActivity = recentProtectedActivity(scoringSamples);
+    long recentErrors = recentErrors(scoringSamples);
+    double coverage = clamp01(protectedActivity / 20d);
+    double reliability = 1d - clamp01(recentErrors / (double) Math.max(1L, protectedActivity));
+    double posture = postureScore(prismVault, properties, prismRuntimeMetrics, tokenBacklog);
+
+    int coverageScore = toScore(coverage);
+    int reliabilityScore = toScore(reliability);
+    int postureScore = toScore(posture);
+    int overallScore = toScore((0.50d * coverage) + (0.30d * reliability) + (0.20d * posture));
+
+    return new PrivacyScore(
+        overallScore,
+        "Last 60 minutes",
+        "Based on protected activity, runtime reliability, and deployment posture "
+            + "in the last 60 minutes.",
+        new PrivacyScoreComponent(
+            "Coverage",
+            coverageScore,
+            protectedActivity > 0
+                ? protectedActivity + " protected event(s) observed in the active window."
+                : "Waiting for protected traffic in the active window."),
+        new PrivacyScoreComponent(
+            "Reliability",
+            reliabilityScore,
+            recentErrors > 0
+                ? recentErrors + " error event(s) reduced the runtime reliability score."
+                : "No recent detector, vault, or restore errors reduced the score."),
+        new PrivacyScoreComponent(
+            "Posture",
+            postureScore,
+            postureDetail(prismVault, properties, prismRuntimeMetrics, tokenBacklog)));
+  }
+
+  private static long recentProtectedActivity(List<HistorySample> samples) {
+    if (samples.isEmpty()) {
+      return 0L;
+    }
+    HistorySample first = samples.getFirst();
+    HistorySample last = samples.getLast();
+    long detectionDelta = Math.max(0L, last.totalDetections() - first.totalDetections());
+    long tokenizedDelta = Math.max(0L, last.tokenizedCount() - first.tokenizedCount());
+    if (samples.size() == 1) {
+      return Math.max(last.totalDetections(), last.tokenizedCount());
+    }
+    return Math.max(detectionDelta, tokenizedDelta);
+  }
+
+  private static long recentErrors(List<HistorySample> samples) {
+    if (samples.isEmpty()) {
+      return 0L;
+    }
+    HistorySample first = samples.getFirst();
+    HistorySample last = samples.getLast();
+    if (samples.size() == 1) {
+      return last.detectionErrors();
+    }
+    return Math.max(0L, last.detectionErrors() - first.detectionErrors());
+  }
+
+  private static double postureScore(
+      PrismVault prismVault,
+      SpringPrismProperties properties,
+      PrismRuntimeMetrics prismRuntimeMetrics,
+      long tokenBacklog) {
+    double score = 0.55d;
+    score += properties.isSecurityStrictMode() ? 0.15d : 0.05d;
+    score += prismVault.getClass().getSimpleName().toLowerCase().contains("redis") ? 0.20d : 0.15d;
+    score += "spring-prism-change-me".equals(properties.getAppSecret()) ? -0.20d : 0.10d;
+    if (tokenBacklog == 0L) {
+      score += 0.05d;
+    } else if (tokenBacklog > prismRuntimeMetrics.auditRetentionLimit()) {
+      score -= 0.05d;
+    }
+    return clamp01(score);
+  }
+
+  private static String postureDetail(
+      PrismVault prismVault,
+      SpringPrismProperties properties,
+      PrismRuntimeMetrics prismRuntimeMetrics,
+      long tokenBacklog) {
+    String strictMode = properties.isSecurityStrictMode() ? "strict mode on" : "fail-open mode";
+    String vaultMode =
+        prismVault.getClass().getSimpleName().toLowerCase().contains("redis")
+            ? "Redis-backed shared vault"
+            : "local in-memory vault";
+    String secretState =
+        "spring-prism-change-me".equals(properties.getAppSecret())
+            ? "default app secret still configured"
+            : "custom app secret configured";
+    String backlogState =
+        tokenBacklog > prismRuntimeMetrics.auditRetentionLimit()
+            ? "token backlog is elevated"
+            : "token backlog is within the normal band";
+    return strictMode + ", " + vaultMode + ", " + secretState + ", and " + backlogState + ".";
+  }
+
+  private static int toScore(double value) {
+    return (int) Math.round(clamp01(value) * 100d);
+  }
+
+  private static double clamp01(double value) {
+    return Math.max(0d, Math.min(1d, value));
   }
 }

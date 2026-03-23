@@ -1,7 +1,27 @@
 {
-  "tokenizedCount": 21,
-  "detokenizedCount": 19,
+  "tokenizedCount": 34,
+  "detokenizedCount": 31,
   "detectionErrorCount": 1,
+  "privacyScore": {
+    "score": 92,
+    "windowLabel": "Last 60 minutes",
+    "explanation": "Based on protected activity, runtime reliability, and deployment posture in the last 60 minutes.",
+    "coverage": {
+      "label": "Coverage",
+      "score": 90,
+      "detail": "18 protected event(s) observed in the active window."
+    },
+    "reliability": {
+      "label": "Reliability",
+      "score": 94,
+      "detail": "No recent detector, vault, or restore errors reduced the score."
+    },
+    "posture": {
+      "label": "Posture",
+      "score": 91,
+      "detail": "strict mode on, Redis-backed shared vault, custom app secret configured, and token backlog is within the normal band."
+    }
+  },
   "detectionCounts": {
     "UNIVERSAL:EMAIL": 9,
     "UNIVERSAL:PHONE": 4,
@@ -19,10 +39,25 @@
       "totalNanos": 86000000,
       "averageNanos": 6142857
     },
+    "langchain4j:scan": {
+      "samples": 8,
+      "totalNanos": 78000000,
+      "averageNanos": 9750000
+    },
     "langchain4j:vault-detokenize": {
-      "samples": 5,
+      "samples": 8,
       "totalNanos": 43000000,
-      "averageNanos": 8600000
+      "averageNanos": 5375000
+    },
+    "mcp-stdio:scan": {
+      "samples": 5,
+      "totalNanos": 49000000,
+      "averageNanos": 9800000
+    },
+    "mcp-streamable-http:scan": {
+      "samples": 3,
+      "totalNanos": 36000000,
+      "averageNanos": 12000000
     }
   },
   "rulePackMetrics": [
@@ -37,30 +72,183 @@
       "totalDetections": 5
     }
   ],
+  "entityMetrics": [
+    {
+      "rulePackName": "UNIVERSAL",
+      "entityType": "EMAIL",
+      "detections": 9
+    },
+    {
+      "rulePackName": "UNIVERSAL",
+      "entityType": "PHONE",
+      "detections": 4
+    },
+    {
+      "rulePackName": "EUROPE",
+      "entityType": "IBAN",
+      "detections": 3
+    },
+    {
+      "rulePackName": "EUROPE",
+      "entityType": "PESEL",
+      "detections": 2
+    }
+  ],
+  "integrationMetrics": [
+    {
+      "name": "spring-ai",
+      "scan": {
+        "samples": 14,
+        "totalNanos": 104000000,
+        "averageNanos": 7428571
+      },
+      "tokenize": {
+        "samples": 14,
+        "totalNanos": 86000000,
+        "averageNanos": 6142857
+      },
+      "detokenize": null
+    },
+    {
+      "name": "langchain4j",
+      "scan": {
+        "samples": 8,
+        "totalNanos": 78000000,
+        "averageNanos": 9750000
+      },
+      "tokenize": null,
+      "detokenize": {
+        "samples": 8,
+        "totalNanos": 43000000,
+        "averageNanos": 5375000
+      }
+    },
+    {
+      "name": "mcp-stdio",
+      "scan": {
+        "samples": 5,
+        "totalNanos": 49000000,
+        "averageNanos": 9800000
+      },
+      "tokenize": null,
+      "detokenize": null
+    },
+    {
+      "name": "mcp-streamable-http",
+      "scan": {
+        "samples": 3,
+        "totalNanos": 36000000,
+        "averageNanos": 12000000
+      },
+      "tokenize": null,
+      "detokenize": null
+    }
+  ],
+  "historySamples": [
+    {
+      "capturedAt": "2026-03-23T15:12:00Z",
+      "totalDetections": 4,
+      "detectionErrors": 0,
+      "scanMilliseconds": 6.2,
+      "tokenizedCount": 6,
+      "detokenizedCount": 5,
+      "tokenBacklog": 1,
+      "vaultType": "RedisPrismVault"
+    },
+    {
+      "capturedAt": "2026-03-23T15:26:00Z",
+      "totalDetections": 8,
+      "detectionErrors": 0,
+      "scanMilliseconds": 7.9,
+      "tokenizedCount": 13,
+      "detokenizedCount": 12,
+      "tokenBacklog": 1,
+      "vaultType": "RedisPrismVault"
+    },
+    {
+      "capturedAt": "2026-03-23T15:41:00Z",
+      "totalDetections": 13,
+      "detectionErrors": 1,
+      "scanMilliseconds": 9.4,
+      "tokenizedCount": 22,
+      "detokenizedCount": 20,
+      "tokenBacklog": 2,
+      "vaultType": "RedisPrismVault"
+    },
+    {
+      "capturedAt": "2026-03-23T15:58:00Z",
+      "totalDetections": 18,
+      "detectionErrors": 1,
+      "scanMilliseconds": 8.1,
+      "tokenizedCount": 34,
+      "detokenizedCount": 31,
+      "tokenBacklog": 3,
+      "vaultType": "RedisPrismVault"
+    }
+  ],
+  "historyRollups": [
+    {
+      "key": "recent",
+      "label": "Recent",
+      "sampleCount": 4,
+      "latestDetections": 18,
+      "errorEvents": 1,
+      "averageScanMilliseconds": 7.9,
+      "peakTokenBacklog": 3
+    },
+    {
+      "key": "5m",
+      "label": "5 minutes",
+      "sampleCount": 1,
+      "latestDetections": 18,
+      "errorEvents": 1,
+      "averageScanMilliseconds": 8.1,
+      "peakTokenBacklog": 3
+    },
+    {
+      "key": "15m",
+      "label": "15 minutes",
+      "sampleCount": 2,
+      "latestDetections": 18,
+      "errorEvents": 1,
+      "averageScanMilliseconds": 8.75,
+      "peakTokenBacklog": 3
+    },
+    {
+      "key": "1h",
+      "label": "1 hour",
+      "sampleCount": 4,
+      "latestDetections": 18,
+      "errorEvents": 1,
+      "averageScanMilliseconds": 7.9,
+      "peakTokenBacklog": 3
+    }
+  ],
+  "historyRetentionLimit": 120,
   "auditEvents": [
     {
-      "timestamp": "2026-03-22T20:52:41Z",
+      "timestamp": "2026-03-23T15:58:21Z",
       "action": "detokenized",
       "subject": "PRISM_TOKEN",
       "count": 2,
       "source": "runtime"
     },
     {
-      "timestamp": "2026-03-22T20:51:57Z",
+      "timestamp": "2026-03-23T15:57:57Z",
       "action": "detected",
       "subject": "EMAIL",
       "count": 3,
       "source": "UNIVERSAL"
     },
     {
-      "timestamp": "2026-03-22T20:50:15Z",
+      "timestamp": "2026-03-23T15:56:15Z",
       "action": "detected",
       "subject": "IBAN",
       "count": 1,
       "source": "EUROPE"
     },
     {
-      "timestamp": "2026-03-22T20:49:48Z",
+      "timestamp": "2026-03-23T15:55:48Z",
       "action": "error",
       "subject": "PHONE",
       "count": 1,
@@ -72,5 +260,20 @@
     "UNIVERSAL",
     "EUROPE"
   ],
-  "vaultType": "DefaultPrismVault"
+  "vaultType": "RedisPrismVault",
+  "distributedVault": true,
+  "tokenBacklog": 3,
+  "dashboardConfiguration": {
+    "auditRetentionLimit": 12,
+    "historyRetentionLimit": 120,
+    "defaultPollingSeconds": 30,
+    "alertThresholds": {
+      "scanLatencyWarnMs": 25,
+      "scanLatencyCriticalMs": 75,
+      "tokenBacklogWarn": 5,
+      "tokenBacklogCritical": 20,
+      "detectionErrorWarn": 1,
+      "detectionErrorCritical": 5
+    }
+  }
 }
