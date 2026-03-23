@@ -26,6 +26,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** MCP client implementation for hosted servers over Streamable HTTP. */
 public final class PrismHttpMcpClient extends AbstractPrismMcpClient {
@@ -62,7 +63,8 @@ public final class PrismHttpMcpClient extends AbstractPrismMcpClient {
   }
 
   @Override
-  protected @NonNull String execute(@NonNull String requestJson) throws IOException {
+  protected @NonNull String execute(@NonNull String requestJson, @Nullable String requestId)
+      throws IOException {
     HttpRequest request =
         HttpRequest.newBuilder(endpoint)
             .timeout(Duration.ofSeconds(30))
@@ -79,7 +81,7 @@ public final class PrismHttpMcpClient extends AbstractPrismMcpClient {
       }
       String contentType = response.headers().firstValue("content-type").orElse("");
       return contentType.contains("text/event-stream")
-          ? PrismMcpEventStreamParser.extractLastJsonPayload(response.body())
+          ? PrismMcpEventStreamParser.extractResponsePayload(response.body(), requestId)
           : response.body();
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();

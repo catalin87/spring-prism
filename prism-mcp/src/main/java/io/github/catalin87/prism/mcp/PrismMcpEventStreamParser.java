@@ -15,50 +15,122 @@
  */
 package io.github.catalin87.prism.mcp;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-/** Parses Streamable HTTP event streams and extracts the last JSON payload event. */
+/** Parses Streamable HTTP event streams and extracts the most relevant JSON payload event. */
 final class PrismMcpEventStreamParser {
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private PrismMcpEventStreamParser() {}
 
-  static @NonNull String extractLastJsonPayload(@NonNull String body) {
-    StringBuilder currentEvent = new StringBuilder();
-    String latestPayload = null;
+  static @NonNull String extractResponsePayload(
+      @NonNull String body, @Nullable String expectedRequestId) {
+    StringBuilder currentEventData = new StringBuilder();
+    String currentEventType = "";
+    Candidate bestCandidate = null;
 
     for (String rawLine : body.split("\\R", -1)) {
       String line = rawLine.stripTrailing();
       if (line.isEmpty()) {
-        latestPayload = chooseLatest(latestPayload, currentEvent);
-        currentEvent.setLength(0);
+        bestCandidate =
+            chooseBestCandidate(
+                bestCandidate, currentEventType, currentEventData, expectedRequestId);
+        currentEventData.setLength(0);
+        currentEventType = "";
         continue;
       }
       if (line.startsWith(":")) {
         continue;
       }
+      if (line.startsWith("event:")) {
+        currentEventType = line.substring("event:".length()).trim();
+        continue;
+      }
       if (line.startsWith("data:")) {
-        if (!currentEvent.isEmpty()) {
-          currentEvent.append('\n');
+        if (!currentEventData.isEmpty()) {
+          currentEventData.append('\n');
         }
-        currentEvent.append(line.substring("data:".length()).trim());
+        String dataChunk = line.substring("data:".length());
+        currentEventData.append(stripSingleLeadingSpace(dataChunk));
       }
     }
 
-    latestPayload = chooseLatest(latestPayload, currentEvent);
-    if (latestPayload == null) {
+    bestCandidate =
+        chooseBestCandidate(bestCandidate, currentEventType, currentEventData, expectedRequestId);
+    if (bestCandidate == null) {
       throw new IllegalStateException("No JSON payload found in MCP SSE response");
     }
-    return latestPayload;
+    return bestCandidate.payload();
   }
 
-  private static String chooseLatest(String latestPayload, StringBuilder currentEvent) {
-    if (currentEvent.isEmpty()) {
-      return latestPayload;
-    }
-    String candidate = currentEvent.toString().trim();
-    if (candidate.isBlank() || "[DONE]".equals(candidate)) {
-      return latestPayload;
-    }
-    return candidate;
+  private static @NonNull String stripSingleLeadingSpace(@NonNull String value) {
+    return value.startsWith(" ") ? value.substring(1) : value;
   }
+
+  private static @Nullable Candidate chooseBestCandidate(
+      @Nullable Candidate bestCandidate,
+      @NonNull String eventType,
+      @NonNull StringBuilder currentEventData,
+      @Nullable String expectedRequestId) {
+    Candidate candidate = toCandidate(eventType, currentEventData, expectedRequestId);
+    if (candidate == null) {
+      return bestCandidate;
+    }
+    if (bestCandidate == null || candidate.score() >= bestCandidate.score()) {
+      return candidate;
+    }
+    return bestCandidate;
+  }
+
+  private static @Nullable Candidate toCandidate(
+      @NonNull String eventType,
+      @NonNull StringBuilder currentEventData,
+      @Nullable String expectedRequestId) {
+    if (currentEventData.isEmpty()) {
+      return null;
+    }
+    String payload = currentEventData.toString().trim();
+    if (payload.isBlank() || "[DONE]".equals(payload)) {
+      return null;
+    }
+    try {
+      JsonNode node = OBJECT_MAPPER.readTree(payload);
+      return new Candidate(payload, score(eventType, node, expectedRequestId));
+    } catch (IOException exception) {
+      return null;
+    }
+  }
+
+  private static int score(
+      @NonNull String eventType, @NonNull JsonNode node, @Nullable String expectedRequestId) {
+    int score = 0;
+    if ("response".equals(eventType)) {
+      score += 20;
+    } else if ("message".equals(eventType) || eventType.isBlank()) {
+      score += 5;
+    } else if ("ping".equals(eventType)) {
+      score -= 20;
+    }
+
+    if (node.has("jsonrpc")) {
+      score += 25;
+    }
+    if (node.has("result") || node.has("error")) {
+      score += 30;
+    }
+    if (node.has("id")) {
+      score += 10;
+      if (expectedRequestId != null && expectedRequestId.equals(node.path("id").asText())) {
+        score += 40;
+      }
+    }
+    return score;
+  }
+
+  private record Candidate(@NonNull String payload, int score) {}
 }

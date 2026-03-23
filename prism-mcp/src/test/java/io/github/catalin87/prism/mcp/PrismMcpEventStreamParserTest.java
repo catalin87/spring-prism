@@ -36,7 +36,7 @@ class PrismMcpEventStreamParserTest {
 
         """;
 
-    assertThat(PrismMcpEventStreamParser.extractLastJsonPayload(body))
+    assertThat(PrismMcpEventStreamParser.extractResponsePayload(body, null))
         .isEqualTo("{\"jsonrpc\":\"2.0\",\"result\":{\"message\":\"final\"}}");
   }
 
@@ -49,7 +49,42 @@ class PrismMcpEventStreamParserTest {
 
         """;
 
-    assertThat(PrismMcpEventStreamParser.extractLastJsonPayload(body))
+    assertThat(PrismMcpEventStreamParser.extractResponsePayload(body, null))
         .isEqualTo("{\"jsonrpc\":\"2.0\",\n\"result\":{\"message\":\"joined\"}}");
+  }
+
+  @Test
+  void extractResponsePayloadPrefersMatchingRequestIdOverProgressEvents() {
+    String body =
+        """
+        event: message
+        data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progress":25}}
+
+        event: message
+        data: {"jsonrpc":"2.0","id":"other","result":{"message":"wrong-request"}}
+
+        event: message
+        data: {"jsonrpc":"2.0","id":"req-42","result":{"message":"final"}}
+
+        """;
+
+    assertThat(PrismMcpEventStreamParser.extractResponsePayload(body, "req-42"))
+        .isEqualTo("{\"jsonrpc\":\"2.0\",\"id\":\"req-42\",\"result\":{\"message\":\"final\"}}");
+  }
+
+  @Test
+  void extractResponsePayloadIgnoresPingEventsWhenChoosingFinalPayload() {
+    String body =
+        """
+        event: ping
+        data: {"jsonrpc":"2.0","id":"req-42","result":{"message":"stale"}}
+
+        event: response
+        data: {"jsonrpc":"2.0","id":"req-42","result":{"message":"fresh"}}
+
+        """;
+
+    assertThat(PrismMcpEventStreamParser.extractResponsePayload(body, "req-42"))
+        .isEqualTo("{\"jsonrpc\":\"2.0\",\"id\":\"req-42\",\"result\":{\"message\":\"fresh\"}}");
   }
 }

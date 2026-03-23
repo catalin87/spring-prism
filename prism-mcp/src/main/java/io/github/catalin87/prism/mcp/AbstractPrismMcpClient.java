@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** Shared base implementation for Prism-protected MCP client transports. */
 abstract class AbstractPrismMcpClient implements PrismMcpClient {
@@ -49,7 +50,8 @@ abstract class AbstractPrismMcpClient implements PrismMcpClient {
   public final @NonNull Map<String, Object> exchange(@NonNull Map<String, Object> request) {
     try {
       Map<String, Object> sanitizedRequest = payloadSanitizer.sanitizeRequest(request, integration);
-      String rawResponse = execute(objectMapper.writeValueAsString(sanitizedRequest));
+      String rawResponse =
+          execute(objectMapper.writeValueAsString(sanitizedRequest), requestId(sanitizedRequest));
       Map<String, Object> response = parseResponse(rawResponse);
       return payloadSanitizer.restoreResponse(response, integration);
     } catch (IOException exception) {
@@ -57,7 +59,8 @@ abstract class AbstractPrismMcpClient implements PrismMcpClient {
     }
   }
 
-  protected abstract @NonNull String execute(@NonNull String requestJson) throws IOException;
+  protected abstract @NonNull String execute(
+      @NonNull String requestJson, @Nullable String requestId) throws IOException;
 
   protected final @NonNull String writeJson(@NonNull Map<String, Object> payload)
       throws IOException {
@@ -67,5 +70,10 @@ abstract class AbstractPrismMcpClient implements PrismMcpClient {
   protected final @NonNull Map<String, Object> parseResponse(@NonNull String rawResponse)
       throws IOException {
     return objectMapper.readValue(rawResponse, MAP_TYPE);
+  }
+
+  private static @Nullable String requestId(@NonNull Map<String, Object> request) {
+    Object id = request.get("id");
+    return id == null ? null : String.valueOf(id);
   }
 }
