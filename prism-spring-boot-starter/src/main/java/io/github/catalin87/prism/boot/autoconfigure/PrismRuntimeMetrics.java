@@ -159,7 +159,8 @@ public class PrismRuntimeMetrics
             Instant.now().toString(),
             totalDetections,
             detectionErrors,
-            averageMilliseconds("spring-ai:scan", "langchain4j:scan"),
+            averageMilliseconds(
+                "spring-ai:scan", "langchain4j:scan", "mcp-stdio:scan", "mcp-streamable-http:scan"),
             tokenized,
             detokenized,
             Math.max(0, tokenized - detokenized),
