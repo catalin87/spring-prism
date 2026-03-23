@@ -8,7 +8,8 @@
     </parent>
     <artifactId>mcp-example</artifactId>
     <name>Spring Prism MCP Example</name>
-
+    <description>Reference implementations demonstrating Spring Prism working with the Model Content Protocol (MCP) for enhanced observability in LLM interactions.</description>
+    
     <dependencies>
         <dependency>
             <groupId>io.github.catalin87.prism</groupId>

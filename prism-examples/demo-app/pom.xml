@@ -8,6 +8,7 @@
     </parent>
     <artifactId>demo-app</artifactId>
     <name>Spring Prism Unified Demo App</name>
+    <description> A unified demo application showcasing the capabilities of Spring Prism across various AI ecosystems.</description>
 
     <dependencies>
         <dependency>

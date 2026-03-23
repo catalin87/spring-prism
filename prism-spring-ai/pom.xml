@@ -7,7 +7,9 @@
         <version>1.0.0</version>
     </parent>
     <artifactId>prism-spring-ai</artifactId>
-    
+    <name>Spring Prism Spring AI</name>
+    <description>PII protection and reversible pseudonymization integration for Spring AI ChatClients and Advisors.</description>
+
     <dependencies>
         <!-- Internal Dependency -->
         <dependency>
