@@ -23,10 +23,24 @@ To include Spring Prism in your project, add the following dependency (once publ
 
 ```xml
 <dependency>
-  <groupId>io.github.catalin87</groupId>
+  <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
   <version>1.0.0</version>
 </dependency>
+```
+
+## Usage at a Glance
+
+Protecting your Spring AI interactions is as simple as adding a single Advisor:
+```java
+// Spring Prism automatically pseudonymizes PII before it leaves your app
+var response = chatClient.prompt()
+    .advisors(new PrismChatClientAdvisor()) 
+    .user("My email is john.doe@example.com")
+    .call()
+    .content();
+
+// The 'response' already has the original PII restored transparently!
 ```
 
 Then use the runnable examples in `prism-examples/` as the canonical onboarding path:
