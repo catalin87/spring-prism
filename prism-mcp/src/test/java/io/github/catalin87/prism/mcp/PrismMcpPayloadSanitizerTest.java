@@ -114,6 +114,103 @@ class PrismMcpPayloadSanitizerTest {
         .hasMessageContaining("Strict mode blocked Prism MCP processing");
   }
 
+  @Test
+  void sanitizeJsonEncodedToolArguments() {
+    PrismMcpPayloadSanitizer sanitizer =
+        new PrismMcpPayloadSanitizer(List.of(new UniversalRulePack()), vault);
+
+    Map<String, Object> sanitized =
+        sanitizer.sanitizeRequest(
+            Map.of(
+                "jsonrpc",
+                "2.0",
+                "method",
+                "tools/call",
+                "params",
+                Map.of(
+                    "name",
+                    "lookupCustomer",
+                    "arguments",
+                    """
+                    {"email":"user@example.com","nested":{"phone":"+40 712 345 678"}}
+                    """)),
+            PrismMcpMetricsSink.MCP_STDIO_INTEGRATION);
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> params = (Map<String, Object>) sanitized.get("params");
+    String arguments = String.valueOf(params.get("arguments"));
+
+    assertThat(arguments).contains("<PRISM_EMAIL_").contains("<PRISM_PHONE_NUMBER_");
+    assertThat(arguments).doesNotContain("user@example.com").doesNotContain("+40 712 345 678");
+    assertThat(params.get("name")).isEqualTo("lookupCustomer");
+    assertThat(sanitized.get("method")).isEqualTo("tools/call");
+  }
+
+  @Test
+  void sanitizeMessageContentWithoutTouchingProtocolFields() {
+    PrismMcpPayloadSanitizer sanitizer =
+        new PrismMcpPayloadSanitizer(List.of(new UniversalRulePack()), vault);
+
+    Map<String, Object> sanitized =
+        sanitizer.sanitizeRequest(
+            Map.of(
+                "jsonrpc",
+                "2.0",
+                "method",
+                "sampling/createMessage",
+                "params",
+                Map.of(
+                    "model",
+                    "gpt-5.4",
+                    "messages",
+                    List.of(
+                        Map.of(
+                            "role",
+                            "user",
+                            "content",
+                            List.of(
+                                Map.of("type", "text", "text", "Email user@example.com"),
+                                Map.of("type", "text", "text", "Call +40 712 345 678")))))),
+            PrismMcpMetricsSink.MCP_STREAMABLE_HTTP_INTEGRATION);
+
+    assertThat(String.valueOf(sanitized))
+        .contains("<PRISM_EMAIL_")
+        .contains("<PRISM_PHONE_NUMBER_")
+        .contains("sampling/createMessage")
+        .contains("role=user")
+        .contains("type=text")
+        .doesNotContain("user@example.com")
+        .doesNotContain("+40 712 345 678");
+  }
+
+  @Test
+  void restoreStructuredContentAndTextBlocks() {
+    PrismMcpPayloadSanitizer sanitizer =
+        new PrismMcpPayloadSanitizer(List.of(new UniversalRulePack()), vault);
+
+    String emailToken = vault.tokenize("user@example.com", "EMAIL").key();
+    String phoneToken = vault.tokenize("+40 712 345 678", "PHONE_NUMBER").key();
+
+    Map<String, Object> restored =
+        sanitizer.restoreResponse(
+            Map.of(
+                "jsonrpc",
+                "2.0",
+                "result",
+                Map.of(
+                    "content",
+                    List.of(Map.of("type", "text", "text", "Handled " + emailToken)),
+                    "structuredContent",
+                    "{\"phone\":\"" + phoneToken + "\"}")),
+            PrismMcpMetricsSink.MCP_STDIO_INTEGRATION);
+
+    assertThat(String.valueOf(restored))
+        .contains("user@example.com")
+        .contains("+40 712 345 678")
+        .doesNotContain("<PRISM_EMAIL_")
+        .doesNotContain("<PRISM_PHONE_NUMBER_");
+  }
+
   private static final class FailingRulePack implements PrismRulePack {
     @Override
     public @NonNull List<PiiDetector> getDetectors() {

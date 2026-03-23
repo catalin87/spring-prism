@@ -42,6 +42,7 @@ The MCP client protection layer.
 - **Scope**: Protects the Java application in the MCP client role first by sanitizing outbound JSON-like request payloads and restoring Prism tokens in inbound MCP results.
 - **Transport Coverage**: Supports local subprocess `stdio` and hosted `Streamable HTTP` transports. Docker remains a deployment detail on top of the same transport contract.
 - **Structured Payload Support**: Recursively walks strings inside maps, lists, prompt fields, tool arguments, and textual results without introducing Spring dependencies into the module.
+- **Protocol-Aware Support**: Handles common MCP request/result shapes more explicitly, including tool argument payloads, message content blocks, and JSON-encoded structured argument values.
 - **Streaming Foundation**: Uses a dedicated event-stream parser so `Streamable HTTP` responses can tolerate multi-line `data:` events and terminal markers such as `[DONE]`.
 - **Server Groundwork**: Includes a reusable server interceptor foundation so later MCP server-role support can share the same payload sanitization and restoration rules.
 
