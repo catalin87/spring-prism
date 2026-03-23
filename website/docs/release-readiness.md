@@ -71,6 +71,89 @@ For local release-profile verification without publishing, use:
 mvn -Prelease -Dgpg.skip=true -DskipTests package
 ```
 
+## Final 1.0.0 Checklist
+
+Use this as the final gate before cutting `v1.0.0`.
+
+### Already Complete
+
+- Product scope for `1.0.0` is implemented on `main`
+- MCP client-side support is shipped and documented
+- Dashboard redesign and Privacy Score are shipped
+- Example apps build and boot in CI
+- `release` profile produces `sources.jar` and `javadoc.jar`
+- `prism-dashboard` now produces a valid Javadoc artifact
+- GitHub secrets for Central publishing and GPG signing are configured
+- Public signing key is committed in the repository
+
+### Must Pass Right Before Tagging
+
+- `main` is green in GitHub Actions
+- No open release-blocking PRs remain
+- Full local verification succeeds:
+
+```bash
+mvn clean verify
+```
+
+- Release-profile packaging succeeds without publishing:
+
+```bash
+mvn -Prelease -Dgpg.skip=true -DskipTests package
+```
+
+- Docusaurus docs build succeeds:
+
+```bash
+cd website && npm run build
+```
+
+### Central Publishing Readiness
+
+- `io.github.catalin87` namespace is verified in Sonatype Central
+- GitHub environment `maven-central-release` exists
+- GitHub Action secrets exist and are current:
+  - `OSSRH_USERNAME`
+  - `OSSRH_TOKEN`
+  - `GPG_PRIVATE_KEY`
+  - `GPG_PASSPHRASE`
+- Release workflow references the same signing key already registered publicly
+
+### Release Cut
+
+1. Update root `pom.xml` from `1.0.0-SNAPSHOT` to `1.0.0`
+2. Commit with:
+
+```bash
+git add pom.xml
+git commit -s -m "release: v1.0.0"
+git push origin main
+```
+
+3. Tag and push:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+4. Monitor `release.yml` until:
+   - build and tests pass
+   - signing succeeds
+   - Central publish succeeds
+   - GitHub Release is created
+
+### Immediately After Release
+
+1. Bump root `pom.xml` to the next development version, for example `1.1.0-SNAPSHOT`
+2. Commit and push:
+
+```bash
+git add pom.xml
+git commit -s -m "chore: begin 1.1.0-SNAPSHOT development cycle"
+git push origin main
+```
+
 ## Notes
 
 - `spring.prism.app-secret` must be overridden in every real deployment.
