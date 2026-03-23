@@ -23,6 +23,7 @@ public record PrismMetricsSnapshot(
     long tokenizedCount,
     long detokenizedCount,
     long detectionErrorCount,
+    PrivacyScore privacyScore,
     Map<String, Long> detectionCounts,
     Map<String, PrismRuntimeMetrics.DurationMetric> durationMetrics,
     List<RulePackMetric> rulePackMetrics,

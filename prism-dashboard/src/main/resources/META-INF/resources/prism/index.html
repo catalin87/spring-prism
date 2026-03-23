@@ -13,9 +13,8 @@
           <p class="eyebrow">Spring Prism Dashboard</p>
           <h1>Operate Prism like a real privacy control plane.</h1>
           <p class="hero-copy">
-            Watch redaction traffic, vault posture, trend rollups, and alert thresholds without
-            exposing raw PII. The dashboard reads the runtime snapshot published by Spring Prism
-            and keeps every visible view aggregate or masked.
+            Track live protection posture, masked audit evidence, and runtime thresholds without
+            exposing raw PII.
           </p>
           <div class="hero-actions">
             <span id="mode-pill" class="mode-pill">Live mode</span>
@@ -49,10 +48,10 @@
           <label>
             Trend Window
             <select id="history-window">
-              <option value="ALL" selected>All retained</option>
+              <option value="ALL">All retained</option>
               <option value="5m">Last 5 minutes</option>
               <option value="15m">Last 15 minutes</option>
-              <option value="1h">Last hour</option>
+              <option value="1h" selected>Last hour</option>
             </select>
           </label>
           <label>
@@ -73,6 +72,18 @@
               <option value="ALL">All</option>
             </select>
           </label>
+          <label>
+            Policy
+            <select id="policy-filter" disabled>
+              <option>All</option>
+            </select>
+          </label>
+          <label>
+            Priority
+            <select id="priority-filter" disabled>
+              <option>All</option>
+            </select>
+          </label>
           <div class="ops-actions">
             <button id="polling-toggle" class="secondary-button" type="button">Pause Polling</button>
             <button id="export-button" class="secondary-button" type="button">Export JSON</button>
@@ -89,23 +100,56 @@
       </section>
 
       <section id="cards-grid" class="cards-grid hidden">
-        <article class="panel metric-card">
-          <p class="label">Vault Health</p>
-          <h2 id="vault-type">-</h2>
-          <dl class="metric-list">
+        <article class="panel score-panel">
+          <div class="panel-header compact">
             <div>
-              <dt>Tokenized</dt>
-              <dd id="tokenized-count">0</dd>
+              <p class="label">Global Privacy Score</p>
+              <h2>Live protection posture</h2>
             </div>
-            <div>
-              <dt>Detokenized</dt>
-              <dd id="detokenized-count">0</dd>
+            <span id="privacy-score-window" class="score-window">Last 60 minutes</span>
+          </div>
+          <div class="score-hero">
+            <div class="score-ring-shell">
+              <div id="privacy-score-ring" class="score-ring" style="--score: 0">
+                <div class="score-ring-core">
+                  <strong id="privacy-score-value">0</strong>
+                  <span>Safety</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <dt>Detection Errors</dt>
-              <dd id="error-count">0</dd>
+            <div class="score-copy">
+              <p id="privacy-score-explanation" class="score-explanation">
+                Based on protected activity, runtime reliability, and deployment posture in the
+                last 60 minutes.
+              </p>
+              <div class="score-breakdown">
+                <article class="score-breakdown-card">
+                  <div class="score-breakdown-header">
+                    <span>Coverage</span>
+                    <strong id="privacy-coverage-score">0%</strong>
+                  </div>
+                  <div class="score-bar"><span id="privacy-coverage-bar"></span></div>
+                  <p id="privacy-coverage-detail">Waiting for recent protected traffic.</p>
+                </article>
+                <article class="score-breakdown-card">
+                  <div class="score-breakdown-header">
+                    <span>Reliability</span>
+                    <strong id="privacy-reliability-score">0%</strong>
+                  </div>
+                  <div class="score-bar"><span id="privacy-reliability-bar"></span></div>
+                  <p id="privacy-reliability-detail">Runtime error posture is still warming up.</p>
+                </article>
+                <article class="score-breakdown-card">
+                  <div class="score-breakdown-header">
+                    <span>Posture</span>
+                    <strong id="privacy-posture-score">0%</strong>
+                  </div>
+                  <div class="score-bar"><span id="privacy-posture-bar"></span></div>
+                  <p id="privacy-posture-detail">Deployment posture details will appear here.</p>
+                </article>
+              </div>
             </div>
-          </dl>
+          </div>
         </article>
 
         <article class="panel metric-card">
@@ -119,24 +163,40 @@
           <h2 id="scan-latency">0 ms</h2>
           <dl class="metric-list">
             <div>
-              <dt>Health Signal</dt>
-              <dd id="health-signal">-</dd>
+              <dt>Tokenized</dt>
+              <dd id="tokenized-count">0</dd>
             </div>
             <div>
-              <dt>Active Rule Packs</dt>
-              <dd id="rule-packs">-</dd>
+              <dt>Detokenized</dt>
+              <dd id="detokenized-count">0</dd>
+            </div>
+            <div>
+              <dt>Detection errors</dt>
+              <dd id="error-count">0</dd>
+            </div>
+            <div>
+              <dt>Vault mode</dt>
+              <dd id="vault-type">-</dd>
             </div>
             <div>
               <dt>Polling</dt>
               <dd id="polling-mode">-</dd>
             </div>
             <div>
-              <dt>Tracked Timers</dt>
+              <dt>Tracked timers</dt>
               <dd id="timer-count">0</dd>
             </div>
             <div>
-              <dt>Preferred Endpoint</dt>
+              <dt>Rule packs</dt>
+              <dd id="rule-packs">-</dd>
+            </div>
+            <div>
+              <dt>Preferred endpoint</dt>
               <dd id="endpoint-used">-</dd>
+            </div>
+            <div>
+              <dt>Health signal</dt>
+              <dd id="health-signal">-</dd>
             </div>
           </dl>
         </article>
@@ -144,44 +204,38 @@
 
       <section id="analytics-grid" class="analytics-grid hidden">
         <article class="panel metric-card">
+          <p class="label">Runtime Checkpoints</p>
+          <h2>Control-plane snapshots</h2>
+          <div id="trend-cards" class="trend-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Thresholds</p>
+          <h2>Operational boundaries</h2>
+          <div id="alert-cards" class="alert-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Integrations</p>
+          <h2>Runtime timing posture</h2>
+          <div id="integration-summary" class="integration-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
           <p class="label">Rule Pack Activity</p>
           <h2>Locale-aware coverage</h2>
           <div id="rule-pack-metrics" class="bars-list"></div>
         </article>
 
         <article class="panel metric-card">
-          <p class="label">Trend Cards</p>
-          <h2>Runtime checkpoints</h2>
-          <div id="trend-cards" class="trend-grid"></div>
-        </article>
-
-        <article class="panel metric-card">
-          <p class="label">Rollups</p>
-          <h2>Server-side trend windows</h2>
-          <div id="rollup-cards" class="rollup-grid"></div>
-        </article>
-
-        <article class="panel metric-card">
-          <p class="label">Alerts</p>
-          <h2>Operational thresholds</h2>
-          <div id="alert-cards" class="alert-grid"></div>
-        </article>
-
-        <article class="panel metric-card">
-          <p class="label">Integrations</p>
-          <h2>Spring AI vs LangChain4j</h2>
-          <div id="integration-summary" class="integration-grid"></div>
-        </article>
-
-        <article class="panel metric-card">
-          <p class="label">Entities</p>
-          <h2>Detector drill-downs</h2>
+          <p class="label">Entity Drill-downs</p>
+          <h2>Detector hotspots</h2>
           <div id="entity-drilldowns" class="entity-grid"></div>
         </article>
 
         <article class="panel metric-card">
-          <p class="label">Vault Mode</p>
-          <h2>Current storage posture</h2>
+          <p class="label">Vault Posture</p>
+          <h2>Storage and restore pressure</h2>
           <div id="vault-insights" class="vault-grid"></div>
         </article>
 
@@ -192,8 +246,18 @@
         </article>
 
         <article class="panel metric-card">
-          <p class="label">Audit Log</p>
-          <h2>Masked recent activity</h2>
+          <p class="label">Rollups</p>
+          <h2>Server-side trend windows</h2>
+          <div id="rollup-cards" class="rollup-grid"></div>
+        </article>
+
+        <article class="panel metric-card audit-panel">
+          <div class="panel-header compact">
+            <div>
+              <p class="label">Masked Recent Activity</p>
+              <h2>Audit-friendly operational view</h2>
+            </div>
+          </div>
           <div class="audit-toolbar">
             <label>
               Action
@@ -225,8 +289,8 @@
       <section id="history-panel" class="panel history-panel hidden">
         <div class="panel-header">
           <div>
-            <p class="label">History</p>
-            <h2>Recent runtime changes</h2>
+            <p class="label">Runtime History</p>
+            <h2>Recent control-plane movement</h2>
           </div>
           <p id="history-retention-note" class="history-note"></p>
         </div>
@@ -254,37 +318,36 @@
         <div class="panel-header">
           <div>
             <p class="label">Refraction Flow</p>
-            <h2>How Prism protects sensitive prompts</h2>
+            <h2>How Spring Prism protects sensitive prompts</h2>
           </div>
         </div>
         <div class="flow-grid">
-          <div class="flow-step">
+          <article class="flow-step">
             <span>1</span>
-            <strong>App sends prompt</strong>
-            <p>User text still contains raw PII at this point.</p>
-          </div>
+            <strong>Scan</strong>
+            <p>Prism intercepts outbound prompts, tools, or MCP payloads before they leave the trusted boundary.</p>
+          </article>
           <div class="flow-arrow">→</div>
-          <div class="flow-step">
+          <article class="flow-step">
             <span>2</span>
-            <strong>Prism tokenizes PII</strong>
-            <p>The vault stores the original value and signs a Prism token.</p>
-          </div>
+            <strong>Redact</strong>
+            <p>Detected PII is replaced with HMAC-backed Prism tokens that external systems cannot reverse.</p>
+          </article>
           <div class="flow-arrow">→</div>
-          <div class="flow-step">
+          <article class="flow-step">
             <span>3</span>
-            <strong>AI model sees token only</strong>
-            <p>No raw email, card, SSN, phone, or regional identifier leaves the app.</p>
-          </div>
+            <strong>Vault</strong>
+            <p>Original values remain inside the local or Redis-backed Prism vault, with bounded retention.</p>
+          </article>
           <div class="flow-arrow">→</div>
-          <div class="flow-step">
+          <article class="flow-step">
             <span>4</span>
-            <strong>Prism restores response</strong>
-            <p>The application receives original values back after detokenization.</p>
-          </div>
+            <strong>Restore</strong>
+            <p>Inbound responses are scanned for Prism tokens and restored only after signature validation succeeds.</p>
+          </article>
         </div>
       </section>
     </main>
-
-    <script type="module" src="./app.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>

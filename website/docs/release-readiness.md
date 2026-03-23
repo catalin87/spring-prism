@@ -44,6 +44,7 @@ The current verification baseline covers:
 - starter auto-configuration tests, including Redis-absent startup safety
 - runnable Spring AI, LangChain4j, and MCP example applications that boot and prove redaction/restoration
 - a dedicated `prism-benchmarks` JMH module for scan, vault, streaming, and Redis-vault measurements
+- embedded dashboard coverage for the redesigned control-plane UI and live Privacy Score rendering
 
 ## Release Profile
 
