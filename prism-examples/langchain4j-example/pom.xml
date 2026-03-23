@@ -8,6 +8,7 @@
     </parent>
     <artifactId>langchain4j-example</artifactId>
     <name>Spring Prism LangChain4j Example</name>
+    <description>Reference implementations demonstrating Spring Prism working with LangChain4j.</description>
 
     <dependencies>
         <dependency>

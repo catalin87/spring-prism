@@ -8,6 +8,7 @@
     </parent>
     <artifactId>spring-ai-example</artifactId>
     <name>Spring Prism Spring AI Example</name>
+    <description>Reference implementations demonstrating Spring Prism working with Spring AI.</description>
 
     <dependencies>
         <dependency>

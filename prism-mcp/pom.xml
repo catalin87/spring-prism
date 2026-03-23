@@ -7,6 +7,8 @@
         <version>1.0.0</version>
     </parent>
     <artifactId>prism-mcp</artifactId>
+    <name>Spring Prism MCP</name>
+    <description>Privacy gateway for the Model Context Protocol (MCP), securing AI client-server tool communications.</description>
 
     <dependencies>
         <dependency>

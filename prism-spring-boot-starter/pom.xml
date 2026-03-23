@@ -7,6 +7,9 @@
         <version>1.0.0</version>
     </parent>
     <artifactId>prism-spring-boot-starter</artifactId>
+    <name>Spring Prism Spring Boot Starter</name>
+    <description>Auto-configuration support for Spring Prism, enabling rapid "plug-and-play" enterprise integration.</description>
+
     <dependencies>
         <dependency>
             <groupId>io.github.catalin87.prism</groupId>

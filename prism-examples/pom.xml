@@ -7,6 +7,8 @@
         <version>1.0.0</version>
     </parent>
     <artifactId>prism-examples</artifactId>
+    <name>Spring Prism Examples</name>
+    <description>A collection of reference implementations demonstrating Spring Prism across various AI ecosystems.</description>
     <packaging>pom</packaging>
 
     <modules>
