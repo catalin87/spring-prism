@@ -12,5 +12,6 @@
     <modules>
         <module>spring-ai-example</module>
         <module>langchain4j-example</module>
+        <module>mcp-example</module>
     </modules>
 </project>

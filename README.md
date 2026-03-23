@@ -5,7 +5,10 @@
 > **The Reversible Privacy Firewall for Generative AI in the Java Ecosystem.**
 > [📖 Read the Documentation](https://catalin87.github.io/spring-prism/)
 
-Spring Prism is a rigorous, zero-dependency data privacy framework designed for integration with **Spring AI** and **LangChain4j**. It seamlessly sits between your robust backend infrastructure and untrusted Large Language Model providers (OpenAI, Anthropic, Mistral), ensuring sensitive data mathematically *cannot* escape your enterprise boundaries.
+Spring Prism is a rigorous, zero-dependency data privacy framework designed for integration with
+**Spring AI**, **LangChain4j**, and **MCP client flows**. It seamlessly sits between your robust
+backend infrastructure and untrusted Large Language Model providers or tool endpoints, ensuring
+sensitive data mathematically *cannot* escape your enterprise boundaries.
 
 ---
 
@@ -86,10 +89,11 @@ example apps under `prism-examples/` and the docs in `website/docs/`.
 
 ## 🧪 Runnable Examples
 
-Spring Prism now ships with two minimal sample apps under `prism-examples/`:
+Spring Prism now ships with three minimal sample apps under `prism-examples/`:
 
 - `spring-ai-example`: starter + Spring AI `ChatClient`
 - `langchain4j-example`: starter + LangChain4j `ChatModel`
+- `mcp-example`: starter + MCP stdio client protection with a fake local server
 
 Each example boots with Java 21, avoids real API keys, and includes an integration test proving
 that the delegate sees tokenized content while the caller receives restored PII.
@@ -107,13 +111,15 @@ The current supported library surface is:
 - `prism-core`
 - `prism-spring-ai`
 - `prism-langchain4j`
+- `prism-mcp`
 - `prism-spring-boot-starter`
+- `prism-dashboard`
 - `prism-examples`
 
 Deferred surfaces:
 
-- `prism-dashboard`
-- MCP support
+- MCP server-side interception
+- Optional NLP/person-name detection
 
 See `website/docs/release-readiness.md` for the current verification baseline, release-profile
 expectations, and the shipped-vs-deferred support boundary.
@@ -149,10 +155,11 @@ Spring Prism executes strict isolation through a robust Maven multi-module archi
 | `prism-core` | The zero-dependency cryptographic Vault, generic `PiiDetector` interfaces, and string boundaries. |
 | `prism-spring-ai` | Spring AI advisor integration for synchronous and streaming chat interception. |
 | `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` decorators for tokenization and restoration. |
+| `prism-mcp` | MCP client-side protection for stdio and Streamable HTTP transports with structured payload walking. |
 | `prism-spring-boot-starter` | Boot auto-configuration, properties, metrics, custom rules, and Redis-backed vault selection. |
 | `prism-benchmarks` | JMH benchmarks for detector scanning, vault operations, streaming restoration, and Redis-vault overhead. |
-| `prism-examples` | Runnable Spring Boot examples for the Spring AI and LangChain4j integration paths. |
-| `prism-dashboard` | Deferred optional dashboard module for future observability UX work. |
+| `prism-examples` | Runnable Spring Boot examples for Spring AI, LangChain4j, and MCP client flows. |
+| `prism-dashboard` | Embedded observability dashboard with retained history, exports, alerts, and operator filters. |
 
 ---
 

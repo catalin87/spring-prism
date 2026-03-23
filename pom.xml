@@ -42,6 +42,7 @@
         <module>prism-core</module>
         <module>prism-spring-ai</module>
         <module>prism-langchain4j</module>
+        <module>prism-mcp</module>
         <module>prism-spring-boot-starter</module>
         <module>prism-benchmarks</module>
         <module>prism-dashboard</module>

@@ -8,6 +8,7 @@ Spring Prism currently validates the following production-facing baseline:
 | Spring Boot | `3.4.x` |
 | Spring AI | `1.0.0-M5` |
 | LangChain4j | `1.0.1` |
+| MCP transports | `stdio`, `Streamable HTTP` |
 
 These versions match the current build and CI matrix. If you move outside this range, treat it as
 untested until the library publishes an updated compatibility statement.
@@ -19,6 +20,6 @@ untested until the library publishes an updated compatibility statement.
 | `prism-core` | Production-ready core engine |
 | `prism-spring-ai` | Supported |
 | `prism-langchain4j` | Supported |
+| `prism-mcp` | Supported (client-side foundation) |
 | `prism-spring-boot-starter` | Supported |
-| `prism-dashboard` | Deferred |
-| MCP support | Deferred |
+| `prism-dashboard` | Supported |

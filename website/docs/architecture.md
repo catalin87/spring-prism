@@ -35,6 +35,14 @@ The Spring Boot 3 autoconfiguration bridge.
 - **Integrations**: Publishes `PrismChatClientAdvisor` for Spring AI and primary LangChain4j wrappers when delegate chat beans are present.
 - **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.
 
+### `prism-mcp`
+The MCP client protection layer.
+- **Frameworks**: Java 21 `HttpClient`, subprocess stdio, Micrometer Observation.
+- **Entry Point**: `PrismMcpClient`, with `PrismStdioMcpClient` and `PrismHttpMcpClient` as the concrete transport wrappers.
+- **Scope**: Protects the Java application in the MCP client role first by sanitizing outbound JSON-like request payloads and restoring Prism tokens in inbound MCP results.
+- **Transport Coverage**: Supports local subprocess `stdio` and hosted `Streamable HTTP` transports. Docker remains a deployment detail on top of the same transport contract.
+- **Structured Payload Support**: Recursively walks strings inside maps, lists, prompt fields, tool arguments, and textual results without introducing Spring dependencies into the module.
+
 ### `prism-dashboard`
 The embedded observability surface.
 - **Packaging**: Static assets are served from `META-INF/resources/prism/` inside the dashboard jar.
@@ -45,12 +53,12 @@ The embedded observability surface.
 
 ## The Request Lifecycle
 
-1. **Interception**: A Spring AI advisor or LangChain4j chat wrapper captures the prompt.
+1. **Interception**: A Spring AI advisor, LangChain4j wrapper, or MCP client transport captures the outbound payload.
 2. **Detection**: `PiiDetector` implementations (e.g., `EmailDetector`) scan the text for PII candidates.
 3. **Tokenization**: `TokenGenerator` creates deterministic HMAC-SHA256 tokens.
 4. **Vaulting**: `PrismVault` stores the `original` ↔ `token` mapping.
 5. **Redaction**: The original text is replaced with labels like `<PRISM_EMAIL_h8a2...]`.
-6. **Execution**: The LLM processes the sanitized request.
+6. **Execution**: The LLM or MCP endpoint processes the sanitized request.
 7. **Detokenization**: The response is scanned for `<PRISM_...>` patterns, and `PrismVault` restores the original PII based on a valid HMAC signature.
 
 ## Security Controls

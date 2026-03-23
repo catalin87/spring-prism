@@ -41,6 +41,7 @@ public class SpringPrismProperties {
   private List<CustomRule> customRules = new ArrayList<>();
   private Set<String> disabledRules = new LinkedHashSet<>();
   private Dashboard dashboard = new Dashboard();
+  private Mcp mcp = new Mcp();
 
   public boolean isEnabled() {
     return enabled;
@@ -122,6 +123,14 @@ public class SpringPrismProperties {
     this.dashboard = dashboard == null ? new Dashboard() : dashboard;
   }
 
+  public Mcp getMcp() {
+    return mcp;
+  }
+
+  public void setMcp(Mcp mcp) {
+    this.mcp = mcp == null ? new Mcp() : mcp;
+  }
+
   /** Externalized dashboard-specific configuration. */
   public static class Dashboard {
     private int auditRetention = DEFAULT_AUDIT_RETENTION;
@@ -160,6 +169,112 @@ public class SpringPrismProperties {
 
     public void setAlertThresholds(AlertThresholds alertThresholds) {
       this.alertThresholds = alertThresholds == null ? new AlertThresholds() : alertThresholds;
+    }
+  }
+
+  /** Externalized MCP client configuration. */
+  public static class Mcp {
+    private boolean enabled;
+    private Boolean securityStrictMode;
+    private String transport = "";
+    private Http http = new Http();
+    private Stdio stdio = new Stdio();
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+      this.enabled = enabled;
+    }
+
+    public Boolean getSecurityStrictMode() {
+      return securityStrictMode;
+    }
+
+    public void setSecurityStrictMode(Boolean securityStrictMode) {
+      this.securityStrictMode = securityStrictMode;
+    }
+
+    public boolean resolveSecurityStrictMode(boolean fallback) {
+      return securityStrictMode != null ? securityStrictMode.booleanValue() : fallback;
+    }
+
+    public String getTransport() {
+      return transport;
+    }
+
+    public void setTransport(String transport) {
+      this.transport = transport == null ? "" : transport.trim();
+    }
+
+    public Http getHttp() {
+      return http;
+    }
+
+    public void setHttp(Http http) {
+      this.http = http == null ? new Http() : http;
+    }
+
+    public Stdio getStdio() {
+      return stdio;
+    }
+
+    public void setStdio(Stdio stdio) {
+      this.stdio = stdio == null ? new Stdio() : stdio;
+    }
+  }
+
+  /** Externalized HTTP transport settings for MCP. */
+  public static class Http {
+    private String baseUrl = "";
+
+    public String getBaseUrl() {
+      return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+      this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
+    }
+  }
+
+  /** Externalized stdio transport settings for MCP. */
+  public static class Stdio {
+    private String command = "";
+    private List<String> args = new ArrayList<>();
+    private String workingDirectory = "";
+    private java.util.Map<String, String> env = new java.util.LinkedHashMap<>();
+
+    public String getCommand() {
+      return command;
+    }
+
+    public void setCommand(String command) {
+      this.command = command == null ? "" : command.trim();
+    }
+
+    public List<String> getArgs() {
+      return args;
+    }
+
+    public void setArgs(List<String> args) {
+      this.args = args == null ? new ArrayList<>() : new ArrayList<>(args);
+    }
+
+    public String getWorkingDirectory() {
+      return workingDirectory;
+    }
+
+    public void setWorkingDirectory(String workingDirectory) {
+      this.workingDirectory = workingDirectory == null ? "" : workingDirectory.trim();
+    }
+
+    public java.util.Map<String, String> getEnv() {
+      return env;
+    }
+
+    public void setEnv(java.util.Map<String, String> env) {
+      this.env = env == null ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(env);
     }
   }
 

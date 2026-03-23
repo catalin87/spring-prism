@@ -17,8 +17,10 @@ The following modules are part of the supported library surface:
 | `prism-core` | Zero-dependency detectors, rule packs, vault, tokenization, streaming buffer | Supported |
 | `prism-spring-ai` | Spring AI advisor integration for synchronous and streaming chat flows | Supported |
 | `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` wrappers | Supported |
+| `prism-mcp` | MCP client-side protection for stdio and Streamable HTTP transports | Supported |
 | `prism-spring-boot-starter` | Spring Boot properties, auto-configuration, Redis selection, metrics surface | Supported |
-| `prism-examples` | Runnable Spring Boot sample apps for both supported integrations | Supported |
+| `prism-dashboard` | Embedded dashboard with retained history, filters, exports, and alerts | Supported |
+| `prism-examples` | Runnable Spring Boot sample apps for Spring AI, LangChain4j, and MCP | Supported |
 
 ## Deferred
 
@@ -26,8 +28,7 @@ The following surfaces are intentionally outside the current release boundary:
 
 | Surface | Status |
 | --- | --- |
-| `prism-dashboard` | Deferred |
-| MCP support | Deferred |
+| MCP server-side interception | Deferred |
 | Optional NLP/person-name detection | Deferred |
 
 ## What We Validate
@@ -39,8 +40,9 @@ The current verification baseline covers:
 - Spotless, Checkstyle, and Enforcer policies across the reactor
 - WireMock-backed Spring AI integration tests
 - LangChain4j wrapper tests
+- MCP stdio + Streamable HTTP transport tests with structured payload sanitization/restoration
 - starter auto-configuration tests, including Redis-absent startup safety
-- runnable Spring AI and LangChain4j example applications that boot and prove redaction/restoration
+- runnable Spring AI, LangChain4j, and MCP example applications that boot and prove redaction/restoration
 - a dedicated `prism-benchmarks` JMH module for scan, vault, streaming, and Redis-vault measurements
 
 ## Release Profile
@@ -63,4 +65,4 @@ mvn -Prelease -Dgpg.skip=true -DskipTests package
 - `spring.prism.app-secret` must be overridden in every real deployment.
 - Fail-open remains the default behavior; strict mode is opt-in through `spring.prism.security-strict-mode=true`.
 - Redis is the supported distributed vault path for this release boundary.
-- `prism-dashboard` remains intentionally deferred and is not part of the current release-complete claim.
+- MCP support in this release boundary covers the client role first. Server-side MCP interception remains a later milestone.
