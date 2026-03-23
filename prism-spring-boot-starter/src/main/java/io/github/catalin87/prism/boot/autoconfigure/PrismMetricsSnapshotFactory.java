@@ -17,6 +17,8 @@ package io.github.catalin87.prism.boot.autoconfigure;
 
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +32,8 @@ final class PrismMetricsSnapshotFactory {
   static PrismMetricsSnapshot create(
       PrismRuntimeMetrics prismRuntimeMetrics,
       List<PrismRulePack> springPrismRulePacks,
-      PrismVault prismVault) {
+      PrismVault prismVault,
+      SpringPrismProperties properties) {
     Map<String, Long> detectionCounts = prismRuntimeMetrics.detectionCounts();
     List<String> activeRulePacks =
         springPrismRulePacks.stream().map(PrismRulePack::getName).toList();
@@ -79,8 +82,11 @@ final class PrismMetricsSnapshotFactory {
             .toList();
     String vaultType = prismVault.getClass().getSimpleName();
     prismRuntimeMetrics.captureHistorySample(vaultType);
+    List<HistorySample> historySamples = prismRuntimeMetrics.recentHistorySamples();
     long tokenBacklog =
         Math.max(0, prismRuntimeMetrics.tokenizedCount() - prismRuntimeMetrics.detokenizedCount());
+    DashboardConfiguration dashboardConfiguration =
+        dashboardConfiguration(prismRuntimeMetrics, properties);
     return new PrismMetricsSnapshot(
         prismRuntimeMetrics.tokenizedCount(),
         prismRuntimeMetrics.detokenizedCount(),
@@ -90,13 +96,70 @@ final class PrismMetricsSnapshotFactory {
         rulePackMetrics,
         entityMetrics,
         integrationMetrics,
-        prismRuntimeMetrics.recentHistorySamples(),
+        historySamples,
+        historyRollups(historySamples),
         prismRuntimeMetrics.historyRetentionLimit(),
         prismRuntimeMetrics.recentAuditEvents(),
         prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
         vaultType,
         vaultType.toLowerCase().contains("redis"),
-        tokenBacklog);
+        tokenBacklog,
+        dashboardConfiguration);
+  }
+
+  private static DashboardConfiguration dashboardConfiguration(
+      PrismRuntimeMetrics prismRuntimeMetrics, SpringPrismProperties properties) {
+    SpringPrismProperties.AlertThresholds alertThresholds =
+        properties.getDashboard().getAlertThresholds();
+    return new DashboardConfiguration(
+        prismRuntimeMetrics.auditRetentionLimit(),
+        prismRuntimeMetrics.historyRetentionLimit(),
+        properties.getDashboard().getDefaultPollingSeconds(),
+        new DashboardAlertThresholds(
+            alertThresholds.getScanLatencyWarnMs(),
+            alertThresholds.getScanLatencyCriticalMs(),
+            alertThresholds.getTokenBacklogWarn(),
+            alertThresholds.getTokenBacklogCritical(),
+            alertThresholds.getDetectionErrorWarn(),
+            alertThresholds.getDetectionErrorCritical()));
+  }
+
+  private static List<HistoryRollup> historyRollups(List<HistorySample> historySamples) {
+    Instant now = Instant.now();
+    return List.of(
+        rollup("recent", "Recent", historySamples),
+        rollup("5m", "5 minutes", within(historySamples, now, Duration.ofMinutes(5))),
+        rollup("15m", "15 minutes", within(historySamples, now, Duration.ofMinutes(15))),
+        rollup("1h", "1 hour", within(historySamples, now, Duration.ofHours(1))));
+  }
+
+  private static List<HistorySample> within(
+      List<HistorySample> historySamples, Instant now, Duration duration) {
+    Instant cutoff = now.minus(duration);
+    return historySamples.stream()
+        .filter(sample -> Instant.parse(sample.capturedAt()).isAfter(cutoff))
+        .toList();
+  }
+
+  private static HistoryRollup rollup(String key, String label, List<HistorySample> samples) {
+    if (samples.isEmpty()) {
+      return new HistoryRollup(key, label, 0, 0, 0, 0d, 0);
+    }
+
+    long latestDetections = samples.getLast().totalDetections();
+    long errorEvents = samples.stream().mapToLong(HistorySample::detectionErrors).max().orElse(0);
+    double averageScanMilliseconds =
+        samples.stream().mapToDouble(HistorySample::scanMilliseconds).average().orElse(0d);
+    long peakTokenBacklog = samples.stream().mapToLong(HistorySample::tokenBacklog).max().orElse(0);
+
+    return new HistoryRollup(
+        key,
+        label,
+        samples.size(),
+        latestDetections,
+        errorEvents,
+        averageScanMilliseconds,
+        peakTokenBacklog);
   }
 }

@@ -29,6 +29,9 @@ public class SpringPrismProperties {
   private static final String DEFAULT_SECRET = "spring-prism-change-me";
   private static final Duration DEFAULT_TTL = Duration.ofMinutes(30);
   private static final List<String> DEFAULT_LOCALES = List.of("UNIVERSAL");
+  private static final int DEFAULT_AUDIT_RETENTION = 12;
+  private static final int DEFAULT_HISTORY_RETENTION = 120;
+  private static final int DEFAULT_POLLING_SECONDS = 30;
 
   private boolean enabled = true;
   private boolean securityStrictMode;
@@ -37,6 +40,7 @@ public class SpringPrismProperties {
   private List<String> locales = new ArrayList<>(DEFAULT_LOCALES);
   private List<CustomRule> customRules = new ArrayList<>();
   private Set<String> disabledRules = new LinkedHashSet<>();
+  private Dashboard dashboard = new Dashboard();
 
   public boolean isEnabled() {
     return enabled;
@@ -108,6 +112,116 @@ public class SpringPrismProperties {
   public void setDisabledRules(Set<String> disabledRules) {
     this.disabledRules =
         disabledRules == null ? new LinkedHashSet<>() : new LinkedHashSet<>(disabledRules);
+  }
+
+  public Dashboard getDashboard() {
+    return dashboard;
+  }
+
+  public void setDashboard(Dashboard dashboard) {
+    this.dashboard = dashboard == null ? new Dashboard() : dashboard;
+  }
+
+  /** Externalized dashboard-specific configuration. */
+  public static class Dashboard {
+    private int auditRetention = DEFAULT_AUDIT_RETENTION;
+    private int historyRetention = DEFAULT_HISTORY_RETENTION;
+    private int defaultPollingSeconds = DEFAULT_POLLING_SECONDS;
+    private AlertThresholds alertThresholds = new AlertThresholds();
+
+    public int getAuditRetention() {
+      return auditRetention;
+    }
+
+    public void setAuditRetention(int auditRetention) {
+      this.auditRetention = auditRetention <= 0 ? DEFAULT_AUDIT_RETENTION : auditRetention;
+    }
+
+    public int getHistoryRetention() {
+      return historyRetention;
+    }
+
+    public void setHistoryRetention(int historyRetention) {
+      this.historyRetention = historyRetention <= 0 ? DEFAULT_HISTORY_RETENTION : historyRetention;
+    }
+
+    public int getDefaultPollingSeconds() {
+      return defaultPollingSeconds;
+    }
+
+    public void setDefaultPollingSeconds(int defaultPollingSeconds) {
+      this.defaultPollingSeconds =
+          defaultPollingSeconds < 0 ? DEFAULT_POLLING_SECONDS : defaultPollingSeconds;
+    }
+
+    public AlertThresholds getAlertThresholds() {
+      return alertThresholds;
+    }
+
+    public void setAlertThresholds(AlertThresholds alertThresholds) {
+      this.alertThresholds = alertThresholds == null ? new AlertThresholds() : alertThresholds;
+    }
+  }
+
+  /** Externalized dashboard alert thresholds. */
+  public static class AlertThresholds {
+    private double scanLatencyWarnMs = 25d;
+    private double scanLatencyCriticalMs = 75d;
+    private long tokenBacklogWarn = 5L;
+    private long tokenBacklogCritical = 20L;
+    private long detectionErrorWarn = 1L;
+    private long detectionErrorCritical = 5L;
+
+    public double getScanLatencyWarnMs() {
+      return scanLatencyWarnMs;
+    }
+
+    public void setScanLatencyWarnMs(double scanLatencyWarnMs) {
+      this.scanLatencyWarnMs = scanLatencyWarnMs <= 0 ? 25d : scanLatencyWarnMs;
+    }
+
+    public double getScanLatencyCriticalMs() {
+      return scanLatencyCriticalMs;
+    }
+
+    public void setScanLatencyCriticalMs(double scanLatencyCriticalMs) {
+      this.scanLatencyCriticalMs =
+          scanLatencyCriticalMs <= 0 ? 75d : Math.max(scanLatencyCriticalMs, scanLatencyWarnMs);
+    }
+
+    public long getTokenBacklogWarn() {
+      return tokenBacklogWarn;
+    }
+
+    public void setTokenBacklogWarn(long tokenBacklogWarn) {
+      this.tokenBacklogWarn = tokenBacklogWarn < 0 ? 5L : tokenBacklogWarn;
+    }
+
+    public long getTokenBacklogCritical() {
+      return tokenBacklogCritical;
+    }
+
+    public void setTokenBacklogCritical(long tokenBacklogCritical) {
+      this.tokenBacklogCritical =
+          tokenBacklogCritical < 0 ? 20L : Math.max(tokenBacklogCritical, tokenBacklogWarn);
+    }
+
+    public long getDetectionErrorWarn() {
+      return detectionErrorWarn;
+    }
+
+    public void setDetectionErrorWarn(long detectionErrorWarn) {
+      this.detectionErrorWarn = detectionErrorWarn < 0 ? 1L : detectionErrorWarn;
+    }
+
+    public long getDetectionErrorCritical() {
+      return detectionErrorCritical;
+    }
+
+    public void setDetectionErrorCritical(long detectionErrorCritical) {
+      this.detectionErrorCritical =
+          detectionErrorCritical < 0 ? 5L : Math.max(detectionErrorCritical, detectionErrorWarn);
+    }
   }
 
   /** Placeholder binding model for future property-defined detectors. */

@@ -29,21 +29,24 @@ public class PrismActuatorEndpoint {
   private final PrismRuntimeMetrics prismRuntimeMetrics;
   private final List<PrismRulePack> springPrismRulePacks;
   private final PrismVault prismVault;
+  private final SpringPrismProperties springPrismProperties;
 
   /** Creates the actuator endpoint with the active rule packs, vault, and runtime counters. */
   public PrismActuatorEndpoint(
       PrismRuntimeMetrics prismRuntimeMetrics,
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
-      PrismVault prismVault) {
+      PrismVault prismVault,
+      SpringPrismProperties springPrismProperties) {
     this.prismRuntimeMetrics = prismRuntimeMetrics;
     this.springPrismRulePacks = springPrismRulePacks;
     this.prismVault = prismVault;
+    this.springPrismProperties = springPrismProperties;
   }
 
   /** Returns the current Spring Prism runtime snapshot for actuator consumers. */
   @ReadOperation
   public PrismMetricsSnapshot metrics() {
     return PrismMetricsSnapshotFactory.create(
-        prismRuntimeMetrics, springPrismRulePacks, prismVault);
+        prismRuntimeMetrics, springPrismRulePacks, prismVault, springPrismProperties);
   }
 }

@@ -29,10 +29,12 @@ public record PrismMetricsSnapshot(
     List<EntityMetric> entityMetrics,
     List<IntegrationMetric> integrationMetrics,
     List<HistorySample> historySamples,
+    List<HistoryRollup> historyRollups,
     int historyRetentionLimit,
     List<PrismRuntimeMetrics.AuditEvent> auditEvents,
     int auditRetentionLimit,
     List<String> activeRulePacks,
     String vaultType,
     boolean distributedVault,
-    long tokenBacklog) {}
+    long tokenBacklog,
+    DashboardConfiguration dashboardConfiguration) {}

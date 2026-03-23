@@ -1,8 +1,8 @@
 const liveEndpoints = ["/actuator/prism", "/prism/metrics"];
 const demoEndpoint = "./demo-metrics.json";
 const searchParams = new URLSearchParams(window.location.search);
-const defaultPollingSeconds = 30;
-const maxHistoryEntries = 50;
+const fallbackPollingSeconds = 30;
+const maxRenderableHistoryEntries = 120;
 
 const statusPanel = document.getElementById("status-panel");
 const cardsGrid = document.getElementById("cards-grid");
@@ -11,9 +11,12 @@ const historyPanel = document.getElementById("history-panel");
 const refreshButton = document.getElementById("refresh-button");
 const demoButton = document.getElementById("demo-button");
 const exportButton = document.getElementById("export-button");
+const exportCsvButton = document.getElementById("export-csv-button");
+const exportSummaryButton = document.getElementById("export-summary-button");
 const pollingToggleButton = document.getElementById("polling-toggle");
 const pollingIntervalSelect = document.getElementById("polling-interval");
 const historyLimitSelect = document.getElementById("history-limit");
+const historyWindowSelect = document.getElementById("history-window");
 const pollingStatus = document.getElementById("polling-status");
 const filterStatus = document.getElementById("filter-status");
 const modePill = document.getElementById("mode-pill");
@@ -29,10 +32,9 @@ const historyRetentionNote = document.getElementById("history-retention-note");
 let currentMetrics = null;
 let currentEndpoint = null;
 let demoMode = searchParams.get("demo") === "1";
-let pollingSeconds = Number(searchParams.get("poll")) || defaultPollingSeconds;
+let pollingSeconds = Number(searchParams.get("poll") ?? "-1");
 let pollingTimer = null;
-
-pollingIntervalSelect.value = `${pollingSeconds}`;
+let serverPollingInitialized = pollingSeconds >= 0;
 
 async function fetchJson(endpoint) {
   const response = await fetch(endpoint, {
@@ -68,7 +70,7 @@ function updateUrlState() {
     nextUrl.searchParams.delete("demo");
   }
 
-  if (pollingSeconds > 0 && pollingSeconds !== defaultPollingSeconds) {
+  if (pollingSeconds > 0 && pollingSeconds !== fallbackPollingSeconds) {
     nextUrl.searchParams.set("poll", `${pollingSeconds}`);
   } else {
     nextUrl.searchParams.delete("poll");
@@ -91,8 +93,9 @@ function updatePollingUi() {
           : "Auto-refresh is paused. Use Refresh for a manual snapshot.";
 }
 
-function setPolling(seconds) {
+function setPolling(seconds, persistUrl = true) {
   pollingSeconds = seconds;
+  pollingIntervalSelect.value = `${seconds}`;
   if (pollingTimer) {
     window.clearInterval(pollingTimer);
     pollingTimer = null;
@@ -102,8 +105,21 @@ function setPolling(seconds) {
       refresh();
     }, seconds * 1000);
   }
-  updateUrlState();
+  if (persistUrl) {
+    updateUrlState();
+  }
   updatePollingUi();
+}
+
+function initializePollingFromMetrics(metrics) {
+  if (serverPollingInitialized) {
+    return;
+  }
+
+  const configuredDefault =
+      metrics.dashboardConfiguration?.defaultPollingSeconds ?? fallbackPollingSeconds;
+  serverPollingInitialized = true;
+  setPolling(configuredDefault, false);
 }
 
 function formatMilliseconds(durationMetric) {
@@ -117,14 +133,106 @@ function averageMilliseconds(durationMetric) {
   return durationMetric?.averageNanos ? durationMetric.averageNanos / 1_000_000 : 0;
 }
 
-function topDetections(detectionCounts) {
-  return Object.entries(detectionCounts ?? {})
-      .sort((left, right) => right[1] - left[1])
-      .slice(0, 4);
+function alertThresholds(metrics) {
+  return metrics.dashboardConfiguration?.alertThresholds ?? {
+    scanLatencyWarnMs: 25,
+    scanLatencyCriticalMs: 75,
+    tokenBacklogWarn: 5,
+    tokenBacklogCritical: 20,
+    detectionErrorWarn: 1,
+    detectionErrorCritical: 5
+  };
 }
 
-function sumDetections(detectionCounts) {
-  return Object.values(detectionCounts ?? {}).reduce((sum, count) => sum + count, 0);
+function selectedIntegration() {
+  return integrationFilter.value || "ALL";
+}
+
+function selectedRulePack() {
+  return rulePackFilter.value || "ALL";
+}
+
+function selectedEntity() {
+  return entityFilter.value || "ALL";
+}
+
+function selectedHistoryWindow() {
+  return historyWindowSelect.value || "ALL";
+}
+
+function renderFilterOptions(select, values) {
+  const currentValue = select.value;
+  select.replaceChildren();
+
+  const allOption = document.createElement("option");
+  allOption.value = "ALL";
+  allOption.textContent = "All";
+  select.append(allOption);
+
+  values.forEach(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  });
+
+  if ([...select.options].some(option => option.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function updateOperationalFilters(metrics) {
+  renderFilterOptions(
+      integrationFilter,
+      (metrics.integrationMetrics ?? []).map(integration => integration.name));
+  renderFilterOptions(
+      rulePackFilter,
+      (metrics.rulePackMetrics ?? []).map(rulePack => rulePack.name));
+  renderFilterOptions(
+      entityFilter,
+      [...new Set((metrics.entityMetrics ?? []).map(entity => entity.entityType))].sort());
+
+  filterStatus.textContent =
+      `${selectedIntegration() === "ALL" ? "All integrations" : selectedIntegration()} · `
+      + `${selectedRulePack() === "ALL" ? "all rule packs" : selectedRulePack()} · `
+      + `${selectedEntity() === "ALL" ? "all entity types" : selectedEntity()} · `
+      + `${selectedHistoryWindow() === "ALL" ? "full retained history" : selectedHistoryWindow()}`;
+}
+
+function filteredIntegrationMetrics(integrationMetrics) {
+  return integrationMetrics.filter(
+      integration => selectedIntegration() === "ALL" || integration.name === selectedIntegration());
+}
+
+function filteredRulePackMetrics(rulePackMetrics) {
+  return rulePackMetrics.filter(
+      metric => selectedRulePack() === "ALL" || metric.name === selectedRulePack());
+}
+
+function filteredEntityMetrics(entityMetrics) {
+  return entityMetrics.filter(entity =>
+    (selectedRulePack() === "ALL" || entity.rulePackName === selectedRulePack())
+    && (selectedEntity() === "ALL" || entity.entityType === selectedEntity()));
+}
+
+function detectionEntries(metrics) {
+  const filteredEntities = filteredEntityMetrics(metrics.entityMetrics ?? []);
+  if (filteredEntities.length > 0) {
+    return filteredEntities
+        .map(entity => [`${entity.rulePackName}:${entity.entityType}`, entity.detections])
+        .sort((left, right) => right[1] - left[1]);
+  }
+
+  return Object.entries(metrics.detectionCounts ?? {})
+      .sort((left, right) => right[1] - left[1]);
+}
+
+function topDetections(metrics) {
+  return detectionEntries(metrics).slice(0, 4);
+}
+
+function sumDetections(metrics) {
+  return detectionEntries(metrics).reduce((sum, [, count]) => sum + count, 0);
 }
 
 function dominantTimer(durationMetrics) {
@@ -132,7 +240,8 @@ function dominantTimer(durationMetrics) {
       .sort((left, right) => right[1].averageNanos - left[1].averageNanos)[0];
 }
 
-function renderTopDetections(detections) {
+function renderTopDetections(metrics) {
+  const detections = topDetections(metrics);
   const topList = document.getElementById("top-detections");
   const topEntity = document.getElementById("top-entity");
   topList.replaceChildren();
@@ -159,6 +268,11 @@ function renderRulePackMetrics(rulePackMetrics) {
   container.replaceChildren();
 
   const visibleMetrics = filteredRulePackMetrics(rulePackMetrics);
+  if (visibleMetrics.length === 0) {
+    container.innerHTML = "<p class=\"empty-state\">No rule-pack activity matches the current filters.</p>";
+    return;
+  }
+
   const maxDetections = Math.max(1, ...visibleMetrics.map(metric => metric.totalDetections));
   visibleMetrics.forEach(metric => {
     const row = document.createElement("div");
@@ -181,15 +295,36 @@ function renderRulePackMetrics(rulePackMetrics) {
   });
 }
 
+function historySamplesForWindow() {
+  const historySamples = currentMetrics?.historySamples ?? [];
+  const limit = Number(historyLimitSelect.value || "25");
+  const windowKey = selectedHistoryWindow();
+  let visible = historySamples;
+
+  if (windowKey !== "ALL") {
+    const now = Date.now();
+    const durations = {
+      "5m": 5 * 60 * 1000,
+      "15m": 15 * 60 * 1000,
+      "1h": 60 * 60 * 1000
+    };
+    visible = historySamples.filter(
+        sample => now - new Date(sample.capturedAt).getTime() <= durations[windowKey]);
+  }
+
+  return visible.slice(-Math.min(limit, maxRenderableHistoryEntries));
+}
+
 function renderTrendCards(metrics) {
   const trendCards = document.getElementById("trend-cards");
   trendCards.replaceChildren();
 
-  const leadingRulePack = (metrics.rulePackMetrics ?? [])[0];
-  const totalDetections = sumDetections(metrics.detectionCounts);
+  const leadingRulePack = filteredRulePackMetrics(metrics.rulePackMetrics ?? [])[0];
+  const totalDetections = sumDetections(metrics);
   const slowestTimer = dominantTimer(metrics.durationMetrics);
-  const retentionLabel =
-      `${Math.min((metrics.auditEvents ?? []).length, metrics.auditRetentionLimit ?? 0)} / ${metrics.auditRetentionLimit ?? 0}`;
+  const selectedRollup =
+      (metrics.historyRollups ?? []).find(rollup => rollup.key === selectedHistoryWindow().toLowerCase())
+      ?? (metrics.historyRollups ?? [])[0];
 
   [
     {
@@ -200,9 +335,9 @@ function renderTrendCards(metrics) {
           : "Waiting for live detections"
     },
     {
-      label: "Total Detections",
+      label: "Visible Detections",
       value: `${totalDetections}`,
-      caption: "Combined detections across all active rule packs"
+      caption: "Combined detections across the current entity and rule-pack filter"
     },
     {
       label: "Slowest Timer",
@@ -210,9 +345,11 @@ function renderTrendCards(metrics) {
       caption: slowestTimer ? formatMilliseconds(slowestTimer[1]) : "No duration samples yet"
     },
     {
-      label: "Audit Retention",
-      value: retentionLabel,
-      caption: "Masked events currently kept in the in-memory dashboard history"
+      label: "Window Rollup",
+      value: selectedRollup?.label ?? "Recent",
+      caption: selectedRollup
+          ? `${selectedRollup.sampleCount} sample(s) · ${selectedRollup.averageScanMilliseconds.toFixed(2)} ms avg scan`
+          : "No rollup data yet"
     }
   ].forEach(card => {
     const article = document.createElement("article");
@@ -226,11 +363,37 @@ function renderTrendCards(metrics) {
   });
 }
 
+function renderRollups(metrics) {
+  const container = document.getElementById("rollup-cards");
+  container.replaceChildren();
+
+  (metrics.historyRollups ?? []).forEach(rollup => {
+    const card = document.createElement("article");
+    card.className = "rollup-card";
+    card.innerHTML = `
+      <p>${rollup.label}</p>
+      <strong>${rollup.latestDetections}</strong>
+      <span>${rollup.sampleCount} sample(s) · ${rollup.averageScanMilliseconds.toFixed(2)} ms avg scan</span>
+      <dl class="mini-metrics">
+        <div><dt>Errors</dt><dd>${rollup.errorEvents}</dd></div>
+        <div><dt>Peak backlog</dt><dd>${rollup.peakTokenBacklog}</dd></div>
+      </dl>
+    `;
+    container.append(card);
+  });
+}
+
 function renderIntegrationSummary(metrics) {
   const container = document.getElementById("integration-summary");
   container.replaceChildren();
 
-  filteredIntegrationMetrics(metrics.integrationMetrics ?? []).forEach(integration => {
+  const integrations = filteredIntegrationMetrics(metrics.integrationMetrics ?? []);
+  if (integrations.length === 0) {
+    container.innerHTML = "<p class=\"empty-state\">No integration timing data matches the current filter.</p>";
+    return;
+  }
+
+  integrations.forEach(integration => {
     const title = integration.name === "spring-ai" ? "Spring AI" : "LangChain4j";
     const card = document.createElement("article");
     card.className = "integration-card";
@@ -258,23 +421,43 @@ function renderAlerts(metrics) {
   const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
       ?? metrics.durationMetrics?.["langchain4j:scan"];
   const scanMs = averageMilliseconds(scanMetric);
-  const tokenGap = Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0));
+  const tokenGap = metrics.tokenBacklog ?? Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0));
   const errorCount = metrics.detectionErrorCount ?? 0;
   const isRedis = (metrics.vaultType ?? "").toLowerCase().includes("redis");
+  const thresholds = alertThresholds(metrics);
+
+  const scanState =
+      scanMs >= thresholds.scanLatencyCriticalMs
+          ? "critical"
+          : scanMs >= thresholds.scanLatencyWarnMs ? "warn" : "healthy";
+  const backlogState =
+      tokenGap >= thresholds.tokenBacklogCritical
+          ? "critical"
+          : tokenGap >= thresholds.tokenBacklogWarn ? "warn" : "healthy";
+  const errorState =
+      errorCount >= thresholds.detectionErrorCritical
+          ? "critical"
+          : errorCount >= thresholds.detectionErrorWarn ? "warn" : "healthy";
 
   [
-    errorCount > 0
-        ? alertLevel("Detection errors", "warn", `${errorCount} detection error event(s) observed.`)
-        : alertLevel("Detection errors", "healthy", "No detection errors recorded."),
-    scanMs > 25
-        ? alertLevel("Scan latency", "warn", `${scanMs.toFixed(2)} ms average scan time.`)
-        : alertLevel("Scan latency", "healthy", `${scanMs.toFixed(2)} ms average scan time.`),
-    tokenGap > 5
-        ? alertLevel("Token backlog", "warn", `${tokenGap} more tokenizations than restorations.`)
-        : alertLevel("Token backlog", "healthy", "Tokenize/detokenize activity is balanced."),
-    isRedis
-        ? alertLevel("Vault mode", "info", "Redis-backed vault active for shared restore paths.")
-        : alertLevel("Vault mode", "info", "Local in-memory vault active for single-node operation.")
+    alertLevel(
+        "Detection errors",
+        errorState,
+        `${errorCount} detection error event(s). Warn at ${thresholds.detectionErrorWarn}, critical at ${thresholds.detectionErrorCritical}.`),
+    alertLevel(
+        "Scan latency",
+        scanState,
+        `${scanMs.toFixed(2)} ms average scan time. Warn at ${thresholds.scanLatencyWarnMs} ms, critical at ${thresholds.scanLatencyCriticalMs} ms.`),
+    alertLevel(
+        "Token backlog",
+        backlogState,
+        `${tokenGap} outstanding restore delta. Warn at ${thresholds.tokenBacklogWarn}, critical at ${thresholds.tokenBacklogCritical}.`),
+    alertLevel(
+        "Vault mode",
+        isRedis ? "info" : "healthy",
+        isRedis
+            ? "Redis-backed vault active for shared restore paths."
+            : "Local in-memory vault active for single-node operation.")
   ].forEach(alert => {
     const card = document.createElement("article");
     card.className = `alert-card alert-${alert.state}`;
@@ -304,7 +487,7 @@ function renderEntityDrilldowns(metrics) {
     return;
   }
 
-  entityMetrics.slice(0, 6).forEach(metric => {
+  entityMetrics.slice(0, 8).forEach(metric => {
     const card = document.createElement("article");
     card.className = "entity-card";
     card.innerHTML = `
@@ -342,7 +525,7 @@ function renderVaultInsights(metrics) {
     },
     {
       label: "Token balance",
-      value: `${metrics.tokenBacklog ?? Math.max(0, (metrics.tokenizedCount ?? 0) - (metrics.detokenizedCount ?? 0))}`,
+      value: `${metrics.tokenBacklog ?? 0}`,
       note: "Outstanding restore delta"
     }
   ];
@@ -359,70 +542,43 @@ function renderVaultInsights(metrics) {
   });
 }
 
-function selectedIntegration() {
-  return integrationFilter.value || "ALL";
-}
+function renderDashboardConfiguration(metrics) {
+  const container = document.getElementById("dashboard-config");
+  container.replaceChildren();
 
-function selectedRulePack() {
-  return rulePackFilter.value || "ALL";
-}
-
-function selectedEntity() {
-  return entityFilter.value || "ALL";
-}
-
-function updateOperationalFilters(metrics) {
-  renderFilterOptions(
-      integrationFilter,
-      (metrics.integrationMetrics ?? []).map(integration => integration.name));
-  renderFilterOptions(
-      rulePackFilter,
-      (metrics.rulePackMetrics ?? []).map(rulePack => rulePack.name));
-  renderFilterOptions(
-      entityFilter,
-      [...new Set((metrics.entityMetrics ?? []).map(entity => entity.entityType))].sort());
-
-  filterStatus.textContent =
-      `${selectedIntegration() === "ALL" ? "All integrations" : selectedIntegration()} · `
-      + `${selectedRulePack() === "ALL" ? "all rule packs" : selectedRulePack()} · `
-      + `${selectedEntity() === "ALL" ? "all entity types" : selectedEntity()}`;
-}
-
-function filteredIntegrationMetrics(integrationMetrics) {
-  return integrationMetrics.filter(
-      integration => selectedIntegration() === "ALL" || integration.name === selectedIntegration());
-}
-
-function filteredRulePackMetrics(rulePackMetrics) {
-  return rulePackMetrics.filter(
-      metric => selectedRulePack() === "ALL" || metric.name === selectedRulePack());
-}
-
-function filteredEntityMetrics(entityMetrics) {
-  return entityMetrics.filter(entity =>
-    (selectedRulePack() === "ALL" || entity.rulePackName === selectedRulePack())
-    && (selectedEntity() === "ALL" || entity.entityType === selectedEntity()));
-}
-
-function renderFilterOptions(select, values) {
-  const currentValue = select.value;
-  select.replaceChildren();
-
-  const allOption = document.createElement("option");
-  allOption.value = "ALL";
-  allOption.textContent = "All";
-  select.append(allOption);
-
-  values.forEach(value => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    select.append(option);
+  const config = metrics.dashboardConfiguration ?? {};
+  const thresholds = config.alertThresholds ?? {};
+  [
+    {
+      label: "Retention",
+      value: `${config.auditRetentionLimit ?? 0} / ${config.historyRetentionLimit ?? 0}`,
+      note: "Audit and history sample limits"
+    },
+    {
+      label: "Default polling",
+      value: `${config.defaultPollingSeconds ?? fallbackPollingSeconds}s`,
+      note: "Starter-provided dashboard refresh cadence"
+    },
+    {
+      label: "Scan thresholds",
+      value: `${thresholds.scanLatencyWarnMs ?? 25} / ${thresholds.scanLatencyCriticalMs ?? 75} ms`,
+      note: "Warn and critical scan latency"
+    },
+    {
+      label: "Backlog thresholds",
+      value: `${thresholds.tokenBacklogWarn ?? 5} / ${thresholds.tokenBacklogCritical ?? 20}`,
+      note: "Warn and critical token backlog"
+    }
+  ].forEach(item => {
+    const card = document.createElement("article");
+    card.className = "config-card";
+    card.innerHTML = `
+      <p>${item.label}</p>
+      <strong>${item.value}</strong>
+      <span>${item.note}</span>
+    `;
+    container.append(card);
   });
-
-  if ([...select.options].some(option => option.value === currentValue)) {
-    select.value = currentValue;
-  }
 }
 
 function updateAuditFilters(auditEvents, retentionLimit) {
@@ -481,21 +637,22 @@ function renderAuditLog(auditEvents, retentionLimit) {
 }
 
 function healthSignal(metrics) {
+  const thresholds = alertThresholds(metrics);
+  if ((metrics.detectionErrorCount ?? 0) >= thresholds.detectionErrorCritical) {
+    return "Critical";
+  }
   if ((metrics.detectionErrorCount ?? 0) > 0) {
     return "Attention";
   }
   const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
       ?? metrics.durationMetrics?.["langchain4j:scan"];
-  if (averageMilliseconds(scanMetric) > 25) {
+  if (averageMilliseconds(scanMetric) >= thresholds.scanLatencyCriticalMs) {
+    return "Critical";
+  }
+  if (averageMilliseconds(scanMetric) >= thresholds.scanLatencyWarnMs) {
     return "Warm";
   }
   return "Healthy";
-}
-
-function limitedHistory() {
-  const limit = Number(historyLimitSelect.value || "25");
-  const serverHistory = currentMetrics?.historySamples ?? [];
-  return serverHistory.slice(-Math.min(limit, maxHistoryEntries));
 }
 
 function renderSparkline(svgId, values, stroke) {
@@ -512,13 +669,8 @@ function renderSparkline(svgId, values, stroke) {
   const maxValue = Math.max(1, ...values);
 
   const points = values.map((value, index) => {
-    const x =
-        padding
-        + ((width - padding * 2) * index) / Math.max(1, values.length - 1);
-    const y =
-        height
-        - padding
-        - ((height - padding * 2) * value) / maxValue;
+    const x = padding + ((width - padding * 2) * index) / Math.max(1, values.length - 1);
+    const y = height - padding - ((height - padding * 2) * value) / maxValue;
     return `${x},${y}`;
   }).join(" ");
 
@@ -533,14 +685,14 @@ function renderSparkline(svgId, values, stroke) {
 }
 
 function renderHistory() {
-  const points = limitedHistory();
+  const points = historySamplesForWindow();
   if (!points.length) {
     historyPanel.classList.add("hidden");
     return;
   }
 
   historyRetentionNote.textContent =
-      `Server-side history retains the latest ${currentMetrics?.historyRetentionLimit ?? points.length} sample(s).`;
+      `Server-side history retains the latest ${currentMetrics?.historyRetentionLimit ?? points.length} sample(s); showing ${points.length} in the selected window.`;
   renderSparkline("history-detections", points.map(point => point.totalDetections), "#0f766e");
   renderSparkline("history-errors", points.map(point => point.detectionErrors), "#b42318");
   renderSparkline("history-scan", points.map(point => point.scanMilliseconds), "#1d4ed8");
@@ -548,34 +700,88 @@ function renderHistory() {
   historyPanel.classList.remove("hidden");
 }
 
+function triggerDownload(name, type, content) {
+  const blob = new Blob([content], {type});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 function exportSnapshot() {
   if (!currentMetrics) {
     return;
   }
 
-  const blob = new Blob(
-      [
-        JSON.stringify(
-            {
-              endpoint: currentEndpoint,
-              exportedAt: new Date().toISOString(),
-              metrics: currentMetrics,
-              history: limitedHistory()
-            },
-            null,
-            2)
-      ],
-      {type: "application/json"});
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `spring-prism-dashboard-${Date.now()}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  triggerDownload(
+      `spring-prism-dashboard-${Date.now()}.json`,
+      "application/json",
+      JSON.stringify(
+          {
+            endpoint: currentEndpoint,
+            exportedAt: new Date().toISOString(),
+            metrics: currentMetrics,
+            history: historySamplesForWindow()
+          },
+          null,
+          2));
+}
+
+function exportHistoryCsv() {
+  if (!currentMetrics) {
+    return;
+  }
+
+  const rows = ["captured_at,total_detections,detection_errors,scan_milliseconds,token_backlog,vault_type"];
+  historySamplesForWindow().forEach(sample => {
+    rows.push(
+        [
+          sample.capturedAt,
+          sample.totalDetections,
+          sample.detectionErrors,
+          sample.scanMilliseconds,
+          sample.tokenBacklog,
+          sample.vaultType
+        ].join(","));
+  });
+  triggerDownload(`spring-prism-history-${Date.now()}.csv`, "text/csv", rows.join("\n"));
+}
+
+function exportIncidentSummary() {
+  if (!currentMetrics) {
+    return;
+  }
+
+  const topEntities = topDetections(currentMetrics)
+      .map(([name, count]) => `- ${name}: ${count}`)
+      .join("\n") || "- none";
+  const rollups = (currentMetrics.historyRollups ?? [])
+      .map(rollup =>
+        `- ${rollup.label}: ${rollup.sampleCount} samples, ${rollup.latestDetections} detections, ${rollup.averageScanMilliseconds.toFixed(2)} ms avg scan`)
+      .join("\n");
+  const summary = [
+    "Spring Prism Incident Summary",
+    `Generated: ${new Date().toISOString()}`,
+    `Endpoint: ${currentEndpoint}`,
+    `Vault: ${currentMetrics.vaultType}`,
+    `Health: ${healthSignal(currentMetrics)}`,
+    `Token backlog: ${currentMetrics.tokenBacklog ?? 0}`,
+    "",
+    "Top entities",
+    topEntities,
+    "",
+    "Rollups",
+    rollups
+  ].join("\n");
+
+  triggerDownload(`spring-prism-incident-${Date.now()}.txt`, "text/plain", summary);
 }
 
 function renderMetrics(endpoint, metrics) {
   currentMetrics = metrics;
   currentEndpoint = endpoint;
+  initializePollingFromMetrics(metrics);
 
   const scanMetric = metrics.durationMetrics?.["spring-ai:scan"]
       ?? metrics.durationMetrics?.["langchain4j:scan"];
@@ -593,13 +799,15 @@ function renderMetrics(endpoint, metrics) {
   document.getElementById("endpoint-used").textContent = endpoint;
 
   updateOperationalFilters(metrics);
-  renderTopDetections(topDetections(metrics.detectionCounts));
+  renderTopDetections(metrics);
   renderRulePackMetrics(metrics.rulePackMetrics ?? []);
   renderTrendCards(metrics);
+  renderRollups(metrics);
   renderAlerts(metrics);
   renderIntegrationSummary(metrics);
   renderEntityDrilldowns(metrics);
   renderVaultInsights(metrics);
+  renderDashboardConfiguration(metrics);
   updateAuditFilters(metrics.auditEvents ?? [], metrics.auditRetentionLimit ?? 0);
   renderAuditLog(metrics.auditEvents ?? [], metrics.auditRetentionLimit ?? 0);
   renderHistory();
@@ -629,15 +837,11 @@ function renderError(error) {
   updatePollingUi();
 }
 
-function rerenderAuditFromCurrentState() {
+function rerenderCurrentMetrics() {
   if (!currentMetrics) {
     return;
   }
-  renderAuditLog(currentMetrics.auditEvents ?? [], currentMetrics.auditRetentionLimit ?? 0);
-}
-
-function rerenderHistoryFromCurrentState() {
-  renderHistory();
+  renderMetrics(currentEndpoint, currentMetrics);
 }
 
 async function refresh() {
@@ -657,27 +861,33 @@ demoButton.addEventListener("click", async () => {
   await refresh();
 });
 exportButton.addEventListener("click", exportSnapshot);
+exportCsvButton.addEventListener("click", exportHistoryCsv);
+exportSummaryButton.addEventListener("click", exportIncidentSummary);
 pollingToggleButton.addEventListener("click", () => {
   if (pollingSeconds > 0) {
-    pollingIntervalSelect.value = "0";
     setPolling(0);
     return;
   }
-  const nextSeconds = Number(pollingIntervalSelect.value || defaultPollingSeconds) || defaultPollingSeconds;
-  pollingIntervalSelect.value = `${nextSeconds}`;
+  const nextSeconds =
+      Number(pollingIntervalSelect.value || `${fallbackPollingSeconds}`) || fallbackPollingSeconds;
   setPolling(nextSeconds);
 });
 pollingIntervalSelect.addEventListener("change", () => {
   setPolling(Number(pollingIntervalSelect.value || "0"));
 });
-historyLimitSelect.addEventListener("change", rerenderHistoryFromCurrentState);
-integrationFilter.addEventListener("change", () => currentMetrics && renderMetrics(currentEndpoint, currentMetrics));
-rulePackFilter.addEventListener("change", () => currentMetrics && renderMetrics(currentEndpoint, currentMetrics));
-entityFilter.addEventListener("change", () => currentMetrics && renderMetrics(currentEndpoint, currentMetrics));
-[auditActionFilter, auditSourceFilter, auditLimitFilter].forEach(element => {
-  element.addEventListener("change", rerenderAuditFromCurrentState);
+[
+  historyLimitSelect,
+  historyWindowSelect,
+  integrationFilter,
+  rulePackFilter,
+  entityFilter,
+  auditActionFilter,
+  auditSourceFilter,
+  auditLimitFilter
+].forEach(element => {
+  element.addEventListener("change", rerenderCurrentMetrics);
 });
 
 updateModeUi();
-setPolling(pollingSeconds);
+setPolling(serverPollingInitialized ? pollingSeconds : fallbackPollingSeconds, false);
 refresh();

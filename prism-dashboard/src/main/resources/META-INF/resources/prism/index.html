@@ -11,10 +11,11 @@
       <section class="hero">
         <div>
           <p class="eyebrow">Spring Prism Dashboard</p>
-          <h1>Observe refraction health without exposing raw PII.</h1>
+          <h1>Operate Prism like a real privacy control plane.</h1>
           <p class="hero-copy">
-            This embedded dashboard reads the live Spring Prism runtime snapshot and surfaces top
-            detections, vault health, and the privacy flow around your AI requests.
+            Watch redaction traffic, vault posture, trend rollups, and alert thresholds without
+            exposing raw PII. The dashboard reads the runtime snapshot published by Spring Prism
+            and keeps every visible view aggregate or masked.
           </p>
           <div class="hero-actions">
             <span id="mode-pill" class="mode-pill">Live mode</span>
@@ -31,17 +32,27 @@
             <select id="polling-interval">
               <option value="0">Paused</option>
               <option value="15">15s</option>
-              <option value="30" selected>30s</option>
+              <option value="30">30s</option>
+              <option value="45">45s</option>
               <option value="60">60s</option>
             </select>
           </label>
           <label>
-            History Window
+            History Samples
             <select id="history-limit">
               <option value="10">10 samples</option>
               <option value="25" selected>25 samples</option>
               <option value="50">50 samples</option>
               <option value="120">Full retention</option>
+            </select>
+          </label>
+          <label>
+            Trend Window
+            <select id="history-window">
+              <option value="ALL" selected>All retained</option>
+              <option value="5m">Last 5 minutes</option>
+              <option value="15m">Last 15 minutes</option>
+              <option value="1h">Last hour</option>
             </select>
           </label>
           <label>
@@ -64,7 +75,9 @@
           </label>
           <div class="ops-actions">
             <button id="polling-toggle" class="secondary-button" type="button">Pause Polling</button>
-            <button id="export-button" class="secondary-button" type="button">Export Snapshot</button>
+            <button id="export-button" class="secondary-button" type="button">Export JSON</button>
+            <button id="export-csv-button" class="secondary-button" type="button">Export CSV</button>
+            <button id="export-summary-button" class="secondary-button" type="button">Incident Summary</button>
           </div>
         </div>
         <p id="polling-status" class="ops-note">Auto-refresh is enabled every 30 seconds.</p>
@@ -143,6 +156,12 @@
         </article>
 
         <article class="panel metric-card">
+          <p class="label">Rollups</p>
+          <h2>Server-side trend windows</h2>
+          <div id="rollup-cards" class="rollup-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
           <p class="label">Alerts</p>
           <h2>Operational thresholds</h2>
           <div id="alert-cards" class="alert-grid"></div>
@@ -167,6 +186,12 @@
         </article>
 
         <article class="panel metric-card">
+          <p class="label">Admin Surface</p>
+          <h2>Retention and thresholds</h2>
+          <div id="dashboard-config" class="config-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
           <p class="label">Audit Log</p>
           <h2>Masked recent activity</h2>
           <div class="audit-toolbar">
@@ -188,6 +213,7 @@
                 <option value="5">5</option>
                 <option value="8">8</option>
                 <option value="12">12</option>
+                <option value="20">20</option>
               </select>
             </label>
           </div>
