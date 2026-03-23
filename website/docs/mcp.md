@@ -2,6 +2,16 @@
 
 Spring Prism now protects Java applications acting as **MCP clients**.
 
+## Tooling Guides
+
+If you want a practical setup guide for real tools, start here:
+
+- [MCP Tooling Guides](/docs/mcp-tooling)
+- [VS Code](/docs/mcp-vscode)
+- [JetBrains / IntelliJ](/docs/mcp-jetbrains)
+- [GitHub Copilot and agent tooling](/docs/mcp-copilot)
+- [Docker and hosted Streamable HTTP](/docs/mcp-docker-hosted)
+
 ## What Ships Today
 
 The current MCP support lives in `prism-mcp` and focuses on the client boundary first:

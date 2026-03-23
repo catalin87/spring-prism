@@ -33,6 +33,11 @@ Then use the runnable examples in `prism-examples/` as the canonical onboarding 
 
 - `spring-ai-example`
 - `langchain4j-example`
+- `mcp-example`
+
+If you are adopting MCP in real tools, continue with the dedicated tooling docs:
+
+- [MCP Tooling Guides](/docs/mcp-tooling)
 
 ## How it Works
 
