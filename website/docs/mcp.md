@@ -13,6 +13,7 @@ The current MCP support lives in `prism-mcp` and focuses on the client boundary 
 - stronger `Streamable HTTP` event parsing for multi-line `data:` frames, progress events, request-id correlation, and `[DONE]` style trailers
 - fail-open behavior by default, with strict mode available through starter properties
 - runtime metrics aligned with the existing Spring AI and LangChain4j integrations
+- dashboard timing cards and history rollups now include MCP transport activity instead of treating MCP traffic as invisible background load
 
 ## Supported Transports
 
