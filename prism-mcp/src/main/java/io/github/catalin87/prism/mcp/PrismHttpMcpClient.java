@@ -79,27 +79,11 @@ public final class PrismHttpMcpClient extends AbstractPrismMcpClient {
       }
       String contentType = response.headers().firstValue("content-type").orElse("");
       return contentType.contains("text/event-stream")
-          ? extractSsePayload(response.body())
+          ? PrismMcpEventStreamParser.extractLastJsonPayload(response.body())
           : response.body();
     } catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       throw new IllegalStateException("Interrupted while waiting for MCP HTTP response", exception);
     }
-  }
-
-  private static String extractSsePayload(String body) {
-    String latestPayload = null;
-    for (String line : body.split("\\R")) {
-      if (line.startsWith("data:")) {
-        String payload = line.substring("data:".length()).trim();
-        if (!payload.isBlank()) {
-          latestPayload = payload;
-        }
-      }
-    }
-    if (latestPayload == null) {
-      throw new IllegalStateException("No JSON payload found in MCP SSE response");
-    }
-    return latestPayload;
   }
 }
