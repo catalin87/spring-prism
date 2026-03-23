@@ -15,6 +15,9 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -25,6 +28,8 @@ public class PrismRuntimeMetrics
     implements io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink,
         io.github.catalin87.prism.langchain4j.PrismMetricsSink {
 
+  private static final int MAX_AUDIT_EVENTS = 12;
+
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
   private final AtomicLong detectionErrorCount = new AtomicLong();
@@ -32,27 +37,32 @@ public class PrismRuntimeMetrics
   private final ConcurrentHashMap<String, AtomicLong> durationTotalsNanos =
       new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> durationSamples = new ConcurrentHashMap<>();
+  private final Deque<AuditEvent> auditEvents = new ArrayDeque<>();
 
   @Override
   public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {
     detectionCounts
         .computeIfAbsent(metricKey(rulePackName, entityType), ignored -> new AtomicLong())
         .addAndGet(count);
+    recordEvent("detected", entityType, count, rulePackName);
   }
 
   @Override
   public void onDetectionError(@NonNull String rulePackName, @NonNull String entityType) {
     detectionErrorCount.incrementAndGet();
+    recordEvent("error", entityType, 1, rulePackName);
   }
 
   @Override
   public void onTokenized(int count) {
     tokenizedCount.addAndGet(count);
+    recordEvent("tokenized", "PRISM_TOKEN", count, "runtime");
   }
 
   @Override
   public void onDetokenized(int count) {
     detokenizedCount.addAndGet(count);
+    recordEvent("detokenized", "PRISM_TOKEN", count, "runtime");
   }
 
   @Override
@@ -107,6 +117,16 @@ public class PrismRuntimeMetrics
                 }));
   }
 
+  /** Returns a recent bounded snapshot of masked Prism activity events. */
+  public synchronized java.util.List<AuditEvent> recentAuditEvents() {
+    return java.util.List.copyOf(auditEvents);
+  }
+
+  /** Returns the maximum number of masked audit events retained in memory. */
+  public int auditRetentionLimit() {
+    return MAX_AUDIT_EVENTS;
+  }
+
   private String metricKey(String rulePackName, String entityType) {
     return rulePackName + ":" + entityType;
   }
@@ -117,6 +137,21 @@ public class PrismRuntimeMetrics
     durationSamples.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
   }
 
+  private synchronized void recordEvent(String action, String subject, long count, String source) {
+    auditEvents.addFirst(new AuditEvent(Instant.now().toString(), action, subject, count, source));
+    while (auditEvents.size() > MAX_AUDIT_EVENTS) {
+      auditEvents.removeLast();
+    }
+  }
+
   /** Immutable timing snapshot for a single Prism runtime operation. */
   public record DurationMetric(long samples, long totalNanos, long averageNanos) {}
+
+  /** Immutable masked audit event summarizing recent Prism activity without exposing raw PII. */
+  public record AuditEvent(
+      @NonNull String timestamp,
+      @NonNull String action,
+      @NonNull String subject,
+      long count,
+      @NonNull String source) {}
 }

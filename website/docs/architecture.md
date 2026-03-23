@@ -35,6 +35,13 @@ The Spring Boot 3 autoconfiguration bridge.
 - **Integrations**: Publishes `PrismChatClientAdvisor` for Spring AI and primary LangChain4j wrappers when delegate chat beans are present.
 - **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.
 
+### `prism-dashboard`
+The embedded observability surface.
+- **Packaging**: Static assets are served from `META-INF/resources/prism/` inside the dashboard jar.
+- **Data Source**: Reads the Prism runtime snapshot from `/actuator/prism` when Actuator is present and falls back to `/prism/metrics` otherwise.
+- **Verification**: Includes a bundled `/prism/?demo=1` fixture mode for visual checks without a live runtime.
+- **Current Scope**: Dashboard shell, top-redacted metrics, vault/runtime health, rule-pack activity bars, trend cards, a masked recent-activity audit feed with filters, and a visual refraction-flow explainer.
+
 ## The Request Lifecycle
 
 1. **Interception**: A Spring AI advisor or LangChain4j chat wrapper captures the prompt.

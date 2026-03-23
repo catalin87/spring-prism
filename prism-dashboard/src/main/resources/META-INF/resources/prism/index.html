@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spring Prism Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="dashboard-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Spring Prism Dashboard</p>
+          <h1>Observe refraction health without exposing raw PII.</h1>
+          <p class="hero-copy">
+            This embedded dashboard reads the live Spring Prism runtime snapshot and surfaces top
+            detections, vault health, and the privacy flow around your AI requests.
+          </p>
+          <div class="hero-actions">
+            <span id="mode-pill" class="mode-pill">Live mode</span>
+            <button id="demo-button" class="demo-button" type="button">Open Demo Data</button>
+          </div>
+        </div>
+        <button id="refresh-button" class="refresh-button" type="button">Refresh</button>
+      </section>
+
+      <section id="status-panel" class="panel status-panel">
+        <strong>Loading dashboard metrics...</strong>
+      </section>
+
+      <section id="cards-grid" class="cards-grid hidden">
+        <article class="panel metric-card">
+          <p class="label">Vault Health</p>
+          <h2 id="vault-type">-</h2>
+          <dl class="metric-list">
+            <div>
+              <dt>Tokenized</dt>
+              <dd id="tokenized-count">0</dd>
+            </div>
+            <div>
+              <dt>Detokenized</dt>
+              <dd id="detokenized-count">0</dd>
+            </div>
+            <div>
+              <dt>Detection Errors</dt>
+              <dd id="error-count">0</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Top Redacted</p>
+          <h2 id="top-entity">No detections yet</h2>
+          <ul id="top-detections" class="ranking-list"></ul>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Runtime Pulse</p>
+          <h2 id="scan-latency">0 ms</h2>
+          <dl class="metric-list">
+            <div>
+              <dt>Active Rule Packs</dt>
+              <dd id="rule-packs">-</dd>
+            </div>
+            <div>
+              <dt>Tracked Timers</dt>
+              <dd id="timer-count">0</dd>
+            </div>
+            <div>
+              <dt>Preferred Endpoint</dt>
+              <dd id="endpoint-used">-</dd>
+            </div>
+          </dl>
+        </article>
+      </section>
+
+      <section id="analytics-grid" class="analytics-grid hidden">
+        <article class="panel metric-card">
+          <p class="label">Rule Pack Activity</p>
+          <h2>Locale-aware coverage</h2>
+          <div id="rule-pack-metrics" class="bars-list"></div>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Trend Cards</p>
+          <h2>Runtime checkpoints</h2>
+          <div id="trend-cards" class="trend-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Audit Log</p>
+          <h2>Masked recent activity</h2>
+          <div class="audit-toolbar">
+            <label>
+              Action
+              <select id="audit-action-filter">
+                <option value="ALL">All</option>
+              </select>
+            </label>
+            <label>
+              Source
+              <select id="audit-source-filter">
+                <option value="ALL">All</option>
+              </select>
+            </label>
+            <label>
+              Show
+              <select id="audit-limit-filter">
+                <option value="5">5</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+              </select>
+            </label>
+          </div>
+          <p id="audit-retention-note" class="audit-note"></p>
+          <ul id="audit-log" class="audit-list"></ul>
+        </article>
+      </section>
+
+      <section class="panel flow-panel">
+        <div class="panel-header">
+          <div>
+            <p class="label">Refraction Flow</p>
+            <h2>How Prism protects sensitive prompts</h2>
+          </div>
+        </div>
+        <div class="flow-grid">
+          <div class="flow-step">
+            <span>1</span>
+            <strong>App sends prompt</strong>
+            <p>User text still contains raw PII at this point.</p>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span>2</span>
+            <strong>Prism tokenizes PII</strong>
+            <p>The vault stores the original value and signs a Prism token.</p>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span>3</span>
+            <strong>AI model sees token only</strong>
+            <p>No raw email, card, SSN, phone, or regional identifier leaves the app.</p>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <span>4</span>
+            <strong>Prism restores response</strong>
+            <p>The application receives original values back after detokenization.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

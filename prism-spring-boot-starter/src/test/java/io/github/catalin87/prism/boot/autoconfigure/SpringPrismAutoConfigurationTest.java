@@ -175,6 +175,7 @@ class SpringPrismAutoConfigurationTest {
     contextRunner.run(
         context -> {
           PrismRuntimeMetrics runtimeMetrics = context.getBean(PrismRuntimeMetrics.class);
+          runtimeMetrics.onDetected("UNIVERSAL", "EMAIL", 2);
           runtimeMetrics.onScanDuration("spring-ai", 15L);
           runtimeMetrics.onVaultTokenizeDuration("spring-ai", 30L);
           PrismActuatorEndpoint endpoint = context.getBean(PrismActuatorEndpoint.class);
@@ -184,6 +185,11 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.vaultType()).isNotBlank();
           assertThat(snapshot.durationMetrics())
               .containsKeys("spring-ai:scan", "spring-ai:vault-tokenize");
+          assertThat(snapshot.rulePackMetrics())
+              .extracting(RulePackMetric::name)
+              .contains("UNIVERSAL");
+          assertThat(snapshot.auditEvents()).isNotEmpty();
+          assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
         });
   }
 
@@ -201,6 +207,8 @@ class SpringPrismAutoConfigurationTest {
               PrismMetricsSnapshot snapshot = context.getBean(MetricsController.class).metrics();
 
               assertThat(snapshot.durationMetrics()).containsKey("spring-ai:scan");
+              assertThat(snapshot.rulePackMetrics()).isNotEmpty();
+              assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
             });
   }
 

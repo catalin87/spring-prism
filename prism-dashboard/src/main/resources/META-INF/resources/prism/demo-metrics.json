@@ -1,0 +1,76 @@
+{
+  "tokenizedCount": 21,
+  "detokenizedCount": 19,
+  "detectionErrorCount": 1,
+  "detectionCounts": {
+    "UNIVERSAL:EMAIL": 9,
+    "UNIVERSAL:PHONE": 4,
+    "EUROPE:IBAN": 3,
+    "EUROPE:PESEL": 2
+  },
+  "durationMetrics": {
+    "spring-ai:scan": {
+      "samples": 14,
+      "totalNanos": 104000000,
+      "averageNanos": 7428571
+    },
+    "spring-ai:vault-tokenize": {
+      "samples": 14,
+      "totalNanos": 86000000,
+      "averageNanos": 6142857
+    },
+    "langchain4j:vault-detokenize": {
+      "samples": 5,
+      "totalNanos": 43000000,
+      "averageNanos": 8600000
+    }
+  },
+  "rulePackMetrics": [
+    {
+      "name": "UNIVERSAL",
+      "detectorCount": 5,
+      "totalDetections": 13
+    },
+    {
+      "name": "EUROPE",
+      "detectorCount": 5,
+      "totalDetections": 5
+    }
+  ],
+  "auditEvents": [
+    {
+      "timestamp": "2026-03-22T20:52:41Z",
+      "action": "detokenized",
+      "subject": "PRISM_TOKEN",
+      "count": 2,
+      "source": "runtime"
+    },
+    {
+      "timestamp": "2026-03-22T20:51:57Z",
+      "action": "detected",
+      "subject": "EMAIL",
+      "count": 3,
+      "source": "UNIVERSAL"
+    },
+    {
+      "timestamp": "2026-03-22T20:50:15Z",
+      "action": "detected",
+      "subject": "IBAN",
+      "count": 1,
+      "source": "EUROPE"
+    },
+    {
+      "timestamp": "2026-03-22T20:49:48Z",
+      "action": "error",
+      "subject": "PHONE",
+      "count": 1,
+      "source": "UNIVERSAL"
+    }
+  ],
+  "auditRetentionLimit": 12,
+  "activeRulePacks": [
+    "UNIVERSAL",
+    "EUROPE"
+  ],
+  "vaultType": "DefaultPrismVault"
+}
