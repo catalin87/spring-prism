@@ -1,6 +1,6 @@
 # Spring Prism Licensing
 
-Copyright (c) 2024-2026 [Your Name / Legal Entity]. All rights reserved.
+Copyright (c) 2026 Catalin Dordea. All rights reserved.
 
 **SPDX-License-Identifier: EUPL-1.2 OR LicenseRef-Commercial**
 
@@ -28,7 +28,7 @@ This option is **mandatory** for corporations and institutions that wish to:
 * Benefit from dedicated Service Level Agreements (SLA), indemnification against patent infringement, and liability caps.
 * Ensure specific compliance with GDPR and the EU AI Act through a formal provider-client relationship.
 
-**To obtain a Commercial License, please contact:** `[Your Contact Email / Website Link]`
+**To obtain a Commercial License, please contact:** `catalin87@gmail.com`
 
 ---
 
@@ -39,7 +39,7 @@ By submitting a contribution (Pull Request) to this repository, you ("Contributo
 1.  **Ownership:** You retain the copyright to your original contribution.
 2.  **Grant of License:** You grant the Project Owner a perpetual, worldwide, non-exclusive, irrevocable, and royalty-free license to use, modify, and **sublicense** your contribution.
 3.  **Multi-Licensing Rights:** You expressly agree that the Project Owner has the right to distribute your contribution under both the open-source EUPL 1.2 and proprietary commercial licenses.
-4.  **Jurisdiction:** Any legal proceedings initiated by the Contributor shall be subject to the exclusive jurisdiction of the courts in **[City/County, Romania]**.
+4.  **Jurisdiction:** Any legal proceedings initiated by the Contributor shall be subject to the exclusive jurisdiction of the courts in **Constanta, Romania**.
 
 *Your submission of a Pull Request constitutes electronic acceptance of these terms under EU Regulation 910/2014 (eIDAS).*
 
