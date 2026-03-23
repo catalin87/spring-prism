@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>demo-app</module>
         <module>spring-ai-example</module>
         <module>langchain4j-example</module>
         <module>mcp-example</module>

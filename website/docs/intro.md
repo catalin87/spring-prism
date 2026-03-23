@@ -31,6 +31,7 @@ To include Spring Prism in your project, add the following dependency (once publ
 
 Then use the runnable examples in `prism-examples/` as the canonical onboarding path:
 
+- `demo-app`
 - `spring-ai-example`
 - `langchain4j-example`
 - `mcp-example`
@@ -38,6 +39,8 @@ Then use the runnable examples in `prism-examples/` as the canonical onboarding 
 If you are adopting MCP in real tools, continue with the dedicated tooling docs:
 
 - [MCP Tooling Guides](/docs/mcp-tooling)
+
+For interactive product demos and manual privacy testing across all supported integrations, see the [Unified Demo App](/docs/demo-app).
 
 ## How it Works
 
