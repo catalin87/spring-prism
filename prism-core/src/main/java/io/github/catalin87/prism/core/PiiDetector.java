@@ -50,7 +50,7 @@ public interface PiiDetector {
    * @param text The source text to analyze.
    * @return A list of {@link PiiCandidate} objects indicating exact locations in the text.
    */
-  @NonNull List<PiiCandidate> detect(@NonNull String text);
+  @NonNull List<@NonNull PiiCandidate> detect(@NonNull String text);
 
   /** Returns {@code true} when the text contains at least one decimal digit. */
   static boolean containsDigit(@NonNull String text) {

@@ -19,6 +19,7 @@ import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -60,22 +61,22 @@ public class IpAddressDetector implements PiiDetector {
   }
 
   @Override
-  public @NonNull List<PiiCandidate> detect(@NonNull String input) {
+  public @NonNull List<@NonNull PiiCandidate> detect(@NonNull String input) {
     if (!mayMatch(input)) {
       return List.of();
     }
 
-    List<PiiCandidate> matches = new ArrayList<>();
+    List<@NonNull PiiCandidate> matches = new ArrayList<>();
     collectMatches(IPV4_PATTERN.matcher(input), matches);
     collectMatches(IPV6_PATTERN.matcher(input), matches);
 
     return matches;
   }
 
-  private void collectMatches(Matcher matcher, List<PiiCandidate> matches) {
+  private void collectMatches(Matcher matcher, List<@NonNull PiiCandidate> matches) {
     while (matcher.find()) {
-      matches.add(
-          new PiiCandidate(matcher.group(), matcher.start(), matcher.end(), getEntityType()));
+      String candidate = Objects.requireNonNull(matcher.group());
+      matches.add(new PiiCandidate(candidate, matcher.start(), matcher.end(), getEntityType()));
     }
   }
 }

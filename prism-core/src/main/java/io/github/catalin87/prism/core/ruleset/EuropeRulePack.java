@@ -36,7 +36,7 @@ import org.jspecify.annotations.NonNull;
  */
 public class EuropeRulePack implements PrismRulePack {
 
-  private static final List<PiiDetector> DETECTORS =
+  private static final List<@NonNull PiiDetector> DETECTORS =
       List.of(
           new EmailDetector(),
           new CreditCardDetector(),
@@ -55,7 +55,7 @@ public class EuropeRulePack implements PrismRulePack {
   }
 
   @Override
-  public @NonNull List<PiiDetector> getDetectors() {
+  public @NonNull List<@NonNull PiiDetector> getDetectors() {
     return DETECTORS;
   }
 }
