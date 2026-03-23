@@ -117,6 +117,52 @@ code {
   padding: 11px 16px;
 }
 
+.secondary-button {
+  border: 1px solid rgba(29, 24, 20, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 11px 16px;
+}
+
+.ops-panel {
+  margin-bottom: 20px;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.ops-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ops-grid select {
+  border: 1px solid rgba(29, 24, 20, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 10px 12px;
+  color: var(--ink);
+}
+
+.ops-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ops-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+}
+
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -211,6 +257,51 @@ code {
   font-size: 1.1rem;
 }
 
+.integration-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.integration-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(29, 24, 20, 0.08);
+}
+
+.integration-card p,
+.integration-card span {
+  margin: 0;
+  color: var(--muted);
+}
+
+.integration-card strong {
+  font-size: 1.15rem;
+}
+
+.mini-metrics {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.mini-metrics div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mini-metrics dt {
+  color: var(--muted);
+}
+
+.mini-metrics dd {
+  margin: 0;
+  font-weight: 700;
+}
+
 .bar-row {
   display: grid;
   gap: 8px;
@@ -300,6 +391,34 @@ code {
   font-size: 0.88rem;
 }
 
+.history-panel {
+  margin-bottom: 20px;
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.history-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(29, 24, 20, 0.08);
+}
+
+.history-card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.history-card svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
 .flow-panel {
   overflow: hidden;
 }
@@ -363,8 +482,10 @@ code {
 
 @media (max-width: 940px) {
   .hero,
+  .ops-grid,
   .cards-grid,
   .analytics-grid,
+  .history-grid,
   .flow-grid {
     grid-template-columns: 1fr;
     display: grid;
@@ -381,6 +502,10 @@ code {
   .trend-grid,
   .audit-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .ops-actions {
+    flex-direction: column;
   }
 
   .flow-arrow {

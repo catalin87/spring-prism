@@ -24,6 +24,33 @@
         <button id="refresh-button" class="refresh-button" type="button">Refresh</button>
       </section>
 
+      <section class="panel ops-panel">
+        <div class="ops-grid">
+          <label>
+            Polling
+            <select id="polling-interval">
+              <option value="0">Paused</option>
+              <option value="15">15s</option>
+              <option value="30" selected>30s</option>
+              <option value="60">60s</option>
+            </select>
+          </label>
+          <label>
+            History Window
+            <select id="history-limit">
+              <option value="10">10 points</option>
+              <option value="25" selected>25 points</option>
+              <option value="50">50 points</option>
+            </select>
+          </label>
+          <div class="ops-actions">
+            <button id="polling-toggle" class="secondary-button" type="button">Pause Polling</button>
+            <button id="export-button" class="secondary-button" type="button">Export Snapshot</button>
+          </div>
+        </div>
+        <p id="polling-status" class="ops-note">Auto-refresh is enabled every 30 seconds.</p>
+      </section>
+
       <section id="status-panel" class="panel status-panel">
         <strong>Loading dashboard metrics...</strong>
       </section>
@@ -59,8 +86,16 @@
           <h2 id="scan-latency">0 ms</h2>
           <dl class="metric-list">
             <div>
+              <dt>Health Signal</dt>
+              <dd id="health-signal">-</dd>
+            </div>
+            <div>
               <dt>Active Rule Packs</dt>
               <dd id="rule-packs">-</dd>
+            </div>
+            <div>
+              <dt>Polling</dt>
+              <dd id="polling-mode">-</dd>
             </div>
             <div>
               <dt>Tracked Timers</dt>
@@ -85,6 +120,12 @@
           <p class="label">Trend Cards</p>
           <h2>Runtime checkpoints</h2>
           <div id="trend-cards" class="trend-grid"></div>
+        </article>
+
+        <article class="panel metric-card">
+          <p class="label">Integrations</p>
+          <h2>Spring AI vs LangChain4j</h2>
+          <div id="integration-summary" class="integration-grid"></div>
         </article>
 
         <article class="panel metric-card">
@@ -115,6 +156,29 @@
           <p id="audit-retention-note" class="audit-note"></p>
           <ul id="audit-log" class="audit-list"></ul>
         </article>
+      </section>
+
+      <section id="history-panel" class="panel history-panel hidden">
+        <div class="panel-header">
+          <div>
+            <p class="label">History</p>
+            <h2>Recent runtime changes</h2>
+          </div>
+        </div>
+        <div class="history-grid">
+          <article class="history-card">
+            <p>Total detections</p>
+            <svg id="history-detections" viewBox="0 0 320 120" role="img" aria-label="Detection history chart"></svg>
+          </article>
+          <article class="history-card">
+            <p>Detection errors</p>
+            <svg id="history-errors" viewBox="0 0 320 120" role="img" aria-label="Error history chart"></svg>
+          </article>
+          <article class="history-card">
+            <p>Scan latency</p>
+            <svg id="history-scan" viewBox="0 0 320 120" role="img" aria-label="Scan latency history chart"></svg>
+          </article>
+        </div>
       </section>
 
       <section class="panel flow-panel">
