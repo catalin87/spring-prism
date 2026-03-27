@@ -19,6 +19,7 @@ The following modules are part of the supported library surface:
 | `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` wrappers | Supported |
 | `prism-mcp` | MCP client-side protection for stdio and Streamable HTTP transports | Supported |
 | `prism-spring-boot-starter` | Spring Boot properties, auto-configuration, Redis selection, metrics surface | Supported |
+| `prism-integration-tests` | Testcontainers Redis and WireMock-backed multi-node release validation | Supported |
 | `prism-dashboard` | Embedded dashboard with retained history, filters, exports, and alerts | Supported |
 | `prism-examples` | Runnable Spring Boot sample apps for Spring AI, LangChain4j, and MCP | Supported |
 
@@ -52,9 +53,13 @@ The current verification baseline covers:
 - LangChain4j wrapper tests
 - MCP stdio + Streamable HTTP transport tests with structured payload sanitization/restoration
 - starter auto-configuration tests, including Redis-absent startup safety
+- dedicated `prism-integration-tests` coverage for cross-node Redis restore, TTL expiry, noisy LLM restoration, and large-payload distributed flows
+- dedicated `prism-integration-tests` coverage for Redis outage handling during tokenize and restore flows
 - runnable Spring AI, LangChain4j, and MCP example applications that boot and prove redaction/restoration
 - a dedicated `prism-benchmarks` JMH module for scan, vault, streaming, and Redis-vault measurements
 - embedded dashboard coverage for the redesigned control-plane UI and live Privacy Score rendering
+
+See [Integration Test Tracker](./integration-test-tracker.md) for the current suite inventory and branch-level status.
 
 ## Release Profile
 
