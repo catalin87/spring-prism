@@ -13,7 +13,7 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.github.catalin87.prism.spring.ai.advisor;
+package io.github.catalin87.prism.langchain4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -57,7 +57,7 @@ class PrismTextScannerTest {
   @Test
   void returnsOriginalInstanceWhenNoTokenPrefixExists() {
     PrismTextScanner scanner = newScanner();
-    String text = "A very large but completely safe RAG paragraph with no vault markers.";
+    String text = "A large LangChain4j prompt with no vault markers at all.";
 
     assertThat(scanner.detokenize(text)).isSameAs(text);
   }

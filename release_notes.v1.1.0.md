@@ -24,3 +24,23 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `re
   for Prism-specific operational visibility.
 - Added dedicated distributed deployment and troubleshooting guides for enterprise multi-node
   operations.
+
+### Large-Context and RAG Performance
+
+- Reworked large-payload tokenization in Spring AI and LangChain4j to rebuild sanitized text in a
+  single pass instead of performing repeated in-place `StringBuilder.replace(...)` operations.
+- Added a detokenize fast-path that skips regex work entirely when no Prism token prefix is
+  present in the response chunk.
+- Reduced streaming chunk overhead in `StreamingBuffer` by avoiding unnecessary intermediate
+  string copies while buffering fragmented Prism tokens.
+- Reduced in-memory vault overhead for many-hit prompts by replacing probabilistic cleanup with a
+  cheaper deterministic cleanup ticker and lightweight epoch-second reads.
+- Added per-request tokenization and detokenization caches so repeated values or repeated Prism
+  tokens do not trigger duplicate vault work inside the same large prompt/response flow.
+- Added segment-aware scanning for very large prompts so detector work can be distributed across
+  overlapping text windows without losing boundary matches near segment edges.
+- Added focused scanner tests for large prompts in both Spring AI and LangChain4j integrations.
+- Added a new JMH benchmark, `LargePromptAdvisorBenchmark`, to measure large prompt tokenization
+  and tokenize-plus-restore costs through the real Spring AI advisor path.
+- Strengthened the Redis multi-node integration suite with a larger RAG-style payload fixture so
+  `v1.1.0` performance work is validated against production-shaped prompt sizes.
