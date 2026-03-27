@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -43,6 +43,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.util.ClassUtils;
 
 /** Auto-configuration entry point for Spring Prism. */
 @AutoConfiguration
@@ -54,6 +55,9 @@ import org.springframework.context.annotation.Primary;
     matchIfMissing = true)
 @EnableConfigurationProperties(SpringPrismProperties.class)
 public class SpringPrismAutoConfiguration {
+
+  private static final String REDIS_TEMPLATE_CLASS =
+      "org.springframework.data.redis.core.StringRedisTemplate";
 
   @Bean
   @ConditionalOnMissingBean
@@ -79,13 +83,11 @@ public class SpringPrismAutoConfiguration {
   PrismVault prismVault(
       TokenGenerator prismTokenGenerator,
       SpringPrismProperties properties,
-      ObjectProvider<org.springframework.data.redis.core.StringRedisTemplate>
-          redisTemplateProvider) {
+      ListableBeanFactory beanFactory) {
     long ttlSeconds = Math.max(1L, properties.getTtl().toSeconds());
     byte[] secret = secretKey(properties);
     Duration ttl = properties.getTtl();
-    org.springframework.data.redis.core.StringRedisTemplate redisTemplate =
-        redisTemplateProvider.getIfAvailable();
+    Object redisTemplate = findRedisTemplate(beanFactory);
     SpringPrismProperties.VaultType vaultType = properties.getVault().getType();
 
     return switch (vaultType) {
@@ -93,7 +95,7 @@ public class SpringPrismAutoConfiguration {
       case REDIS -> createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
       case AUTO -> {
         if (redisTemplate != null) {
-          yield new RedisPrismVault(redisTemplate, prismTokenGenerator, secret, ttl);
+          yield createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
         }
         yield new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
       }
@@ -170,16 +172,24 @@ public class SpringPrismAutoConfiguration {
   }
 
   private static PrismVault createRedisVault(
-      TokenGenerator prismTokenGenerator,
-      Duration ttl,
-      byte[] secret,
-      org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
-    if (redisTemplate == null) {
+      TokenGenerator prismTokenGenerator, Duration ttl, byte[] secret, Object redisTemplate) {
+    if (!(redisTemplate instanceof org.springframework.data.redis.core.StringRedisTemplate typed)) {
       throw new IllegalStateException(
           "spring.prism.vault.type=redis requires a StringRedisTemplate bean for shared vault"
               + " configuration.");
     }
-    return new RedisPrismVault(redisTemplate, prismTokenGenerator, secret, ttl);
+    return new RedisPrismVault(typed, prismTokenGenerator, secret, ttl);
+  }
+
+  private static Object findRedisTemplate(ListableBeanFactory beanFactory) {
+    if (!ClassUtils.isPresent(
+        REDIS_TEMPLATE_CLASS, SpringPrismAutoConfiguration.class.getClassLoader())) {
+      return null;
+    }
+    Class<?> redisTemplateClass =
+        ClassUtils.resolveClassName(
+            REDIS_TEMPLATE_CLASS, SpringPrismAutoConfiguration.class.getClassLoader());
+    return beanFactory.getBeanProvider(redisTemplateClass).getIfAvailable();
   }
 
   @Configuration(proxyBeanMethods = false)
