@@ -6,11 +6,11 @@ This page tracks the release-critical integration suites that back the `1.1.0-SN
 
 Current branch focus:
 
-- `feature/31-redis-first-cluster-safety`
+- `feature/32-large-context-rag-performance`
 
 Primary release claim:
 
-- Redis-backed shared vault storage is safe for multi-node Prism deployments
+- Spring Prism remains credible on large prompts and RAG-style payloads, not only on short prompts
 
 ## Active Suites
 
@@ -30,6 +30,7 @@ Primary release claim:
 | TTL expiry | Passing |
 | Secret mismatch safety | Passing |
 | Large-payload flow | Passing |
+| RAG-style dense payload flow | Passing in suite design, local Docker execution required |
 | Redis outage handling | Passing |
 
 ## Validation Commands
@@ -51,3 +52,5 @@ mvn verify
 - `prism-integration-tests` is a test-only module and is configured with `maven.deploy.skip=true`.
 - Redis outage coverage currently validates fail-closed behavior by asserting that tokenize and
   restore operations fail in a controlled way while Redis is unavailable.
+- Large-context work in `v1.1.0` should keep this suite updated whenever prompt-size-sensitive
+  behavior changes.

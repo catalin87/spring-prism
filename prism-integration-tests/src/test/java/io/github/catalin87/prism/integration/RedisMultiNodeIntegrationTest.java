@@ -214,7 +214,7 @@ class RedisMultiNodeIntegrationTest {
     long tokenizeNanos = System.nanoTime() - tokenizeStart;
 
     String sanitizedPrompt = nodeA.lastPromptContent();
-    assertThat(extractTokens(sanitizedPrompt)).hasSizeGreaterThan(20);
+    assertThat(extractTokens(sanitizedPrompt)).hasSizeGreaterThan(300);
 
     wireMockServer.resetRequests();
     wireMockServer.stubFor(
@@ -352,18 +352,20 @@ class RedisMultiNodeIntegrationTest {
   }
 
   private static String largePayload() {
-    StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < 40; i++) {
+    StringBuilder builder = new StringBuilder(16384);
+    for (int i = 0; i < 120; i++) {
       builder
-          .append("Record ")
+          .append("Retrieved record ")
           .append(i)
           .append(": email rag-user-")
           .append(String.format("%02d", i))
-          .append("@example.com, SSN 123-45-67")
-          .append(String.format("%02d", i))
-          .append(", card 4111 1111 1111 ")
-          .append(String.format("%04d", i))
-          .append(". ");
+          .append("@example.com, SSN 123-45-")
+          .append(String.format("%04d", 6700 + i))
+          .append(", card 4111 1111 1111 1111, phone +40 712 345 ")
+          .append(String.format("%03d", i))
+          .append(". Retrieved context segment ")
+          .append(i)
+          .append(" remains privacy-sensitive. ");
     }
     return builder.toString();
   }

@@ -16,6 +16,7 @@
 package io.github.catalin87.prism.core.vault;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,5 +34,23 @@ class StreamingBufferTest {
         "Hello user, the email associated is ", chunk1, "Initial payload isolated successfully.");
     assertEquals("", chunk2, "M_EMA rigidly buffered inside constraints natively.");
     assertEquals("<PRISM_EMAIL_u8J>", chunk3, "Full Token mathematically flushed automatically.");
+  }
+
+  @Test
+  void returnsWholeChunkImmediatelyWhenNoTokenBoundaryExists() {
+    StreamingBuffer buffer = new StreamingBuffer();
+    String chunk = "Large RAG paragraph with no token markers at all.";
+
+    assertEquals(chunk, buffer.processChunk(chunk));
+    assertEquals("", buffer.flush());
+  }
+
+  @Test
+  void returnsSameEmptyInstanceWhenNothingBuffered() {
+    StreamingBuffer buffer = new StreamingBuffer();
+    String empty = "";
+
+    assertSame(empty, buffer.processChunk(empty));
+    assertEquals("", buffer.flush());
   }
 }
