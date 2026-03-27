@@ -121,9 +121,11 @@ class SpringPrismAutoConfigurationTest {
   @Test
   void propertiesBindingSupportsTtlAndStrictMode() {
     contextRunner
+        .withUserConfiguration(RedisTemplateConfiguration.class)
         .withPropertyValues(
             "spring.prism.security-strict-mode=true",
             "spring.prism.ttl=45m",
+            "spring.prism.vault.type=redis",
             "spring.prism.dashboard.audit-retention=20",
             "spring.prism.dashboard.history-retention=240",
             "spring.prism.dashboard.default-polling-seconds=45",
@@ -134,6 +136,8 @@ class SpringPrismAutoConfigurationTest {
               SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
               assertThat(properties.isSecurityStrictMode()).isTrue();
               assertThat(properties.getTtl()).isEqualTo(Duration.ofMinutes(45));
+              assertThat(properties.getVault().getType())
+                  .isEqualTo(SpringPrismProperties.VaultType.REDIS);
               assertThat(properties.getDashboard().getAuditRetention()).isEqualTo(20);
               assertThat(properties.getDashboard().getHistoryRetention()).isEqualTo(240);
               assertThat(properties.getDashboard().getDefaultPollingSeconds()).isEqualTo(45);
@@ -170,6 +174,42 @@ class SpringPrismAutoConfigurationTest {
             context -> {
               assertThat(context).hasSingleBean(PrismVault.class);
               assertThat(context.getBean(PrismVault.class)).isInstanceOf(RedisPrismVault.class);
+            });
+  }
+
+  @Test
+  void explicitRedisVaultTypeRequiresSharedRedisBean() {
+    contextRunner
+        .withPropertyValues("spring.prism.vault.type=redis")
+        .run(
+            context -> {
+              assertThat(context).hasFailed();
+              assertThat(context.getStartupFailure())
+                  .hasMessageContaining("spring.prism.vault.type=redis requires");
+            });
+  }
+
+  @Test
+  void explicitRedisVaultTypeUsesRedisWhenBeanIsPresent() {
+    contextRunner
+        .withUserConfiguration(RedisTemplateConfiguration.class)
+        .withPropertyValues("spring.prism.vault.type=redis")
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismVault.class);
+              assertThat(context.getBean(PrismVault.class)).isInstanceOf(RedisPrismVault.class);
+            });
+  }
+
+  @Test
+  void explicitInMemoryVaultTypeKeepsLocalVaultEvenWhenRedisBeanExists() {
+    contextRunner
+        .withUserConfiguration(RedisTemplateConfiguration.class)
+        .withPropertyValues("spring.prism.vault.type=in-memory")
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(PrismVault.class);
+              assertThat(context.getBean(PrismVault.class)).isInstanceOf(DefaultPrismVault.class);
             });
   }
 
@@ -227,9 +267,52 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.historyRetentionLimit()).isEqualTo(120);
           assertThat(snapshot.auditEvents()).isNotEmpty();
           assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
+          assertThat(snapshot.configuredVaultMode()).isEqualTo("AUTO");
+          assertThat(snapshot.customAppSecretConfigured()).isTrue();
+          assertThat(snapshot.sharedVaultReady()).isFalse();
+          assertThat(snapshot.vaultReadinessStatus()).isEqualTo("LOCAL_ONLY");
           assertThat(snapshot.tokenBacklog()).isGreaterThanOrEqualTo(0);
           assertThat(snapshot.dashboardConfiguration().defaultPollingSeconds()).isEqualTo(30);
         });
+  }
+
+  @Test
+  void actuatorEndpointExposesExplicitRedisVaultMode() {
+    contextRunner
+        .withUserConfiguration(RedisTemplateConfiguration.class)
+        .withPropertyValues("spring.prism.vault.type=redis")
+        .run(
+            context -> {
+              PrismMetricsSnapshot snapshot =
+                  context.getBean(PrismActuatorEndpoint.class).metrics();
+
+              assertThat(snapshot.configuredVaultMode()).isEqualTo("REDIS");
+              assertThat(snapshot.customAppSecretConfigured()).isTrue();
+              assertThat(snapshot.vaultType()).isEqualTo("RedisPrismVault");
+              assertThat(snapshot.distributedVault()).isTrue();
+              assertThat(snapshot.sharedVaultReady()).isTrue();
+              assertThat(snapshot.vaultReadinessStatus()).isEqualTo("READY");
+            });
+  }
+
+  @Test
+  void actuatorEndpointFlagsRedisModeWithDefaultSecretAsAttention() {
+    new ApplicationContextRunner()
+        .withConfiguration(AutoConfigurations.of(SpringPrismAutoConfiguration.class))
+        .withUserConfiguration(RedisTemplateConfiguration.class)
+        .withPropertyValues(
+            "spring.prism.app-secret=spring-prism-change-me", "spring.prism.vault.type=redis")
+        .run(
+            context -> {
+              PrismMetricsSnapshot snapshot =
+                  context.getBean(PrismActuatorEndpoint.class).metrics();
+
+              assertThat(snapshot.customAppSecretConfigured()).isFalse();
+              assertThat(snapshot.distributedVault()).isTrue();
+              assertThat(snapshot.sharedVaultReady()).isFalse();
+              assertThat(snapshot.vaultReadinessStatus()).isEqualTo("ATTENTION");
+              assertThat(snapshot.vaultReadinessDetails()).contains("default app secret");
+            });
   }
 
   @Test

@@ -19,7 +19,9 @@ const sidebars = {
     'intro',
     'architecture',
     'configuration',
+    'distributed-deployments',
     'dashboard',
+    'grafana',
     'demo-app',
     'detectors',
     {
@@ -36,6 +38,7 @@ const sidebars = {
     },
     'compatibility',
     'performance',
+    'troubleshooting',
     'migration-guide',
     'release-readiness',
   ],

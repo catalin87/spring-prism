@@ -35,13 +35,19 @@ new PrismChatClientAdvisor(List.of(rulePack), prismVault, ObservationRegistry.NO
 
 ## Redis Vault Selection
 
-- The starter keeps `DefaultPrismVault` by default.
-- If a `StringRedisTemplate` bean is present, the starter switches to `RedisPrismVault`
+- The starter now exposes `spring.prism.vault.type` with `auto`, `in-memory`, and `redis`.
+- `auto` preserves the previous ergonomic behavior:
+  if a `StringRedisTemplate` bean is present, the starter switches to `RedisPrismVault`
   automatically.
+- `redis` is the recommended explicit choice for multi-node deployments and fails fast when no
+  shared Redis bean is configured.
+- `in-memory` keeps `DefaultPrismVault` even if Redis is on the classpath.
 
 ## Recommended Upgrade Path
 
 1. Move to `prism-spring-boot-starter` if you were wiring components manually.
 2. Set an explicit `spring.prism.app-secret`.
-3. Verify your active locales and disabled rules explicitly in configuration.
-4. For LangChain4j applications, expose one delegate chat bean and let the starter wrap it.
+3. Choose `spring.prism.vault.type=redis` for multi-node deployments and keep all nodes on the
+   same app secret and shared Redis infrastructure.
+4. Verify your active locales and disabled rules explicitly in configuration.
+5. For LangChain4j applications, expose one delegate chat bean and let the starter wrap it.

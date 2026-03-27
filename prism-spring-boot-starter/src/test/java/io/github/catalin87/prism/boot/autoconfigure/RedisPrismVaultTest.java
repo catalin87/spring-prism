@@ -25,8 +25,11 @@ import static org.mockito.Mockito.when;
 
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -101,5 +104,73 @@ class RedisPrismVaultTest {
 
     assertThat(vault.detokenize(token.key())).isNull();
     verify(redisTemplate).delete(eq(token.key()));
+  }
+
+  @Test
+  void sharedRedisStoreAllowsCrossNodeRestoration() {
+    InMemoryStringRedisTemplate sharedRedis = new InMemoryStringRedisTemplate();
+    RedisPrismVault writerVault =
+        new RedisPrismVault(
+            sharedRedis, new HmacSha256TokenGenerator(), secretKey, Duration.ofMinutes(5));
+    RedisPrismVault readerVault =
+        new RedisPrismVault(
+            sharedRedis, new HmacSha256TokenGenerator(), secretKey, Duration.ofMinutes(5));
+
+    PrismToken token = writerVault.tokenize("user@corp.local", "EMAIL");
+
+    assertThat(readerVault.detokenize(token.key())).isEqualTo("user@corp.local");
+  }
+
+  @Test
+  void sharedRedisStoreRejectsRestoreAcrossNodesWhenSecretsDiffer() {
+    InMemoryStringRedisTemplate sharedRedis = new InMemoryStringRedisTemplate();
+    RedisPrismVault writerVault =
+        new RedisPrismVault(
+            sharedRedis, new HmacSha256TokenGenerator(), secretKey, Duration.ofMinutes(5));
+    RedisPrismVault readerVault =
+        new RedisPrismVault(
+            sharedRedis,
+            new HmacSha256TokenGenerator(),
+            "other-secret".getBytes(StandardCharsets.UTF_8),
+            Duration.ofMinutes(5));
+
+    PrismToken token = writerVault.tokenize("user@corp.local", "EMAIL");
+
+    assertThat(readerVault.detokenize(token.key())).isNull();
+  }
+
+  private static final class InMemoryStringRedisTemplate extends StringRedisTemplate {
+
+    private final Map<String, String> store = new ConcurrentHashMap<>();
+    private final ValueOperations<String, String> valueOperations = createValueOperations();
+
+    @SuppressWarnings("unchecked")
+    private ValueOperations<String, String> createValueOperations() {
+      return (ValueOperations<String, String>)
+          Proxy.newProxyInstance(
+              ValueOperations.class.getClassLoader(),
+              new Class<?>[] {ValueOperations.class},
+              (proxy, method, args) -> {
+                String methodName = method.getName();
+                if ("set".equals(methodName)) {
+                  store.put((String) args[0], (String) args[1]);
+                  return null;
+                }
+                if ("get".equals(methodName)) {
+                  return store.get(args[0]);
+                }
+                throw new UnsupportedOperationException(methodName);
+              });
+    }
+
+    @Override
+    public ValueOperations<String, String> opsForValue() {
+      return valueOperations;
+    }
+
+    @Override
+    public Boolean delete(String key) {
+      return store.remove(key) != null;
+    }
   }
 }

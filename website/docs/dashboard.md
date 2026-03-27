@@ -6,6 +6,9 @@ sidebar_position: 7
 
 The `prism-dashboard` module packages a lightweight embedded observability UI inside the jar at `/prism/`.
 
+If you want to visualize Prism across existing operations tooling, continue with the
+[Grafana Integration](/docs/grafana) guide.
+
 ## Data sources
 
 The dashboard prefers the Actuator endpoint:
@@ -28,7 +31,7 @@ If Actuator is not on the classpath, it falls back to:
 - Integration drill-down cards for Spring AI and LangChain4j timing paths
 - Threshold-aware alert cards for detection errors, scan latency, token backlog, and vault mode
 - Entity drill-down cards grouped by rule pack and detector type
-- Vault insight cards describing local vs Redis posture, shared-vs-local topology, and restore pressure
+- Vault insight cards describing configured vault mode, local vs Redis runtime posture, shared-vs-local topology, shared-vault readiness, and restore pressure
 - Admin cards showing current retention, polling, and alert-threshold settings
 - Masked recent-activity audit feed with action/source/limit filters
 - Server-side retained history charts for detections, errors, scan latency, and token backlog
@@ -79,6 +82,28 @@ spring:
 ```
 
 These values shape both the server-side snapshot and the UI rendering, which keeps the dashboard behavior truthful to the running app configuration.
+
+The runtime snapshot also exposes both:
+
+- the configured vault mode from `spring.prism.vault.type`
+- the active runtime vault implementation such as `DefaultPrismVault` or `RedisPrismVault`
+- whether the distributed restore path is actually ready for shared-node use
+
+This helps operators tell the difference between intended deployment posture and the currently
+active vault implementation.
+
+For Redis-backed deployments, `sharedVaultReady` becomes `true` only when Spring Prism sees both:
+
+- a Redis-backed runtime vault
+- a non-default `spring.prism.app-secret`
+
+This keeps the dashboard honest about whether the shared restore path is merely enabled or actually
+ready for production-shaped multi-node use.
+
+For full production rollout guidance, pair the dashboard with:
+
+- [Distributed Deployments](/docs/distributed-deployments)
+- [Troubleshooting](/docs/troubleshooting)
 
 ## Live example integration
 

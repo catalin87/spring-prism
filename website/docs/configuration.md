@@ -10,6 +10,7 @@ Spring Prism is configured using standard Spring Boot property files such as `ap
 | `spring.prism.security-strict-mode` | `false` | If true, any failure in detection or vaulting will result in a hard failure (Fail Closed). |
 | `spring.prism.app-secret` | `spring-prism-change-me` | The HMAC secret used to sign Prism tokens. Override this in every real deployment. |
 | `spring.prism.ttl` | `30m` | The time-to-live for vault entries. Invalid values fall back to the starter default. |
+| `spring.prism.vault.type` | `auto` | Vault strategy: `auto`, `in-memory`, or `redis`. Use `redis` for multi-node deployments. |
 | `spring.prism.locales` | `UNIVERSAL` | The active locale set. Common values include `UNIVERSAL`, `EU`, `RO`, `PL`, `DE`, `GB`, `EN`, and `US`. |
 | `spring.prism.disabled-rules` | empty | Entity types to suppress from the resolved rule packs, such as `EMAIL` or `SSN`. |
 | `spring.prism.custom-rules[n].name` | empty | Entity type name for a property-backed custom regex detector. |
@@ -33,6 +34,8 @@ Then configure the starter:
 spring:
   prism:
     app-secret: ${PRISM_APP_SECRET}
+    vault:
+      type: auto
     security-strict-mode: false
     ttl: 30m
     locales: EU,EN
@@ -50,7 +53,55 @@ The starter auto-configures:
 - the runtime metrics endpoint at `/actuator/prism` when Spring Boot Actuator is on the classpath
 - the fallback metrics endpoint at `/prism/metrics` when Actuator is absent
 
-When a `StringRedisTemplate` bean is present, the starter switches to the Redis-backed vault automatically. Otherwise it keeps the default in-memory vault.
+## Vault Selection
+
+The starter now supports an explicit vault selection contract:
+
+- `spring.prism.vault.type=auto`
+  Recommended default for local development and simple deployments. If a `StringRedisTemplate`
+  bean is present, Spring Prism uses `RedisPrismVault`; otherwise it keeps `DefaultPrismVault`.
+- `spring.prism.vault.type=in-memory`
+  Forces the local in-memory vault even when Redis is on the classpath or already configured.
+  Use this only for single-node deployments.
+- `spring.prism.vault.type=redis`
+  Forces the shared Redis-backed vault and fails startup if no `StringRedisTemplate` bean exists.
+  Use this for Kubernetes, load-balanced, and other multi-node deployments.
+
+For distributed deployments, every node must:
+
+- use the same `spring.prism.app-secret`
+- connect to the same Redis deployment or logical shared vault
+- use compatible TTL expectations for restore windows
+
+If a `StringRedisTemplate` bean is already available in your application, `auto` mode preserves the
+existing low-friction behavior while still allowing explicit enterprise configuration.
+
+## Multi-Node Redis Example
+
+For a concrete clustered setup, use explicit Redis mode and keep every node on the same app secret:
+
+```yaml
+spring:
+  data:
+    redis:
+      host: redis.internal
+      port: 6379
+  prism:
+    app-secret: ${PRISM_APP_SECRET}
+    vault:
+      type: redis
+    ttl: 30m
+    locales: UNIVERSAL
+```
+
+You can also start from the sample file in:
+
+- `prism-examples/spring-ai-example/src/main/resources/application-redis.yml`
+
+For full production guidance, continue with:
+
+- [Distributed Deployments](/docs/distributed-deployments)
+- [Troubleshooting](/docs/troubleshooting)
 
 ## Spring AI Runtime Behavior
 

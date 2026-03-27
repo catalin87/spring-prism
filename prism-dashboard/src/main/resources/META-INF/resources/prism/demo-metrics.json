@@ -260,8 +260,13 @@
     "UNIVERSAL",
     "EUROPE"
   ],
+  "configuredVaultMode": "REDIS",
+  "customAppSecretConfigured": true,
   "vaultType": "RedisPrismVault",
   "distributedVault": true,
+  "sharedVaultReady": true,
+  "vaultReadinessStatus": "READY",
+  "vaultReadinessDetails": "Redis-backed shared restore path is active and a non-default app secret is configured.",
   "tokenBacklog": 3,
   "dashboardConfiguration": {
     "auditRetentionLimit": 12,
