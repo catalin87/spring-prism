@@ -40,6 +40,7 @@ public class SpringPrismProperties {
   private List<String> locales = new ArrayList<>(DEFAULT_LOCALES);
   private List<CustomRule> customRules = new ArrayList<>();
   private Set<String> disabledRules = new LinkedHashSet<>();
+  private Vault vault = new Vault();
   private Dashboard dashboard = new Dashboard();
   private Mcp mcp = new Mcp();
 
@@ -115,6 +116,14 @@ public class SpringPrismProperties {
         disabledRules == null ? new LinkedHashSet<>() : new LinkedHashSet<>(disabledRules);
   }
 
+  public Vault getVault() {
+    return vault;
+  }
+
+  public void setVault(Vault vault) {
+    this.vault = vault == null ? new Vault() : vault;
+  }
+
   public Dashboard getDashboard() {
     return dashboard;
   }
@@ -129,6 +138,26 @@ public class SpringPrismProperties {
 
   public void setMcp(Mcp mcp) {
     this.mcp = mcp == null ? new Mcp() : mcp;
+  }
+
+  /** Externalized vault selection settings. */
+  public static class Vault {
+    private VaultType type = VaultType.AUTO;
+
+    public VaultType getType() {
+      return type;
+    }
+
+    public void setType(VaultType type) {
+      this.type = type == null ? VaultType.AUTO : type;
+    }
+  }
+
+  /** Supported vault deployment strategies. */
+  public enum VaultType {
+    AUTO,
+    IN_MEMORY,
+    REDIS
   }
 
   /** Externalized dashboard-specific configuration. */

@@ -81,6 +81,14 @@ final class PrismMetricsSnapshotFactory {
                         durationMetrics.get(integration + ":vault-detokenize")))
             .toList();
     String vaultType = prismVault.getClass().getSimpleName();
+    String configuredVaultMode = properties.getVault().getType().name();
+    boolean customAppSecretConfigured = !"spring-prism-change-me".equals(properties.getAppSecret());
+    boolean distributedVault = vaultType.toLowerCase().contains("redis");
+    boolean sharedVaultReady = distributedVault && customAppSecretConfigured;
+    String vaultReadinessStatus =
+        vaultReadinessStatus(distributedVault, sharedVaultReady, customAppSecretConfigured);
+    String vaultReadinessDetails =
+        vaultReadinessDetails(distributedVault, sharedVaultReady, customAppSecretConfigured);
     prismRuntimeMetrics.captureHistorySample(vaultType);
     List<HistorySample> historySamples = prismRuntimeMetrics.recentHistorySamples();
     long tokenBacklog =
@@ -105,10 +113,44 @@ final class PrismMetricsSnapshotFactory {
         prismRuntimeMetrics.recentAuditEvents(),
         prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
+        configuredVaultMode,
+        customAppSecretConfigured,
         vaultType,
-        vaultType.toLowerCase().contains("redis"),
+        distributedVault,
+        sharedVaultReady,
+        vaultReadinessStatus,
+        vaultReadinessDetails,
         tokenBacklog,
         dashboardConfiguration);
+  }
+
+  private static String vaultReadinessStatus(
+      boolean distributedVault, boolean sharedVaultReady, boolean customAppSecretConfigured) {
+    if (sharedVaultReady) {
+      return "READY";
+    }
+    if (distributedVault) {
+      return "ATTENTION";
+    }
+    return customAppSecretConfigured ? "LOCAL_ONLY" : "LOCAL_ONLY_ATTENTION";
+  }
+
+  private static String vaultReadinessDetails(
+      boolean distributedVault, boolean sharedVaultReady, boolean customAppSecretConfigured) {
+    if (sharedVaultReady) {
+      return "Redis-backed shared restore path is active and a non-default app secret is"
+          + " configured.";
+    }
+    if (distributedVault) {
+      return "Redis-backed vault is active, but the default app secret is still configured. Set a"
+          + " shared non-default spring.prism.app-secret on every node.";
+    }
+    if (customAppSecretConfigured) {
+      return "Single-node local vault is active. This is production-safe only when requests and"
+          + " restores stay on the same node.";
+    }
+    return "Single-node local vault is active and the default app secret is still configured."
+        + " Override spring.prism.app-secret before production use.";
   }
 
   private static DashboardConfiguration dashboardConfiguration(

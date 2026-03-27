@@ -573,10 +573,24 @@ function renderVaultInsights(metrics) {
   container.replaceChildren();
 
   const vaultType = metrics.vaultType || "Unknown";
+  const configuredVaultMode = metrics.configuredVaultMode || "AUTO";
+  const readinessStatus = metrics.vaultReadinessStatus || "UNKNOWN";
+  const readinessDetails = metrics.vaultReadinessDetails || "Vault readiness details unavailable.";
   const isRedis = vaultType.toLowerCase().includes("redis");
+  const sharedVaultReady = Boolean(metrics.sharedVaultReady);
   const items = [
     {
-      label: "Mode",
+      label: "Configured mode",
+      value: configuredVaultMode,
+      note:
+          configuredVaultMode === "REDIS"
+              ? "Explicit shared-vault deployment"
+              : configuredVaultMode === "IN_MEMORY"
+                  ? "Explicit single-node deployment"
+                  : "Auto-selects Redis when available"
+    },
+    {
+      label: "Runtime vault",
       value: vaultType,
       note: isRedis ? "Distributed restore path" : "Local restore path"
     },
@@ -586,6 +600,20 @@ function renderVaultInsights(metrics) {
       note: metrics.distributedVault
           ? "Best fit for horizontally scaled restore flows"
           : "Optimized for local in-memory protection"
+    },
+    {
+      label: "Shared vault ready",
+      value: metrics.distributedVault ? (sharedVaultReady ? "Yes" : "No") : "N/A",
+      note: metrics.distributedVault
+          ? sharedVaultReady
+              ? "Shared Redis plus custom app secret are in place"
+              : "Shared vault is active but secret hygiene still needs attention"
+          : "Only relevant for distributed restore paths"
+    },
+    {
+      label: "Readiness",
+      value: readinessStatus,
+      note: readinessDetails
     },
     {
       label: "Retention",
@@ -706,6 +734,12 @@ function renderAuditLog(auditEvents, retentionLimit) {
 }
 
 function healthSignal(metrics) {
+  if ((metrics.distributedVault ?? false) && !(metrics.sharedVaultReady ?? false)) {
+    return "Attention";
+  }
+  if ((metrics.vaultReadinessStatus ?? "") === "LOCAL_ONLY_ATTENTION") {
+    return "Attention";
+  }
   const thresholds = alertThresholds(metrics);
   if ((metrics.detectionErrorCount ?? 0) >= thresholds.detectionErrorCritical) {
     return "Critical";
@@ -832,7 +866,10 @@ function exportIncidentSummary() {
     "Spring Prism Incident Summary",
     `Generated: ${new Date().toISOString()}`,
     `Endpoint: ${currentEndpoint}`,
+    `Configured vault mode: ${currentMetrics.configuredVaultMode ?? "AUTO"}`,
     `Vault: ${currentMetrics.vaultType}`,
+    `Shared vault ready: ${currentMetrics.sharedVaultReady ? "yes" : "no"}`,
+    `Vault readiness: ${currentMetrics.vaultReadinessStatus ?? "UNKNOWN"}`,
     `Health: ${healthSignal(currentMetrics)}`,
     `Token backlog: ${currentMetrics.tokenBacklog ?? 0}`,
     "",

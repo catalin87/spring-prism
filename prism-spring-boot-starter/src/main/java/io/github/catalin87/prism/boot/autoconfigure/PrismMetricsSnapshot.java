@@ -35,7 +35,12 @@ public record PrismMetricsSnapshot(
     List<PrismRuntimeMetrics.AuditEvent> auditEvents,
     int auditRetentionLimit,
     List<String> activeRulePacks,
+    String configuredVaultMode,
+    boolean customAppSecretConfigured,
     String vaultType,
     boolean distributedVault,
+    boolean sharedVaultReady,
+    String vaultReadinessStatus,
+    String vaultReadinessDetails,
     long tokenBacklog,
     DashboardConfiguration dashboardConfiguration) {}

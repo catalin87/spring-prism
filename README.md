@@ -72,11 +72,35 @@ spring:
   prism:
     enabled: true
     app-secret: change-me
+    vault:
+      type: auto
     locales: UNIVERSAL
 ```
 
 For manual wiring, advanced rule-pack selection, and both integration paths, start with the
 example apps under `prism-examples/` and the docs in `website/docs/`.
+
+For deployment topology:
+
+- `spring.prism.vault.type=in-memory` is appropriate for single-node deployments
+- `spring.prism.vault.type=redis` is the recommended path for multi-node or Kubernetes deployments
+- `spring.prism.vault.type=auto` preserves starter ergonomics and automatically uses Redis when a
+  `StringRedisTemplate` bean is already present
+
+Example multi-node Redis setup:
+
+```yaml
+spring:
+  data:
+    redis:
+      host: redis.internal
+      port: 6379
+  prism:
+    app-secret: ${PRISM_APP_SECRET}
+    vault:
+      type: redis
+    ttl: 30m
+```
 
 ## ✅ Compatibility
 
@@ -101,8 +125,8 @@ that the delegate sees tokenized content while the caller receives restored PII.
 ## 🔁 Upgrade Notes
 
 Use the starter-first path as the default integration model and see `website/docs/migration-guide.md`
-for the current Spring AI constructor shape, LangChain4j wrapper behavior, and Redis auto-selection
-defaults.
+for the current Spring AI constructor shape, LangChain4j wrapper behavior, and explicit vault
+selection defaults.
 
 ## 📦 Release Readiness
 
@@ -123,6 +147,14 @@ Deferred surfaces:
 
 See `website/docs/release-readiness.md` for the current verification baseline, release-profile
 expectations, and the shipped-vs-deferred support boundary.
+
+For operational dashboards outside the embedded UI, see `website/docs/grafana.md` for the current
+Grafana integration approach based on the Prism runtime snapshot.
+
+For production rollout guidance in clustered environments, see:
+
+- `website/docs/distributed-deployments.md`
+- `website/docs/troubleshooting.md`
 
 The current `main` branch also passes:
 
