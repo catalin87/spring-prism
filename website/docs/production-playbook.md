@@ -26,6 +26,11 @@ Every serious deployment should have:
 - integration tests covering the runtime path you actually use
 - docs and rollout notes synchronized with the chosen deployment mode
 
+`spring.prism.failure-mode=FAIL_SAFE` remains the default posture and preserves the established
+fail-open behavior with metrics. For stricter regulated environments, prefer
+`spring.prism.failure-mode=FAIL_CLOSED` once you have validated the rollout and operational
+dependencies. See [Configuration: Failure Mode](/docs/configuration#failure-mode).
+
 ## Single-node rollout
 
 Use this when request tokenization and response restoration happen inside the same process or node.

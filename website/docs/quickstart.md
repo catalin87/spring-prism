@@ -6,6 +6,9 @@ sidebar_position: 2
 
 This is the fastest production-shaped path into Spring Prism.
 
+If you want the fastest way to see the product working before wiring it into your own app, start
+with [Enterprise Lab](/docs/demo-app).
+
 ## 1. Add the starter
 
 ```xml

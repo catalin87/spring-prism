@@ -78,7 +78,7 @@ The current verification baseline covers:
 - embedded dashboard coverage for control-plane UI and readiness rendering
 - Docusaurus documentation for onboarding, deployment, troubleshooting, and release posture
 
-See [Integration Test Tracker](./integration-test-tracker.md) for the current suite inventory and branch-level status.
+See [Integration Test Tracker](/docs/integration-test-tracker) for the current suite inventory and branch-level status.
 
 ## Definition of Done for new features
 
