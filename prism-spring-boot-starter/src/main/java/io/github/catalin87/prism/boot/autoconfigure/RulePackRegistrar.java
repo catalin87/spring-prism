@@ -33,10 +33,30 @@ import org.jspecify.annotations.NonNull;
 final class RulePackRegistrar {
 
   private static final Set<String> EUROPE_LOCALES =
-      Set.of("EU", "EUROPE", "DE", "PL", "RO", "UK", "GB");
+      Set.of(
+          "EU",
+          "EUROPE",
+          "DE",
+          "DEU",
+          "GERMANY",
+          "PL",
+          "POL",
+          "POLAND",
+          "RO",
+          "ROU",
+          "ROMANIA",
+          "UK",
+          "GB",
+          "GBR",
+          "UNITED_KINGDOM",
+          "FR",
+          "FRA",
+          "FRANCE",
+          "NL",
+          "NLD",
+          "NETHERLANDS");
   private static final Set<String> UNIVERSAL_LOCALES = Set.of("UNIVERSAL", "GLOBAL", "EN", "US");
-  private static final List<Set<String>> BASELINE_LOCALE_FAMILIES =
-      List.of(EUROPE_LOCALES, UNIVERSAL_LOCALES);
+  private static final Set<String> BASELINE_PACK_NAMES = Set.of("EUROPE", "UNIVERSAL");
 
   List<PrismRulePack> resolve(
       SpringPrismProperties properties, List<PrismRulePack> additionalRulePacks) {
@@ -79,6 +99,16 @@ final class RulePackRegistrar {
 
   private PrismRulePack resolvePrimaryRulePack(
       Set<String> locales, List<PrismRulePack> autoDiscoverableRulePacks) {
+    Set<String> specificLocales =
+        locales.stream()
+            .filter(locale -> !BASELINE_PACK_NAMES.contains(locale))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    java.util.Optional<PrismRulePack> exactMatch =
+        findMatchingPack(autoDiscoverableRulePacks, specificLocales);
+    if (exactMatch.isPresent()) {
+      return exactMatch.orElseThrow();
+    }
+
     if (locales.stream().anyMatch(EUROPE_LOCALES::contains)) {
       return findMatchingPack(autoDiscoverableRulePacks, EUROPE_LOCALES)
           .orElseGet(EuropeRulePack::new);
@@ -95,6 +125,9 @@ final class RulePackRegistrar {
       List<PrismRulePack> candidates, Set<String> requestedAliases) {
     return candidates.stream()
         .filter(rulePack -> matchesAnyAlias(rulePack, requestedAliases))
+        .sorted(
+            java.util.Comparator.comparing(
+                (PrismRulePack rulePack) -> isBaselineFamilyPack(rulePack)))
         .findFirst();
   }
 
@@ -103,7 +136,7 @@ final class RulePackRegistrar {
   }
 
   private boolean isBaselineFamilyPack(PrismRulePack rulePack) {
-    return BASELINE_LOCALE_FAMILIES.stream().anyMatch(family -> matchesAnyAlias(rulePack, family));
+    return BASELINE_PACK_NAMES.contains(normalizedName(rulePack));
   }
 
   private boolean matchesAnyAlias(PrismRulePack rulePack, Set<String> requestedAliases) {

@@ -6,12 +6,11 @@ This page tracks the release-critical integration suites that back the `1.1.0-SN
 
 Current branch focus:
 
-- `feature/33-optional-nlp-extensions`
+- `feature/37-regional-rulepacks-big-7`
 
 Primary release claim:
 
-- Spring Prism can add person-name redaction through an explicit optional module without changing
-  the deterministic default behavior
+- Spring Prism can ship modular regional rulepacks without breaking `1.x` locale fallback behavior
 
 ## Active Suites
 
@@ -19,6 +18,7 @@ Primary release claim:
 | --- | --- | --- | --- |
 | Redis multi-node suite | `prism-integration-tests` | Cross-node restore, TTL expiry, Redis outage handling, noisy LLM restore, large-payload coverage | Green |
 | Optional NLP extension suite | `prism-integration-tests` | Disabled-by-default behavior, heuristic opt-in redaction, false-positive guardrails on technical text | Green |
+| Regional rulepack suite | `prism-integration-tests` | Locale selection for `RO`, `US`, `PL`, `NL`, `GB`, `FR`, and `DE` plus runtime snapshot totals | Green |
 | Spring AI WireMock suite | `prism-spring-ai` | Advisor interception and OpenAI-compatible restore behavior | Green |
 | Starter auto-configuration suite | `prism-spring-boot-starter` | Redis vault selection, readiness, actuator metrics | Green |
 | Example app smoke suites | `prism-examples` | Real application boot and wiring coverage | Green |

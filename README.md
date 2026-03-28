@@ -161,6 +161,13 @@ Supported modules in the `v1.1.0-SNAPSHOT` train:
 
 - `prism-core`
 - `prism-rulepack-common`
+- `prism-rulepack-ro`
+- `prism-rulepack-us`
+- `prism-rulepack-pl`
+- `prism-rulepack-nl`
+- `prism-rulepack-gb`
+- `prism-rulepack-fr`
+- `prism-rulepack-de`
 - `prism-spring-ai`
 - `prism-langchain4j`
 - `prism-mcp`
@@ -181,8 +188,12 @@ Deferred:
 - `prism-rulepack-common` is now the default starter baseline for `UNIVERSAL` detection.
 - Legacy `UniversalRulePack` remains functional for direct `prism-core` consumers in `1.x` and is
   kept as a compatibility shim while modular rulepacks are introduced.
-- Existing `spring.prism.locales` values such as `UNIVERSAL`, `EN`, `US`, `EU`, `RO`, `PL`, `DE`,
-  and `GB` continue to work.
+- Legacy `EuropeRulePack` also remains functional for direct `prism-core` consumers in `1.x`, but
+  is now deprecated and scheduled for removal in `2.0.0`.
+- Existing `spring.prism.locales` values and aliases such as `UNIVERSAL`, `EN`, `US`, `EU`, `RO`,
+  `ROU`, `PL`, `POL`, `NL`, `NLD`, `DE`, `DEU`, `GB`, `GBR`, `FR`, and `FRA` continue to work.
+- Regional rulepack modules are additive and opt-in. If a regional module is absent, locale
+  selection falls back to the legacy in-core family packs in `1.x`.
 
 ## Validation baseline
 

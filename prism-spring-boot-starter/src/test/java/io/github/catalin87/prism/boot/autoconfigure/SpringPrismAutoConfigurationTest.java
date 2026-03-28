@@ -40,6 +40,20 @@ import io.github.catalin87.prism.mcp.PrismMcpMetricsSink;
 import io.github.catalin87.prism.mcp.PrismStdioMcpClient;
 import io.github.catalin87.prism.rulepack.common.CommonRulePack;
 import io.github.catalin87.prism.rulepack.common.autoconfigure.PrismCommonRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.de.GermanyRulePack;
+import io.github.catalin87.prism.rulepack.de.autoconfigure.PrismGermanyRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.fr.FranceRulePack;
+import io.github.catalin87.prism.rulepack.fr.autoconfigure.PrismFranceRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.gb.UnitedKingdomRulePack;
+import io.github.catalin87.prism.rulepack.gb.autoconfigure.PrismUnitedKingdomRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.nl.NetherlandsRulePack;
+import io.github.catalin87.prism.rulepack.nl.autoconfigure.PrismNetherlandsRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.pl.PolandRulePack;
+import io.github.catalin87.prism.rulepack.pl.autoconfigure.PrismPolandRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.ro.RomaniaRulePack;
+import io.github.catalin87.prism.rulepack.ro.autoconfigure.PrismRomaniaRulePackAutoConfiguration;
+import io.github.catalin87.prism.rulepack.us.UsRulePack;
+import io.github.catalin87.prism.rulepack.us.autoconfigure.PrismUsRulePackAutoConfiguration;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
@@ -114,6 +128,145 @@ class SpringPrismAutoConfigurationTest {
               List<PrismRulePack> rulePacks = getRulePacks(context);
               assertThat(rulePacks).hasSize(1);
               assertThat(rulePacks.get(0)).isInstanceOf(EuropeRulePack.class);
+            });
+  }
+
+  @Test
+  void franceAliasesFallBackToEuropeRulePackWhenRegionalModuleIsMissing() {
+    contextRunner
+        .withPropertyValues("spring.prism.locales=FRA")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(EuropeRulePack.class);
+              assertThat(rulePacks.get(0).getActivationAliases()).contains("FR", "FRA", "FRANCE");
+            });
+  }
+
+  @Test
+  void netherlandsAliasesFallBackToEuropeRulePackWhenRegionalModuleIsMissing() {
+    contextRunner
+        .withPropertyValues("spring.prism.locales=NLD")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(EuropeRulePack.class);
+              assertThat(rulePacks.get(0).getActivationAliases())
+                  .contains("NL", "NLD", "NETHERLANDS");
+            });
+  }
+
+  @Test
+  void roLocalePrefersRomaniaRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismRomaniaRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=RO")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(RomaniaRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("RO");
+            });
+  }
+
+  @Test
+  void usLocalePrefersUsRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismUsRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=US")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(UsRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("US");
+            });
+  }
+
+  @Test
+  void plLocalePrefersPolandRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismPolandRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=PL")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(PolandRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("PL");
+            });
+  }
+
+  @Test
+  void nlLocalePrefersNetherlandsRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismNetherlandsRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=NL")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(NetherlandsRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("NL");
+            });
+  }
+
+  @Test
+  void gbLocalePrefersUnitedKingdomRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismUnitedKingdomRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=GB")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(UnitedKingdomRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("GB");
+            });
+  }
+
+  @Test
+  void frLocalePrefersFranceRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismFranceRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=FR")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(FranceRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("FR");
+            });
+  }
+
+  @Test
+  void franceAliasPrefersFranceRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismFranceRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=FRA")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(FranceRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("FR");
+            });
+  }
+
+  @Test
+  void deLocalePrefersGermanyRulePackWhenRegionalModuleIsPresent() {
+    contextRunner
+        .withConfiguration(AutoConfigurations.of(PrismGermanyRulePackAutoConfiguration.class))
+        .withPropertyValues("spring.prism.locales=DE")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(GermanyRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("DE");
             });
   }
 

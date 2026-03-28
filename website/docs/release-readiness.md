@@ -21,6 +21,7 @@ The following modules are part of the supported library surface:
 | `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` wrappers | Supported |
 | `prism-mcp` | MCP client-side protection for stdio and Streamable HTTP transports | Supported |
 | `prism-spring-boot-starter` | Spring Boot properties, auto-configuration, Redis selection, metrics surface, readiness signals | Supported |
+| `prism-rulepack-ro/us/pl/nl/gb/fr/de` | Optional regional Big 7 rulepacks with checksum-backed validation | Supported |
 | `prism-extensions-nlp` | Optional person-name redaction through heuristic, OpenNLP, and hybrid modes | Supported |
 | `prism-integration-tests` | Testcontainers Redis and WireMock-backed multi-node release validation | Supported |
 | `prism-dashboard` | Embedded dashboard with retained history, filters, exports, and alerts | Supported |
