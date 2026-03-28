@@ -52,3 +52,4 @@ spring:
 - If no redaction happens, confirm the input actually matches an enabled Prism detector.
 - If tokens are not restored, verify the same app secret and vault are used throughout the flow.
 - If you want hard failures instead of fail-open behavior, set `spring.prism.failure-mode=FAIL_CLOSED`.
+  See [Configuration: Failure Mode](/docs/configuration#failure-mode).

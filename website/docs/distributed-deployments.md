@@ -107,6 +107,7 @@ Do not rotate secrets mid-flight if old tokens still need to be restored.
 
 ## Operator Checklist
 
+:::info[Operator checklist]
 Before marking a multi-node rollout production-ready, confirm:
 
 - `configuredVaultMode = REDIS`
@@ -118,6 +119,7 @@ Before marking a multi-node rollout production-ready, confirm:
 - TTL covers the real request-to-restore latency window
 
 You can use this as a pre-go-live checklist in change management or deployment review.
+:::
 
 ## What the Dashboard Means
 

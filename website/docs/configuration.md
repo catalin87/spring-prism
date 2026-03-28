@@ -182,10 +182,12 @@ Supported backends:
   No external model required. Best for low-friction setups and conservative production rollout.
 - `opennlp`
   Uses an explicit OpenNLP `TokenNameFinderModel`. Requires
-  `spring.prism.extensions.nlp.model-resource`.
+  `spring.prism.extensions.nlp.model-resource`. For model download, placement, and container
+  mounting examples, use [NLP Model Guide](/docs/nlp-model-guide).
 - `hybrid`
   Combines heuristic candidates with OpenNLP candidates and contextual scoring. Also requires
-  `spring.prism.extensions.nlp.model-resource`.
+  `spring.prism.extensions.nlp.model-resource`. For model download, placement, and container
+  mounting examples, use [NLP Model Guide](/docs/nlp-model-guide).
 
 Example hybrid setup:
 

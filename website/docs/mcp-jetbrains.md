@@ -49,3 +49,5 @@ spring:
 - If IntelliJ starts the app with a different environment than your shell, verify `PRISM_APP_SECRET`.
 - If the MCP process depends on local files, set `spring.prism.mcp.stdio.working-directory`.
 - If the MCP process depends on environment variables, provide them through `spring.prism.mcp.stdio.env[...]`.
+- If you want hard failures instead of fail-open behavior, set `spring.prism.failure-mode=FAIL_CLOSED`.
+  See [Configuration: Failure Mode](/docs/configuration#failure-mode).
