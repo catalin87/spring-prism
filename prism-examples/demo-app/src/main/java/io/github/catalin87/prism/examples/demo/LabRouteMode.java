@@ -15,15 +15,8 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import java.util.List;
-
-/** Response payload for a completed unified demo flow. */
-record DemoRunResponse(
-    String integration,
-    String originalPrompt,
-    List<String> activeRulePacks,
-    String sanitizedOutbound,
-    String mockModelResponse,
-    String restoredResponse,
-    String dashboardUrl,
-    String metricsUrl) {}
+enum LabRouteMode {
+  AUTO,
+  LOCAL,
+  CROSS_NODE
+}

@@ -1,9 +1,25 @@
 spring:
+  application:
+    name: spring-prism-enterprise-lab
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
   prism:
-    app-secret: example-demo-app-secret
+    app-secret: ${SPRING_PRISM_APP_SECRET:example-enterprise-lab-secret}
+    vault:
+      type: ${SPRING_PRISM_VAULT_TYPE:auto}
+    failure-mode: ${SPRING_PRISM_FAILURE_MODE:FAIL_SAFE}
     locales:
       - UNIVERSAL
-      - EUROPE
+      - RO
+      - US
+      - PL
+      - NL
+      - GB
+      - FR
+      - DE
+    ttl: ${SPRING_PRISM_TTL:30m}
     mcp:
       enabled: false
     dashboard:
@@ -13,6 +29,13 @@ spring:
       alert-thresholds:
         scan-latency-warn-ms: 20
         scan-latency-critical-ms: 60
+lab:
+  node-id: ${LAB_NODE_ID:node-a}
+  self-base-url: ${LAB_SELF_BASE_URL:http://localhost:8080}
+  peer-base-url: ${LAB_PEER_BASE_URL:http://localhost:8081}
+  public-base-url: ${LAB_PUBLIC_BASE_URL:http://localhost:8080}
+  grafana-url: ${LAB_GRAFANA_URL:http://localhost:3000}
+  nlp-model-resource: ${LAB_NLP_MODEL_RESOURCE:}
 management:
   endpoints:
     web:

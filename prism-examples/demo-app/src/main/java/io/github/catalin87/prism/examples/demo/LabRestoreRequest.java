@@ -15,8 +15,4 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import java.util.List;
-
-/** Static configuration payload for the unified demo frontend. */
-record DemoOptionsResponse(
-    List<String> integrations, List<String> rulePacks, String dashboardUrl, String metricsUrl) {}
+record LabRestoreRequest(String rawResponse, String failureMode, String integration) {}

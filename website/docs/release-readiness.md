@@ -33,7 +33,7 @@ verification, but are not part of the published Maven library surface:
 | `prism-integration-tests` | Testcontainers Redis and WireMock-backed multi-node release validation | Repo-only |
 | `prism-benchmarks` | JMH benchmark suite for detector, vault, streaming, and Redis-backed paths | Repo-only |
 | `prism-examples` | Runnable Spring Boot sample apps for Spring AI, LangChain4j, and MCP | Repo-only |
-| `demo-app` | Unified manual-test application covering Spring AI, LangChain4j, MCP, dashboards, and rulepack selection | Repo-only |
+| `demo-app` | Clone-and-play Enterprise Lab with two nodes, Redis, Grafana, Big 7 rulepacks, NLP modes, and outage simulation | Repo-only |
 
 ## v1.1.0 Release Scope
 

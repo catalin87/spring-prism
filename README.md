@@ -123,6 +123,9 @@ spring:
         model-resource: file:${PRISM_NLP_MODEL}
 ```
 
+For a practical guide to where that model should live and how to mount it in containers or
+multi-node deployments, see `website/docs/nlp-model-guide.md`.
+
 ## Documentation map
 
 Recommended reading order:
@@ -131,13 +134,26 @@ Recommended reading order:
 2. `website/docs/configuration.md`
 3. `website/docs/distributed-deployments.md`
 4. `website/docs/nlp-extensions.md`
-5. `website/docs/release-readiness.md`
+5. `website/docs/nlp-model-guide.md`
+6. `website/docs/release-readiness.md`
 
 Useful operational guides:
 
 - `website/docs/grafana.md`
 - `website/docs/troubleshooting.md`
 - `website/docs/performance.md`
+- `website/docs/demo-app.md`
+
+## Clone-and-play enterprise lab
+
+From the repository root, start the repo-only Enterprise Lab with:
+
+```bat
+run-demo.cmd
+```
+
+This spins up two demo nodes, Redis, the public proxy, and Grafana with the Spring Prism Overview
+dashboard preloaded. See `website/docs/demo-app.md` for the smoke-test path and troubleshooting.
 
 ## Runnable examples
 
@@ -146,7 +162,7 @@ Examples live under `prism-examples/`:
 - `spring-ai-example`
 - `langchain4j-example`
 - `mcp-example`
-- `demo-app`
+- `demo-app` enterprise lab
 
 These applications stay in the repository as runnable contributor assets and manual QA tooling.
 They are not part of the published Maven library surface.
@@ -223,11 +239,16 @@ Benchmark packaging:
 mvn -pl prism-benchmarks -am package -DskipTests
 ```
 
-Unified demo app, outside the main examples reactor:
+Enterprise lab sandbox, outside the main examples reactor:
 
 ```bash
-mvn install -DskipTests
-mvn -f prism-examples/demo-app/pom.xml spring-boot:run
+run-demo.cmd
+```
+
+Unix shell alternative:
+
+```bash
+./run-demo.sh
 ```
 
 ## Security posture

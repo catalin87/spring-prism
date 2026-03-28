@@ -54,7 +54,7 @@ Use these as the first real samples:
 - `prism-examples/spring-ai-example`
 - `prism-examples/langchain4j-example`
 - `prism-examples/mcp-example`
-- [Unified Demo App](/docs/demo-app)
+- [Enterprise Lab](/docs/demo-app)
 
 These apps live in the repository for onboarding, contributor workflows, and manual verification.
 They are not part of the published Maven library surface.

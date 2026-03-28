@@ -1,66 +1,188 @@
-# Unified Demo App
+# Enterprise Lab
 
-Spring Prism ships a unified demo application that lets you exercise the three supported integration surfaces from a single frontend:
+Spring Prism ships a repo-only **Enterprise Lab** that demonstrates the full `v1.1.0` story in a
+clone-and-play sandbox:
 
-- Spring AI
-- LangChain4j
-- MCP
+- Spring AI, LangChain4j, and MCP payload shapes
+- two application nodes
+- Redis shared vault restore
+- Grafana with the default Prism dashboard preloaded
+- Big 7 regional rulepack selection
+- NLP heuristic and hybrid modes
+- `FAIL_SAFE` and `FAIL_CLOSED`
+- cross-node restore and Redis outage simulation
 
-The demo is designed for:
+This lab is for:
 
-- live product demos
-- manual testing with realistic prompts
-- visually verifying sanitize to model to restore behavior
-- opening the embedded dashboard side by side while the flow runs
+- manual release validation
+- architecture demos
+- contributor debugging
+- realistic smoke tests before cutting a release
 
-## What It Shows
+It is **repo-only** and is not part of the published Maven Central surface.
 
-For every request, the demo app exposes:
+## Why it matters
 
-- the original prompt entered in the UI
-- the sanitized payload that leaves the trusted application boundary
-- the raw mock model response
-- the restored response returned back into the app
-- the active rule packs used for the run
+This lab is more than a sample page. It is a release-grade validation and marketing asset that
+lets teams see the operational value of Spring Prism without wiring their own infrastructure first.
 
-The mock model intentionally echoes the sanitized payload with a prefix and suffix so the restore path is easy to inspect.
+It demonstrates:
 
-## Frontend
+- distributed tokenization and restoration with two application nodes
+- Redis-backed shared vault behavior under healthy and degraded conditions
+- `FAIL_SAFE` versus `FAIL_CLOSED` posture in a realistic UI
+- Big 7 regional rulepack selection in one workspace
+- optional NLP rollout paths for person-name protection
+- operational visibility through the embedded Prism dashboard and Grafana
 
-The app serves a lightweight React frontend from:
+## Architecture at a glance
 
-```text
-/demo-lab/index.html
+The one-command sandbox starts a small enterprise-shaped topology:
+
+- `demo-node-a`
+- `demo-node-b`
+- `redis`
+- `demo-proxy`
+- `grafana`
+
+Traffic enters through `demo-proxy`, while both app nodes share the same Redis-backed vault and
+the same Prism app secret. That makes it possible to sanitize on one node and restore on the
+other.
+
+## One-command startup
+
+On Windows CMD, start the full sandbox from the repository root with:
+
+```bat
+run-demo.cmd
 ```
 
-It includes:
-
-- integration tabs for Spring AI, LangChain4j, and MCP
-- a prompt composer
-- rule-pack checkboxes
-- direct links to the embedded dashboard and actuator metrics snapshot
-
-## Running It
-
-Build the local snapshots once from the repository root:
+On Unix-like shells:
 
 ```bash
-mvn install -DskipTests
+./run-demo.sh
 ```
 
-Then start the demo app directly from its own Maven project:
+The command starts:
 
-```bash
-mvn -f prism-examples/demo-app/pom.xml spring-boot:run
-```
+- `demo-node-a`
+- `demo-node-b`
+- `redis`
+- `demo-proxy`
+- `grafana`
 
-Then open:
+Docker is the only required local prerequisite. No Maven, Node.js, Redis, or Grafana setup is
+needed on the host machine.
 
-- `http://localhost:8080/demo-lab/index.html`
+Default URLs:
+
+- `http://localhost:8080/lab/`
 - `http://localhost:8080/prism/index.html`
+- `http://localhost:3000`
+
+Grafana is preprovisioned with the Spring Prism Overview dashboard and reads live data from the
+same `/actuator/prism` snapshot exposed by the demo stack.
+
+Use these stop commands when you are done:
+
+```bat
+stop-demo.cmd
+```
+
+```bash
+./stop-demo.sh
+```
+
+## What the UI demonstrates
+
+The React-based Enterprise Lab is intentionally a single-page command center rather than a fake
+multi-page product shell.
+
+The UI provides:
+
+- cluster posture controls for:
+  - failure mode
+  - NLP mode
+  - integration path
+  - route strategy
+- Big 7 rulepack selection in the sidebar
+- cluster status cards for nodes and Redis shared vault state
+- direct operations shortcuts for:
+  - embedded dashboard
+  - Grafana
+  - raw Actuator metrics JSON
+- preset payloads next to the raw input editor so testers can switch scenarios quickly
+- a dual workspace for:
+  - raw input
+  - sanitized outbound content
+  - mock model response
+  - restored output
+- a trace flow that shows tokenize, vault, masked payload, and restore phases
+- a timeline with node-aware trace events
+- runtime metrics including:
+  - protected fields
+  - active rules
+  - shared vault state
+  - request and response blocks
+- an outage toggle that arms the next run for degraded-vault testing
+
+## Manual validation checklist
+
+Use the lab to verify:
+
+- a mixed prompt is tokenized and restored correctly
+- regional packs such as `RO`, `US`, `DE`, `GB`, `FR`, `NL`, and `PL` can be toggled explicitly
+- `FAIL_CLOSED` blocks requests when Redis outage simulation is enabled
+- cross-node restore uses the shared Redis vault
+- Grafana reflects blocked requests and active rules after several runs
+- Grafana reflects protected fields, shared-vault readiness, and history charts after several runs
+
+## Recommended smoke-test path
+
+If you want the highest-signal walkthrough, run this exact sequence:
+
+1. Start the lab with `run-demo.cmd` or `./run-demo.sh`.
+2. Open `http://localhost:8080/lab/`.
+3. Run the `Mixed Enterprise Payload` preset with all default rulepacks enabled.
+4. Switch `NLP Mode` to `HYBRID` and run the `NLP Person Names` preset.
+5. Switch route mode to `CROSS_NODE` and verify sanitize-on-A / restore-on-B behavior.
+6. Enable `Simulate Redis outage`, switch to `FAIL_CLOSED`, and run a protected payload again.
+7. Open Grafana and confirm the dashboard reflects protected fields, active rules, and blocked
+   requests.
+
+## Grafana troubleshooting
+
+If the Spring Prism Overview dashboard shows `No data` even though `http://localhost:8080/actuator/prism`
+returns a populated JSON document, restart Grafana and hard-refresh the browser:
+
+```bat
+docker compose -f prism-examples\demo-app\compose.yaml restart grafana
+```
+
+```bash
+docker compose -f prism-examples/demo-app/compose.yaml restart grafana
+```
+
+Then reload:
+
+- `http://localhost:3000/d/spring-prism-overview/spring-prism-overview`
+- `http://localhost:8080/prism/index.html`
+
+## Marketing-ready talking points
+
+When showing Spring Prism to evaluators or internal stakeholders, the lab lets you demonstrate:
+
+- privacy controls before the LLM boundary, not after
+- distributed restore with a shared Redis vault
+- visible enforcement posture through `FAIL_CLOSED`
+- international coverage through modular regional rulepacks
+- optional person-name protection without polluting `prism-core`
+- operational readiness through dashboards and metrics instead of console logs
 
 ## Notes
 
-- The demo app does not require a real LLM API key.
-- The MCP section uses a local mock HTTP endpoint through `prism-mcp`.
-- The existing dedicated example apps remain available for focused framework-specific samples.
+- The lab does not require a real LLM API key.
+- The frontend is served from `/lab/`.
+- The embedded Prism dashboard remains available at `/prism/index.html`.
+- The focused framework examples remain available under `prism-examples/` for narrower debugging
+  scenarios.

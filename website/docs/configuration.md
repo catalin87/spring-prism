@@ -209,6 +209,8 @@ without a readable model resource. That keeps distributed production nodes consi
 silently falling back to a weaker detector than the deployment intended.
 
 For a deeper architecture and rollout guide, continue with [NLP Extensions](/docs/nlp-extensions).
+For a practical model download and provisioning path, continue with
+[NLP Model Guide](/docs/nlp-model-guide).
 
 ## Spring AI Runtime Behavior
 

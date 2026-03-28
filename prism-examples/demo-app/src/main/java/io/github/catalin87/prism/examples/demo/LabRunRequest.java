@@ -15,10 +15,12 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-/** Internal trace produced by each demo integration run. */
-record DemoTrace(
+import java.util.List;
+
+record LabRunRequest(
     String integration,
-    String originalPrompt,
-    String sanitizedOutbound,
-    String mockModelResponse,
-    String restoredResponse) {}
+    String message,
+    List<String> rulePacks,
+    String failureMode,
+    String nlpMode,
+    String routeMode) {}

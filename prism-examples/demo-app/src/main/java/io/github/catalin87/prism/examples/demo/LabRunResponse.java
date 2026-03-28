@@ -15,16 +15,25 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import java.util.List;
 
-/** Unified Spring Prism demo application for manual testing and live demos. */
-@SpringBootApplication
-@EnableConfigurationProperties(LabProperties.class)
-public class DemoApplication {
-
-  public static void main(String[] args) {
-    SpringApplication.run(DemoApplication.class, args);
-  }
-}
+record LabRunResponse(
+    String integration,
+    String originalPrompt,
+    List<String> selectedRulePacks,
+    String failureMode,
+    String nlpMode,
+    String routeMode,
+    String tokenizeNodeId,
+    String restoreNodeId,
+    String sanitizedOutbound,
+    String mockModelResponse,
+    String restoredResponse,
+    boolean blocked,
+    String blockedPhase,
+    String blockedReason,
+    String errorMessage,
+    List<LabTraceEvent> traceEvents,
+    String dashboardUrl,
+    String metricsUrl,
+    String grafanaUrl) {}

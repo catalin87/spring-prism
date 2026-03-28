@@ -49,6 +49,7 @@ The `v1.1.0` line adds performance work aimed specifically at long prompts and R
 - single-pass large-text tokenization in both AI integrations
 - cheaper fast-path detokenization for clean chunks
 - a dedicated `LargePromptAdvisorBenchmark` in `prism-benchmarks`
+- dedicated NLP benchmarks for heuristic, OpenNLP, hybrid, and cold model-load paths
 
 The goal is not just microbenchmark speed, but keeping the end-to-end Prism path credible when a
 prompt contains many retrieved records or large pasted documents.
@@ -79,4 +80,22 @@ Large-prompt advisor benchmark:
 java -jar prism-benchmarks/target/benchmarks.jar LargePromptAdvisorBenchmark
 ```
 
+NLP benchmark with a real OpenNLP model:
+
+```bash
+./scripts/download-nlp-model.sh
+java -Dprism.bench.nlpModel=prism-benchmarks/models/en-ner-person.bin \
+  -jar prism-benchmarks/target/benchmarks.jar NlpBenchmark
+```
+
+NLP benchmark with GC profiling:
+
+```bash
+java -Dprism.bench.nlpModel=prism-benchmarks/models/en-ner-person.bin \
+  -jar prism-benchmarks/target/benchmarks.jar NlpBenchmark -prof gc
+```
+
 The benchmark suite uses an in-memory substitute for Redis templates to allow local execution without a live Redis instance.
+
+For OpenNLP and hybrid benchmarks, the model is loaded once at setup time for warm-detect
+measurements, while `loadOpenNlpModelCold` captures the startup load cost separately.

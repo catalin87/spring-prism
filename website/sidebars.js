@@ -35,7 +35,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Features & Examples',
-      items: ['nlp-extensions', 'demo-app', 'detectors'],
+      items: ['nlp-extensions', 'nlp-model-guide', 'demo-app', 'detectors'],
     },
     {
       type: 'category',
