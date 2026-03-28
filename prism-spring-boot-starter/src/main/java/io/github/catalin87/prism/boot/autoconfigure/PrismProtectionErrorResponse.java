@@ -13,28 +13,8 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.github.catalin87.prism.extensions.nlp;
+package io.github.catalin87.prism.boot.autoconfigure;
 
-import io.github.catalin87.prism.core.PiiDetector;
-import io.github.catalin87.prism.core.PrismRulePack;
-import java.util.List;
-import org.jspecify.annotations.NonNull;
-
-/** Rule pack exposing optional NLP-backed entity detectors. */
-public record NlpExtensionRulePack(@NonNull List<PiiDetector> detectors) implements PrismRulePack {
-
-  @Override
-  public @NonNull String getName() {
-    return "NLP_EXTENSIONS";
-  }
-
-  @Override
-  public @NonNull List<PiiDetector> getDetectors() {
-    return detectors;
-  }
-
-  @Override
-  public boolean isAutoDiscoverable() {
-    return true;
-  }
-}
+/** Stable JSON body returned when the starter blocks a request through PrismProtectionException. */
+public record PrismProtectionErrorResponse(
+    String error, String message, String phase, String reason) {}

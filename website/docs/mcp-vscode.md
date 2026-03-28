@@ -51,4 +51,4 @@ spring:
 - If the subprocess does not start, verify `command`, `args`, and working directory.
 - If no redaction happens, confirm the input actually matches an enabled Prism detector.
 - If tokens are not restored, verify the same app secret and vault are used throughout the flow.
-- If you want hard failures instead of fail-open behavior, enable `spring.prism.mcp.security-strict-mode=true`.
+- If you want hard failures instead of fail-open behavior, set `spring.prism.failure-mode=FAIL_CLOSED`.

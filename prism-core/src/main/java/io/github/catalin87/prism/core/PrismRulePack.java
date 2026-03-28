@@ -37,4 +37,18 @@ public interface PrismRulePack {
    * @return the locale identifier or logical grouping name (e.g. "EN", "EU", "UNIVERSAL").
    */
   @NonNull String getName();
+
+  /**
+   * Signals whether this rule pack should be auto-discovered by the Spring Boot starter when it is
+   * exposed as a bean on the application context.
+   *
+   * <p>The default is {@code false} to preserve {@code 1.0.0} behavior for applications that
+   * already register custom {@link PrismRulePack} beans and do not expect them to become active
+   * automatically after upgrading to {@code 1.1.0}.
+   *
+   * @return {@code true} when the starter may auto-discover this pack, otherwise {@code false}.
+   */
+  default boolean isAutoDiscoverable() {
+    return false;
+  }
 }

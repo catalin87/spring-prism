@@ -39,6 +39,10 @@ public interface PrismMcpMetricsSink {
 
   void onVaultDetokenizeDuration(@NonNull String integration, long nanos);
 
+  default void onRequestBlocked(@NonNull String integration) {}
+
+  default void onResponseBlocked(@NonNull String integration) {}
+
   /** No-op sink used when callers do not need runtime metrics callbacks. */
   final class NoOpPrismMcpMetricsSink implements PrismMcpMetricsSink {
     @Override

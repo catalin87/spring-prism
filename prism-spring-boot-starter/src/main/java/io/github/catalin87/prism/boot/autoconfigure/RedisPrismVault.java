@@ -18,15 +18,21 @@ package io.github.catalin87.prism.boot.autoconfigure;
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.github.catalin87.prism.core.TokenGenerator;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /** Redis-backed {@link PrismVault} implementation for multi-node deployments. */
-final class RedisPrismVault implements PrismVault {
+final class RedisPrismVault implements PrismVault, PrismVaultAvailability {
 
   private static final Duration MINIMUM_TTL = Duration.ofSeconds(1);
 
@@ -73,6 +79,66 @@ final class RedisPrismVault implements PrismVault {
       return null;
     }
     return originalValue;
+  }
+
+  @Override
+  public void verifyAvailability(Duration timeout) {
+    try {
+      String result =
+          redisTemplate.execute(
+              (RedisCallback<String>)
+                  connection -> {
+                    Object nativeConnection = connection.getNativeConnection();
+                    String asyncResult = pingWithTimeout(nativeConnection, timeout);
+                    if (asyncResult != null) {
+                      return asyncResult;
+                    }
+                    Object pingResult = connection.ping();
+                    return pingResult == null ? null : pingResult.toString();
+                  });
+      if (result == null || !"PONG".equalsIgnoreCase(result)) {
+        throw new IllegalStateException("Redis availability check returned an unexpected result");
+      }
+    } catch (Exception exception) {
+      throw new IllegalStateException("Redis availability check failed", exception);
+    }
+  }
+
+  private static @Nullable String pingWithTimeout(
+      @Nullable Object nativeConnection, Duration timeout) {
+    if (nativeConnection == null) {
+      return null;
+    }
+    Method pingMethod;
+    try {
+      pingMethod = nativeConnection.getClass().getMethod("ping");
+    } catch (NoSuchMethodException exception) {
+      return null;
+    } catch (ReflectiveOperationException exception) {
+      throw new IllegalStateException("Redis availability check failed", exception);
+    }
+    Object pingResult;
+    try {
+      pingResult = pingMethod.invoke(nativeConnection);
+    } catch (ReflectiveOperationException exception) {
+      throw new IllegalStateException("Redis availability check failed", exception);
+    }
+    if (!(pingResult instanceof Future<?> pingFuture)) {
+      return null;
+    }
+    long timeoutMillis = Math.max(1L, timeout.toMillis());
+    try {
+      Object resolved = pingFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
+      return resolved == null ? null : resolved.toString();
+    } catch (TimeoutException exception) {
+      pingFuture.cancel(true);
+      throw new IllegalStateException("Redis availability check timed out", exception);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Redis availability check interrupted", exception);
+    } catch (Exception exception) {
+      throw new IllegalStateException("Redis availability check failed", exception);
+    }
   }
 
   private String extractLabel(String tokenKey) {

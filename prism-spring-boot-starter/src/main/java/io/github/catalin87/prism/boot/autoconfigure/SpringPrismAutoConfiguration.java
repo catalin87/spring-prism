@@ -15,8 +15,10 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
+import io.github.catalin87.prism.core.PrismFailureMode;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
@@ -93,16 +95,23 @@ public class SpringPrismAutoConfiguration {
     Object redisTemplate = findRedisTemplate(beanFactory);
     SpringPrismProperties.VaultType vaultType = properties.getVault().getType();
 
-    return switch (vaultType) {
-      case IN_MEMORY -> new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
-      case REDIS -> createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
-      case AUTO -> {
-        if (redisTemplate != null) {
-          yield createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
-        }
-        yield new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
-      }
-    };
+    PrismVault prismVault;
+    if (vaultType == SpringPrismProperties.VaultType.IN_MEMORY) {
+      prismVault = new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
+    } else if (vaultType == SpringPrismProperties.VaultType.REDIS) {
+      prismVault = createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
+    } else if (redisTemplate != null) {
+      prismVault = createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
+    } else {
+      prismVault = new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
+    }
+
+    if (properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED
+        && prismVault instanceof PrismVaultAvailability availability) {
+      availability.verifyAvailability(Duration.ofSeconds(2));
+    }
+
+    return prismVault;
   }
 
   @Bean
@@ -143,7 +152,7 @@ public class SpringPrismAutoConfiguration {
         prismVault,
         observationRegistry,
         prismMetricsSink,
-        properties.isSecurityStrictMode());
+        properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
   }
 
   @Bean
@@ -168,6 +177,17 @@ public class SpringPrismAutoConfiguration {
       SpringPrismProperties properties) {
     return new PrismActuatorEndpoint(
         prismRuntimeMetrics, springPrismRulePacks, prismVault, properties);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(PrismProtectionExceptionHandler.class)
+  @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestControllerAdvice")
+  @ConditionalOnProperty(
+      prefix = "spring.prism.web",
+      name = "protection-exception-handler-enabled",
+      havingValue = "true")
+  PrismProtectionExceptionHandler prismProtectionExceptionHandler() {
+    return new PrismProtectionExceptionHandler();
   }
 
   private static byte[] secretKey(SpringPrismProperties properties) {
@@ -220,7 +240,7 @@ public class SpringPrismAutoConfiguration {
           prismVault,
           observationRegistry,
           prismRuntimeMetrics,
-          properties.isSecurityStrictMode());
+          properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
     }
 
     @Bean
@@ -240,7 +260,7 @@ public class SpringPrismAutoConfiguration {
           prismVault,
           observationRegistry,
           prismRuntimeMetrics,
-          properties.isSecurityStrictMode());
+          properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
     }
   }
 
@@ -266,7 +286,9 @@ public class SpringPrismAutoConfiguration {
               .withVault(prismVault)
               .withObservationRegistry(observationRegistry)
               .withMetricsSink(prismMcpMetricsSink)
-              .withStrictMode(mcp.resolveSecurityStrictMode(properties.isSecurityStrictMode()));
+              .withStrictMode(
+                  mcp.resolveFailureMode(properties.resolveFailureMode())
+                      == PrismFailureMode.FAIL_CLOSED);
       return switch (transport) {
         case STDIO ->
             builder

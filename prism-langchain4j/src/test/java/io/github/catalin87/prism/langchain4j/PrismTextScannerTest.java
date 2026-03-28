@@ -16,6 +16,7 @@
 package io.github.catalin87.prism.langchain4j;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -23,6 +24,10 @@ import static org.mockito.Mockito.when;
 
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
@@ -106,6 +111,31 @@ class PrismTextScannerTest {
     assertThat(scanner.detokenize(sanitized)).isEqualTo(prompt);
   }
 
+  @Test
+  void failClosedBlocksWhenDetectorThrows() {
+    PrismTextScanner scanner =
+        new PrismTextScanner(
+            List.of(new FailingRulePack()),
+            new DefaultPrismVault(
+                new HmacSha256TokenGenerator(),
+                "benchmark-secret-material-32bytes".getBytes(StandardCharsets.UTF_8),
+                3600L),
+            ObservationRegistry.NOOP,
+            PrismMetricsSink.NOOP,
+            PrismFailureMode.FAIL_CLOSED);
+
+    assertThatThrownBy(() -> scanner.tokenize("user@example.com"))
+        .isInstanceOf(PrismProtectionException.class)
+        .extracting(
+            failure -> ((PrismProtectionException) failure).phase(),
+            failure -> ((PrismProtectionException) failure).reason(),
+            failure -> ((PrismProtectionException) failure).failureMode())
+        .containsExactly(
+            PrismProtectionPhase.DETECT,
+            PrismProtectionReason.DETECTOR_FAILURE,
+            PrismFailureMode.FAIL_CLOSED);
+  }
+
   private static PrismTextScanner newScanner() {
     TokenGenerator tokenGenerator = new HmacSha256TokenGenerator();
     DefaultPrismVault vault =
@@ -168,6 +198,32 @@ class PrismTextScannerTest {
       return List.of(
           new PiiCandidate("same@example.com", 0, 16, "EMAIL"),
           new PiiCandidate("same@example.com", 22, 38, "EMAIL"));
+    }
+  }
+
+  private static final class FailingRulePack implements PrismRulePack {
+
+    @Override
+    public String getName() {
+      return "FAILING";
+    }
+
+    @Override
+    public List<PiiDetector> getDetectors() {
+      return List.of(new FailingDetector());
+    }
+  }
+
+  private static final class FailingDetector implements PiiDetector {
+
+    @Override
+    public String getEntityType() {
+      return "EMAIL";
+    }
+
+    @Override
+    public List<PiiCandidate> detect(String text) {
+      throw new IllegalStateException("boom");
     }
   }
 }

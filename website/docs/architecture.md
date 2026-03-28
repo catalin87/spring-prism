@@ -30,7 +30,7 @@ The LangChain4j chat integration layer.
 ### `prism-spring-boot-starter`
 The Spring Boot 3 autoconfiguration bridge.
 - **Frameworks**: Spring Boot 3.4+, Micrometer Observation.
-- **Safety**: "Fail Open" by default (standard security practice) with Micrometer error metrics. "Fail Closed" only if `spring.prism.security-strict-mode=true`.
+- **Safety**: `spring.prism.failure-mode=FAIL_SAFE` preserves the legacy fail-open posture with Micrometer error metrics. `FAIL_CLOSED` is opt-in for production blocking behavior.
 - **Deployments**: Supports explicit vault selection through `spring.prism.vault.type` with `auto`, `in-memory`, and `redis`. `auto` preserves the low-friction Redis auto-detection path; `redis` is the recommended mode for multi-node deployments.
 - **Integrations**: Publishes `PrismChatClientAdvisor` for Spring AI and primary LangChain4j wrappers when delegate chat beans are present.
 - **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.

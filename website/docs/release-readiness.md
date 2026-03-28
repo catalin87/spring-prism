@@ -185,7 +185,10 @@ git push origin main
 ## Notes
 
 - `spring.prism.app-secret` must be overridden in every real deployment.
-- Fail-open remains the default behavior; strict mode is opt-in through `spring.prism.security-strict-mode=true`.
+- Fail-open remains the default behavior through `spring.prism.failure-mode=FAIL_SAFE`.
+- `spring.prism.security-strict-mode` and `spring.prism.mcp.security-strict-mode` are deprecated
+  compatibility properties and will be removed in `v2.0.0`. Use `spring.prism.failure-mode`
+  instead.
 - Redis is the supported distributed vault path for this release boundary.
 - optional NLP remains opt-in and must not change the deterministic default detector behavior
 - MCP support in this release boundary covers the client role first. Server-side MCP interception remains a later milestone.

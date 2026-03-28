@@ -17,14 +17,26 @@ package io.github.catalin87.prism.langchain4j;
 
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.micrometer.observation.ObservationRegistry;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -42,12 +54,13 @@ final class PrismTextScanner {
   private static final Pattern TOKEN_PATTERN = Pattern.compile("<PRISM_[a-zA-Z0-9_-]+>");
   private static final String TOKEN_PREFIX = "<PRISM_";
   private static final String INTEGRATION = PrismMetricsSink.LANGCHAIN4J_INTEGRATION;
+  private static final Duration PREFLIGHT_TIMEOUT = Duration.ofMillis(50);
 
   private final List<PrismRulePack> rulePacks;
   private final PrismVault vault;
   private final ObservationRegistry observationRegistry;
   private final PrismMetricsSink metricsSink;
-  private final boolean strictMode;
+  private final PrismFailureMode failureMode;
 
   PrismTextScanner(
       @NonNull List<PrismRulePack> rulePacks,
@@ -55,17 +68,32 @@ final class PrismTextScanner {
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink,
       boolean strictMode) {
+    this(
+        rulePacks,
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode ? PrismFailureMode.FAIL_CLOSED : PrismFailureMode.FAIL_SAFE);
+  }
+
+  PrismTextScanner(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      @NonNull PrismFailureMode failureMode) {
     this.rulePacks = List.copyOf(rulePacks);
     this.vault = vault;
     this.observationRegistry = observationRegistry;
     this.metricsSink = metricsSink;
-    this.strictMode = strictMode;
+    this.failureMode = failureMode;
   }
 
   @Nullable String tokenize(@Nullable String text) {
     if (text == null || text.isBlank()) {
       return text;
     }
+    runPreflightIfRequired();
 
     List<PiiCandidate> allCandidates = new ArrayList<>();
     long scanStartedAt = System.nanoTime();
@@ -83,11 +111,10 @@ final class PrismTextScanner {
             }
           } catch (Exception e) {
             metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
-            if (strictMode) {
-              throw new IllegalStateException(
-                  "Strict mode blocked Prism processing after detector failure: "
-                      + detector.getEntityType(),
-                  e);
+            if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+              metricsSink.onRequestBlocked(INTEGRATION);
+              throw protectionException(
+                  PrismProtectionPhase.DETECT, PrismProtectionReason.DETECTOR_FAILURE, e);
             }
             observationRegistry.observationConfig().observationHandler(null);
           }
@@ -111,6 +138,15 @@ final class PrismTextScanner {
       ReplacementResult replacementResult = tokenizeCandidates(text, deduplicated);
       redactedCount = replacementResult.replacementCount();
       sanitized = replacementResult.text();
+    } catch (RuntimeException exception) {
+      if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+        metricsSink.onRequestBlocked(INTEGRATION);
+        throw protectionException(
+            PrismProtectionPhase.TOKENIZE,
+            inferVaultReason(exception, PrismProtectionReason.POLICY_BLOCK),
+            exception);
+      }
+      sanitized = text;
     } finally {
       metricsSink.onVaultTokenizeDuration(INTEGRATION, System.nanoTime() - tokenizeStartedAt);
     }
@@ -155,6 +191,15 @@ final class PrismTextScanner {
         return text;
       }
       result.append(text, appendPosition, text.length());
+    } catch (RuntimeException exception) {
+      if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+        metricsSink.onResponseBlocked(INTEGRATION);
+        throw protectionException(
+            PrismProtectionPhase.DETOKENIZE,
+            inferVaultReason(exception, PrismProtectionReason.RESTORE_FAILURE),
+            exception);
+      }
+      return text;
     } finally {
       metricsSink.onVaultDetokenizeDuration(INTEGRATION, System.nanoTime() - detokenizeStartedAt);
     }
@@ -258,6 +303,58 @@ final class PrismTextScanner {
     String original = vault.detokenize(tokenKey);
     detokenizeCache.put(tokenKey, original);
     return original;
+  }
+
+  private void runPreflightIfRequired() {
+    if (failureMode != PrismFailureMode.FAIL_CLOSED
+        || !(vault instanceof PrismVaultAvailability availability)) {
+      return;
+    }
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    try {
+      Future<?> future = executor.submit(() -> availability.verifyAvailability(PREFLIGHT_TIMEOUT));
+      future.get(PREFLIGHT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (TimeoutException exception) {
+      executor.shutdownNow();
+      metricsSink.onRequestBlocked(INTEGRATION);
+      throw protectionException(
+          PrismProtectionPhase.PREFLIGHT, PrismProtectionReason.TIMEOUT, exception);
+    } catch (InterruptedException exception) {
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+      metricsSink.onRequestBlocked(INTEGRATION);
+      throw protectionException(
+          PrismProtectionPhase.PREFLIGHT, PrismProtectionReason.VAULT_UNAVAILABLE, exception);
+    } catch (ExecutionException exception) {
+      executor.shutdownNow();
+      metricsSink.onRequestBlocked(INTEGRATION);
+      throw protectionException(
+          PrismProtectionPhase.PREFLIGHT,
+          PrismProtectionReason.VAULT_UNAVAILABLE,
+          exception.getCause() != null ? exception.getCause() : exception);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private PrismProtectionException protectionException(
+      PrismProtectionPhase phase, PrismProtectionReason reason, Throwable cause) {
+    return new PrismProtectionException(
+        phase,
+        reason,
+        INTEGRATION,
+        failureMode,
+        "Request blocked: Privacy constraints could not be enforced.",
+        cause);
+  }
+
+  private static PrismProtectionReason inferVaultReason(
+      Throwable cause, PrismProtectionReason fallback) {
+    String message = cause.getMessage();
+    if (message != null && message.toLowerCase().contains("redis")) {
+      return PrismProtectionReason.VAULT_UNAVAILABLE;
+    }
+    return fallback;
   }
 
   private record TextSegment(int offset, @NonNull String text) {}

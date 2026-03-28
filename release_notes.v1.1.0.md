@@ -4,6 +4,27 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 
 ## Unreleased
 
+### Backward Compatibility and Migration from v1.0.0
+
+- Preserved the legacy `PrismMetricsSnapshot` constructor so custom integrations compiled against
+  `v1.0.0` keep working while the runtime snapshot grows in `v1.1.0`.
+- Marked the legacy constructor as deprecated and documented the exact fallback values used for new
+  fields: `totalActiveRules = 0`, `failureMode = "FAIL_SAFE"`,
+  `blockedRequestCount = 0L`, `blockedResponseCount = 0L`,
+  `configuredVaultMode = "AUTO"`, `customAppSecretConfigured = false`,
+  `sharedVaultReady = false`, `vaultReadinessStatus = "UNKNOWN"`, and
+  `vaultReadinessDetails = ""`.
+- Preserved legacy strict-mode properties for compatibility and marked them deprecated in both Java
+  API and Spring Boot configuration metadata.
+- Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
+  `spring.prism.failure-mode` instead.
+- Property `spring.prism.mcp.security-strict-mode` is deprecated and will be removed in `v2.0.0`.
+  Use the top-level `spring.prism.failure-mode` instead.
+- Added `PrismRulePack.isAutoDiscoverable()` with a safe default of `false` so custom user-defined
+  rule pack beans from `v1.0.0` do not become active automatically after upgrading to `v1.1.0`.
+- Official Spring Prism rule packs explicitly opt in to auto-discovery, which preserves extension
+  support without introducing surprise redaction behavior for existing applications.
+
 ### Redis-First Cluster Safety
 
 - Added explicit starter configuration for vault selection through `spring.prism.vault.type`.
