@@ -28,12 +28,20 @@ import io.github.catalin87.prism.core.detector.universal.IpAddressDetector;
 import io.github.catalin87.prism.core.detector.universal.PhoneNumberDetector;
 import io.github.catalin87.prism.core.detector.universal.SsnDetector;
 import java.util.List;
+import java.util.Set;
 import org.jspecify.annotations.NonNull;
 
 /**
  * EU-First Rule Pack extending Universal coverage with GDPR-critical European PII: IBAN, EU VAT,
  * Polish PESEL, Romanian CNP, and UK National Insurance Numbers (NINO).
+ *
+ * @deprecated since {@code 1.1.0}. Prefer regional modular rule packs such as {@code
+ *     prism-rulepack-ro}, {@code prism-rulepack-pl}, {@code prism-rulepack-gb}, {@code
+ *     prism-rulepack-fr}, {@code prism-rulepack-nl}, and {@code prism-rulepack-de}. This legacy
+ *     in-core pack remains functional for {@code 1.x} compatibility and will be removed in {@code
+ *     2.0.0}.
  */
+@Deprecated(since = "1.1.0", forRemoval = true)
 public class EuropeRulePack implements PrismRulePack {
 
   private static final List<@NonNull PiiDetector> DETECTORS =
@@ -57,5 +65,36 @@ public class EuropeRulePack implements PrismRulePack {
   @Override
   public @NonNull List<@NonNull PiiDetector> getDetectors() {
     return DETECTORS;
+  }
+
+  @Override
+  public @NonNull Set<@NonNull String> getActivationAliases() {
+    return Set.of(
+        "EU",
+        "EUROPE",
+        "DE",
+        "DEU",
+        "GERMANY",
+        "PL",
+        "POL",
+        "POLAND",
+        "RO",
+        "ROU",
+        "ROMANIA",
+        "UK",
+        "GB",
+        "GBR",
+        "UNITED_KINGDOM",
+        "FR",
+        "FRA",
+        "FRANCE",
+        "NL",
+        "NLD",
+        "NETHERLANDS");
+  }
+
+  @Override
+  public boolean isAutoDiscoverable() {
+    return true;
   }
 }

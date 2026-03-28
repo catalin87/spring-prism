@@ -20,15 +20,27 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.PrismVaultAvailability;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.NonNull;
@@ -40,6 +52,7 @@ public final class PrismMcpPayloadSanitizer {
   private static final Pattern TOKEN_PATTERN = Pattern.compile("<PRISM_[a-zA-Z0-9_-]+>");
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
   private static final TypeReference<List<Object>> LIST_TYPE = new TypeReference<>() {};
+  private static final Duration PREFLIGHT_TIMEOUT = Duration.ofMillis(50);
   private static final Set<String> STRUCTURAL_STRING_KEYS =
       Set.of("jsonrpc", "id", "method", "type", "role", "name", "uri", "mimeType", "model");
   private static final Set<String> JSON_STRING_KEYS = Set.of("arguments", "structuredContent");
@@ -49,7 +62,7 @@ public final class PrismMcpPayloadSanitizer {
   private final List<PrismRulePack> rulePacks;
   private final PrismVault vault;
   private final PrismMcpMetricsSink metricsSink;
-  private final boolean strictMode;
+  private final PrismFailureMode failureMode;
 
   /**
    * Creates a payload sanitizer with explicit metrics and strict-mode settings.
@@ -59,7 +72,7 @@ public final class PrismMcpPayloadSanitizer {
    */
   public PrismMcpPayloadSanitizer(
       @NonNull List<PrismRulePack> rulePacks, @NonNull PrismVault vault) {
-    this(rulePacks, vault, PrismMcpMetricsSink.NOOP, false);
+    this(rulePacks, vault, PrismMcpMetricsSink.NOOP, PrismFailureMode.FAIL_SAFE);
   }
 
   /**
@@ -75,15 +88,36 @@ public final class PrismMcpPayloadSanitizer {
       @NonNull PrismVault vault,
       @NonNull PrismMcpMetricsSink metricsSink,
       boolean strictMode) {
+    this(
+        rulePacks,
+        vault,
+        metricsSink,
+        strictMode ? PrismFailureMode.FAIL_CLOSED : PrismFailureMode.FAIL_SAFE);
+  }
+
+  /**
+   * Creates a sanitizer with an explicit failure mode.
+   *
+   * @param rulePacks active Prism rule packs
+   * @param vault Prism vault used for tokenization and restoration
+   * @param metricsSink runtime metrics callback
+   * @param failureMode active failure mode used for fail-safe vs fail-closed behavior
+   */
+  public PrismMcpPayloadSanitizer(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull PrismMcpMetricsSink metricsSink,
+      @NonNull PrismFailureMode failureMode) {
     this.rulePacks = List.copyOf(Objects.requireNonNull(rulePacks, "rulePacks"));
     this.vault = Objects.requireNonNull(vault, "vault");
     this.metricsSink = Objects.requireNonNull(metricsSink, "metricsSink");
-    this.strictMode = strictMode;
+    this.failureMode = Objects.requireNonNull(failureMode, "failureMode");
   }
 
   /** Returns a recursively sanitized copy of the outbound request payload. */
   public @NonNull Map<String, Object> sanitizeRequest(
       @NonNull Map<String, Object> payload, @NonNull String integration) {
+    runPreflightIfRequired(integration);
     return castMap(transformValue(payload, integration, true, null));
   }
 
@@ -111,9 +145,16 @@ public final class PrismMcpPayloadSanitizer {
             return objectMapper.writeValueAsString(
                 transformValue(parsed, integration, outbound, fieldName));
           } catch (JsonProcessingException exception) {
-            if (strictMode) {
-              throw new IllegalStateException(
-                  "Strict mode blocked Prism MCP processing after JSON serialization failure",
+            if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+              if (outbound) {
+                metricsSink.onRequestBlocked(integration);
+              } else {
+                metricsSink.onResponseBlocked(integration);
+              }
+              throw protectionException(
+                  PrismProtectionPhase.STRUCTURED_PAYLOAD,
+                  PrismProtectionReason.STRUCTURED_PARSE_FAILURE,
+                  integration,
                   exception);
             }
             return outbound
@@ -177,10 +218,12 @@ public final class PrismMcpPayloadSanitizer {
             }
           } catch (RuntimeException exception) {
             metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
-            if (strictMode) {
-              throw new IllegalStateException(
-                  "Strict mode blocked Prism MCP processing after detector failure: "
-                      + detector.getEntityType(),
+            if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+              metricsSink.onRequestBlocked(integration);
+              throw protectionException(
+                  PrismProtectionPhase.DETECT,
+                  PrismProtectionReason.DETECTOR_FAILURE,
+                  integration,
                   exception);
             }
           }
@@ -205,6 +248,16 @@ public final class PrismMcpPayloadSanitizer {
         result.replace(candidate.start(), candidate.end(), token.key());
         redactedCount++;
       }
+    } catch (RuntimeException exception) {
+      if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+        metricsSink.onRequestBlocked(integration);
+        throw protectionException(
+            PrismProtectionPhase.TOKENIZE,
+            inferVaultReason(exception, PrismProtectionReason.POLICY_BLOCK),
+            integration,
+            exception);
+      }
+      return text;
     } finally {
       metricsSink.onVaultTokenizeDuration(integration, System.nanoTime() - tokenizeStartedAt);
     }
@@ -234,6 +287,16 @@ public final class PrismMcpPayloadSanitizer {
             result, Matcher.quoteReplacement(original != null ? original : tokenKey));
       }
       matcher.appendTail(result);
+    } catch (RuntimeException exception) {
+      if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+        metricsSink.onResponseBlocked(integration);
+        throw protectionException(
+            PrismProtectionPhase.RESTORE,
+            inferVaultReason(exception, PrismProtectionReason.RESTORE_FAILURE),
+            integration,
+            exception);
+      }
+      return text;
     } finally {
       metricsSink.onVaultDetokenizeDuration(integration, System.nanoTime() - startedAt);
     }
@@ -253,5 +316,64 @@ public final class PrismMcpPayloadSanitizer {
       }
     }
     return result;
+  }
+
+  private void runPreflightIfRequired(String integration) {
+    if (failureMode != PrismFailureMode.FAIL_CLOSED
+        || !(vault instanceof PrismVaultAvailability availability)) {
+      return;
+    }
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    try {
+      Future<?> future = executor.submit(() -> availability.verifyAvailability(PREFLIGHT_TIMEOUT));
+      future.get(PREFLIGHT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    } catch (TimeoutException exception) {
+      executor.shutdownNow();
+      metricsSink.onRequestBlocked(integration);
+      throw protectionException(
+          PrismProtectionPhase.PREFLIGHT, PrismProtectionReason.TIMEOUT, integration, exception);
+    } catch (InterruptedException exception) {
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+      metricsSink.onRequestBlocked(integration);
+      throw protectionException(
+          PrismProtectionPhase.PREFLIGHT,
+          PrismProtectionReason.VAULT_UNAVAILABLE,
+          integration,
+          exception);
+    } catch (ExecutionException exception) {
+      executor.shutdownNow();
+      metricsSink.onRequestBlocked(integration);
+      throw protectionException(
+          PrismProtectionPhase.PREFLIGHT,
+          PrismProtectionReason.VAULT_UNAVAILABLE,
+          integration,
+          exception.getCause() != null ? exception.getCause() : exception);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private PrismProtectionException protectionException(
+      PrismProtectionPhase phase,
+      PrismProtectionReason reason,
+      String integration,
+      Throwable cause) {
+    return new PrismProtectionException(
+        phase,
+        reason,
+        integration,
+        failureMode,
+        "Request blocked: Privacy constraints could not be enforced.",
+        cause);
+  }
+
+  private static PrismProtectionReason inferVaultReason(
+      Throwable cause, PrismProtectionReason fallback) {
+    String message = cause.getMessage();
+    if (message != null && message.toLowerCase().contains("redis")) {
+      return PrismProtectionReason.VAULT_UNAVAILABLE;
+    }
+    return fallback;
   }
 }

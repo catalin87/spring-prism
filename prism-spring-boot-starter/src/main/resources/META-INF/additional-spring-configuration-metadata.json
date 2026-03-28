@@ -1,0 +1,22 @@
+{
+  "properties": [
+    {
+      "name": "spring.prism.security-strict-mode",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "level": "warning",
+        "replacement": "spring.prism.failure-mode",
+        "reason": "Property 'spring.prism.security-strict-mode' is deprecated; use 'spring.prism.failure-mode' instead."
+      }
+    },
+    {
+      "name": "spring.prism.mcp.security-strict-mode",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "level": "warning",
+        "replacement": "spring.prism.failure-mode",
+        "reason": "Property 'spring.prism.mcp.security-strict-mode' is deprecated; use the top-level 'spring.prism.failure-mode' instead."
+      }
+    }
+  ]
+}

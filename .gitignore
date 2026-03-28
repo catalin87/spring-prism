@@ -77,8 +77,14 @@ yarn-error.log*
 # Temporary & Cache
 # =========================
 .cache/
+.m2/
 tmp/
 temp/
 *~
 *.swp
 *.swo
+
+# =========================
+# Local NLP Benchmark Assets
+# =========================
+prism-benchmarks/models/

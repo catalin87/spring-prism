@@ -20,6 +20,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -110,8 +114,16 @@ class PrismMcpPayloadSanitizerTest {
                 sanitizer.sanitizeRequest(
                     Map.of("params", Map.of("prompt", "safe input")),
                     PrismMcpMetricsSink.MCP_STDIO_INTEGRATION))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Strict mode blocked Prism MCP processing");
+        .isInstanceOf(PrismProtectionException.class)
+        .hasMessageContaining("Request blocked")
+        .extracting(
+            failure -> ((PrismProtectionException) failure).phase(),
+            failure -> ((PrismProtectionException) failure).reason(),
+            failure -> ((PrismProtectionException) failure).failureMode())
+        .containsExactly(
+            PrismProtectionPhase.DETECT,
+            PrismProtectionReason.DETECTOR_FAILURE,
+            PrismFailureMode.FAIL_CLOSED);
   }
 
   @Test

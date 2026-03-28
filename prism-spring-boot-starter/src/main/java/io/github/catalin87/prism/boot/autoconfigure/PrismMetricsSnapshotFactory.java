@@ -37,6 +37,8 @@ final class PrismMetricsSnapshotFactory {
     Map<String, Long> detectionCounts = prismRuntimeMetrics.detectionCounts();
     List<String> activeRulePacks =
         springPrismRulePacks.stream().map(PrismRulePack::getName).toList();
+    int totalActiveRules =
+        springPrismRulePacks.stream().mapToInt(rulePack -> rulePack.getDetectors().size()).sum();
     List<EntityMetric> entityMetrics =
         springPrismRulePacks.stream()
             .flatMap(
@@ -81,6 +83,15 @@ final class PrismMetricsSnapshotFactory {
                         durationMetrics.get(integration + ":vault-detokenize")))
             .toList();
     String vaultType = prismVault.getClass().getSimpleName();
+    String failureMode = properties.resolveFailureMode().name();
+    String configuredVaultMode = properties.getVault().getType().name();
+    boolean customAppSecretConfigured = !"spring-prism-change-me".equals(properties.getAppSecret());
+    boolean distributedVault = vaultType.toLowerCase().contains("redis");
+    boolean sharedVaultReady = distributedVault && customAppSecretConfigured;
+    String vaultReadinessStatus =
+        vaultReadinessStatus(distributedVault, sharedVaultReady, customAppSecretConfigured);
+    String vaultReadinessDetails =
+        vaultReadinessDetails(distributedVault, sharedVaultReady, customAppSecretConfigured);
     prismRuntimeMetrics.captureHistorySample(vaultType);
     List<HistorySample> historySamples = prismRuntimeMetrics.recentHistorySamples();
     long tokenBacklog =
@@ -105,10 +116,48 @@ final class PrismMetricsSnapshotFactory {
         prismRuntimeMetrics.recentAuditEvents(),
         prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
+        totalActiveRules,
+        failureMode,
+        prismRuntimeMetrics.blockedRequestCount(),
+        prismRuntimeMetrics.blockedResponseCount(),
+        configuredVaultMode,
+        customAppSecretConfigured,
         vaultType,
-        vaultType.toLowerCase().contains("redis"),
+        distributedVault,
+        sharedVaultReady,
+        vaultReadinessStatus,
+        vaultReadinessDetails,
         tokenBacklog,
         dashboardConfiguration);
+  }
+
+  private static String vaultReadinessStatus(
+      boolean distributedVault, boolean sharedVaultReady, boolean customAppSecretConfigured) {
+    if (sharedVaultReady) {
+      return "READY";
+    }
+    if (distributedVault) {
+      return "ATTENTION";
+    }
+    return customAppSecretConfigured ? "LOCAL_ONLY" : "LOCAL_ONLY_ATTENTION";
+  }
+
+  private static String vaultReadinessDetails(
+      boolean distributedVault, boolean sharedVaultReady, boolean customAppSecretConfigured) {
+    if (sharedVaultReady) {
+      return "Redis-backed shared restore path is active and a non-default app secret is"
+          + " configured.";
+    }
+    if (distributedVault) {
+      return "Redis-backed vault is active, but the default app secret is still configured. Set a"
+          + " shared non-default spring.prism.app-secret on every node.";
+    }
+    if (customAppSecretConfigured) {
+      return "Single-node local vault is active. This is production-safe only when requests and"
+          + " restores stay on the same node.";
+    }
+    return "Single-node local vault is active and the default app secret is still configured."
+        + " Override spring.prism.app-secret before production use.";
   }
 
   private static DashboardConfiguration dashboardConfiguration(
@@ -243,7 +292,7 @@ final class PrismMetricsSnapshotFactory {
       PrismRuntimeMetrics prismRuntimeMetrics,
       long tokenBacklog) {
     double score = 0.55d;
-    score += properties.isSecurityStrictMode() ? 0.15d : 0.05d;
+    score += properties.resolveFailureMode().name().equals("FAIL_CLOSED") ? 0.15d : 0.05d;
     score += prismVault.getClass().getSimpleName().toLowerCase().contains("redis") ? 0.20d : 0.15d;
     score += "spring-prism-change-me".equals(properties.getAppSecret()) ? -0.20d : 0.10d;
     if (tokenBacklog == 0L) {
@@ -259,7 +308,10 @@ final class PrismMetricsSnapshotFactory {
       SpringPrismProperties properties,
       PrismRuntimeMetrics prismRuntimeMetrics,
       long tokenBacklog) {
-    String strictMode = properties.isSecurityStrictMode() ? "strict mode on" : "fail-open mode";
+    String strictMode =
+        properties.resolveFailureMode().name().equals("FAIL_CLOSED")
+            ? "fail-closed mode"
+            : "fail-safe mode";
     String vaultMode =
         prismVault.getClass().getSimpleName().toLowerCase().contains("redis")
             ? "Redis-backed shared vault"

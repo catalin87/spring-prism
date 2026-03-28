@@ -1,0 +1,24 @@
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  prism:
+    app-secret: ${PRISM_APP_SECRET:replace-me-for-shared-deployments}
+    vault:
+      type: redis
+    ttl: 30m
+    locales: UNIVERSAL
+    dashboard:
+      default-polling-seconds: 15
+      audit-retention: 16
+      history-retention: 180
+      alert-thresholds:
+        scan-latency-warn-ms: 20
+        scan-latency-critical-ms: 60
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prism

@@ -19,10 +19,10 @@ import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -39,6 +39,7 @@ public class DefaultPrismVault implements PrismVault {
 
   // Stores Token Key -> Encapsulated Value + Expiration mapping state securely
   private final Map<String, ExpirableValue> storage = new ConcurrentHashMap<>();
+  private final AtomicInteger cleanupTicker = new AtomicInteger();
 
   /**
    * Initializes the rigorous Vault mechanism natively.
@@ -62,7 +63,7 @@ public class DefaultPrismVault implements PrismVault {
     PrismToken token = tokenGenerator.generate(candidate, secretKey);
 
     // 2. Compute expiration horizon limits
-    long expiresAt = Instant.now().getEpochSecond() + ttlSeconds;
+    long expiresAt = currentEpochSecond() + ttlSeconds;
 
     // 3. Store reversibility mapping sequentially into safe memory
     storage.put(token.key(), new ExpirableValue(value, expiresAt));
@@ -81,7 +82,7 @@ public class DefaultPrismVault implements PrismVault {
       return null;
     }
 
-    if (Instant.now().getEpochSecond() > record.expiresAt()) {
+    if (currentEpochSecond() > record.expiresAt()) {
       storage.remove(tokenKey);
       return null;
     }
@@ -109,10 +110,14 @@ public class DefaultPrismVault implements PrismVault {
     // natively.
     // In deeper enterprise deployments, developers will bind `RedisPrismVault` instead inside
     // Spring Boot.
-    if (Math.random() < 0.05) {
-      long now = Instant.now().getEpochSecond();
+    if ((cleanupTicker.incrementAndGet() & 31) == 0) {
+      long now = currentEpochSecond();
       storage.entrySet().removeIf(entry -> now > entry.getValue().expiresAt());
     }
+  }
+
+  private static long currentEpochSecond() {
+    return System.currentTimeMillis() / 1000L;
   }
 
   private String getLabelFromToken(String tokenKey) {

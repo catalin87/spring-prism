@@ -1,0 +1,851 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PRISM_INFINITY",
+      "label": "Prism Infinity Datasource",
+      "description": "Grafana Infinity datasource used to query /actuator/prism or /prism/metrics",
+      "type": "datasource",
+      "pluginId": "yesoreyeram-infinity-datasource",
+      "pluginName": "Infinity"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "yesoreyeram-infinity-datasource",
+      "name": "Infinity",
+      "version": "3.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "text",
+      "title": "How To Use This Dashboard",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "content": "This dashboard is pre-provisioned for the Enterprise Lab and queries the Prism node metrics endpoint through the bundled Infinity datasource. The hidden `prism_endpoint` variable defaults to the demo proxy Actuator endpoint and can be changed if you want to inspect a different Prism node.",
+        "mode": "markdown"
+      },
+      "transparent": true
+    },
+    {
+      "type": "stat",
+      "title": "Privacy Score",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "json_options": {
+            "root_is_not_array": true
+          },
+          "columns": [
+            {
+              "selector": "privacyScore.score",
+              "text": "score",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "root_selector": "$",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Shared Vault Ready",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 4,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "json_options": {
+            "root_is_not_array": true
+          },
+          "columns": [
+            {
+              "selector": "vaultReadinessStatus",
+              "text": "status",
+              "type": "string"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "root_selector": "$",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Token Backlog",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 8,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "json_options": {
+            "root_is_not_array": true
+          },
+          "columns": [
+            {
+              "selector": "tokenBacklog",
+              "text": "backlog",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "root_selector": "$",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Detection Errors",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 12,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "json_options": {
+            "root_is_not_array": true
+          },
+          "columns": [
+            {
+              "selector": "detectionErrorCount",
+              "text": "errors",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "root_selector": "$",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Vault Mode",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 16,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "json_options": {
+            "root_is_not_array": true
+          },
+          "columns": [
+            {
+              "selector": "vaultType",
+              "text": "mode",
+              "type": "string"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "root_selector": "$",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total Active Rules",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 20,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "json_options": {
+            "root_is_not_array": true
+          },
+          "columns": [
+            {
+              "selector": "totalActiveRules",
+              "text": "rules",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "root_selector": "$",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "History: Token Backlog",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "timeseries",
+          "columns": [
+            {
+              "selector": "capturedAt",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "tokenBacklog",
+              "text": "tokenBacklog",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "$.historySamples",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "History: Detections vs Errors",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "timeseries",
+          "columns": [
+            {
+              "selector": "capturedAt",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "totalDetections",
+              "text": "totalDetections",
+              "type": "number"
+            },
+            {
+              "selector": "detectionErrors",
+              "text": "detectionErrors",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "$.historySamples",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "History: Scan Milliseconds",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "timeseries",
+          "columns": [
+            {
+              "selector": "capturedAt",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "scanMilliseconds",
+              "text": "scanMilliseconds",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "$.historySamples",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Rule Pack Activity",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "columns": [
+            {
+              "selector": "name",
+              "text": "name",
+              "type": "string"
+            },
+            {
+              "selector": "detectorCount",
+              "text": "detectorCount",
+              "type": "number"
+            },
+            {
+              "selector": "totalDetections",
+              "text": "totalDetections",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "$.rulePackMetrics",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Entity Activity",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "prism-infinity"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "prism-infinity"
+          },
+          "format": "table",
+          "columns": [
+            {
+              "selector": "rulePackName",
+              "text": "rulePackName",
+              "type": "string"
+            },
+            {
+              "selector": "entityType",
+              "text": "entityType",
+              "type": "string"
+            },
+            {
+              "selector": "detections",
+              "text": "detections",
+              "type": "number"
+            }
+          ],
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "$.entityMetrics",
+          "source": "url",
+          "type": "json",
+          "url": "http://demo-proxy:8080/actuator/prism",
+          "url_options": {
+            "method": "GET"
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "spring-prism",
+    "privacy",
+    "grafana",
+    "starter"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Spring Prism Overview",
+  "uid": "spring-prism-overview",
+  "version": 7,
+  "weekStart": ""
+}

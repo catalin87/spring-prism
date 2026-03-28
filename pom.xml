@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.catalin87.prism</groupId>
     <artifactId>prism-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Spring Prism Parent</name>
     <description>Reversible PII pseudonymization firewall for Spring AI and LangChain4j.</description>
@@ -47,10 +47,20 @@
     <modules>
         <module>prism-bom</module>
         <module>prism-core</module>
+        <module>prism-rulepack-common</module>
+        <module>prism-rulepack-ro</module>
+        <module>prism-rulepack-us</module>
+        <module>prism-rulepack-pl</module>
+        <module>prism-rulepack-nl</module>
+        <module>prism-rulepack-gb</module>
+        <module>prism-rulepack-fr</module>
+        <module>prism-rulepack-de</module>
+        <module>prism-extensions-nlp</module>
         <module>prism-spring-ai</module>
         <module>prism-langchain4j</module>
         <module>prism-mcp</module>
         <module>prism-spring-boot-starter</module>
+        <module>prism-integration-tests</module>
         <module>prism-benchmarks</module>
         <module>prism-dashboard</module>
         <module>prism-examples</module>
@@ -65,6 +75,7 @@
         <spring-boot.version>3.4.13</spring-boot.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
         <langchain4j.version>1.0.1</langchain4j.version>
+        <opennlp.version>2.5.6</opennlp.version>
         <jmh.version>1.37</jmh.version>
         <tomcat.version>10.1.52</tomcat.version>
         <log4j2.version>2.25.3</log4j2.version>

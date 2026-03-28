@@ -32,6 +32,8 @@ public class PrismRuntimeMetrics
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
   private final AtomicLong detectionErrorCount = new AtomicLong();
+  private final AtomicLong blockedRequestCount = new AtomicLong();
+  private final AtomicLong blockedResponseCount = new AtomicLong();
   private final ConcurrentHashMap<String, AtomicLong> detectionCounts = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> durationTotalsNanos =
       new ConcurrentHashMap<>();
@@ -91,6 +93,18 @@ public class PrismRuntimeMetrics
     recordDuration(integration, "vault-detokenize", nanos);
   }
 
+  @Override
+  public void onRequestBlocked(@NonNull String integration) {
+    blockedRequestCount.incrementAndGet();
+    recordEvent("blocked-request", "PRISM_PROTECTION_BLOCK", 1, integration);
+  }
+
+  @Override
+  public void onResponseBlocked(@NonNull String integration) {
+    blockedResponseCount.incrementAndGet();
+    recordEvent("blocked-response", "PRISM_PROTECTION_BLOCK", 1, integration);
+  }
+
   public long tokenizedCount() {
     return tokenizedCount.get();
   }
@@ -101,6 +115,14 @@ public class PrismRuntimeMetrics
 
   public long detectionErrorCount() {
     return detectionErrorCount.get();
+  }
+
+  public long blockedRequestCount() {
+    return blockedRequestCount.get();
+  }
+
+  public long blockedResponseCount() {
+    return blockedResponseCount.get();
   }
 
   /** Returns an immutable snapshot of detection counts grouped by rule pack and entity type. */

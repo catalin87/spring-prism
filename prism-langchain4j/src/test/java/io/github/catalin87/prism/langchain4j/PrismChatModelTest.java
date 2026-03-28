@@ -27,6 +27,10 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -160,8 +164,18 @@ class PrismChatModelTest {
             () ->
                 prismModel.chat(
                     ChatRequest.builder().messages(List.of(UserMessage.from("safe"))).build()))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Strict mode blocked Prism processing");
+        .isInstanceOfSatisfying(
+            PrismProtectionException.class,
+            error -> {
+              assertThat(error.phase()).isEqualTo(PrismProtectionPhase.DETECT);
+              assertThat(error.reason()).isEqualTo(PrismProtectionReason.DETECTOR_FAILURE);
+              assertThat(error.failureMode()).isEqualTo(PrismFailureMode.FAIL_CLOSED);
+              assertThat(error.integration()).isEqualTo(PrismMetricsSink.LANGCHAIN4J_INTEGRATION);
+              assertThat(error)
+                  .hasMessageContaining(
+                      "Request blocked: Privacy constraints could not be enforced.");
+              assertThat(error.getCause()).isInstanceOf(IllegalStateException.class);
+            });
   }
 
   @Test

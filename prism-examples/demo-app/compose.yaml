@@ -1,0 +1,65 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+
+  demo-node-a:
+    build:
+      context: ../..
+      dockerfile: prism-examples/demo-app/Dockerfile
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_PRISM_VAULT_TYPE: redis
+      SPRING_PRISM_APP_SECRET: example-enterprise-lab-secret
+      LAB_NODE_ID: node-a
+      LAB_SELF_BASE_URL: http://demo-node-a:8080
+      LAB_PEER_BASE_URL: http://demo-node-b:8080
+      LAB_PUBLIC_BASE_URL: http://localhost:8080
+      LAB_GRAFANA_URL: http://localhost:3000
+      LAB_NLP_MODEL_RESOURCE: file:/opt/spring-prism/models/en-ner-person.bin
+    depends_on:
+      - redis
+
+  demo-node-b:
+    build:
+      context: ../..
+      dockerfile: prism-examples/demo-app/Dockerfile
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_PRISM_VAULT_TYPE: redis
+      SPRING_PRISM_APP_SECRET: example-enterprise-lab-secret
+      LAB_NODE_ID: node-b
+      LAB_SELF_BASE_URL: http://demo-node-b:8080
+      LAB_PEER_BASE_URL: http://demo-node-a:8080
+      LAB_PUBLIC_BASE_URL: http://localhost:8080
+      LAB_GRAFANA_URL: http://localhost:3000
+      LAB_NLP_MODEL_RESOURCE: file:/opt/spring-prism/models/en-ner-person.bin
+    depends_on:
+      - redis
+
+  demo-proxy:
+    image: nginx:1.29-alpine
+    depends_on:
+      - demo-node-a
+      - demo-node-b
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    environment:
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - demo-proxy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
