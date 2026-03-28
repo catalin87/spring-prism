@@ -33,6 +33,11 @@
             <artifactId>prism-spring-boot-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-extensions-nlp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

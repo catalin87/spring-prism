@@ -47,6 +47,7 @@
     <modules>
         <module>prism-bom</module>
         <module>prism-core</module>
+        <module>prism-extensions-nlp</module>
         <module>prism-spring-ai</module>
         <module>prism-langchain4j</module>
         <module>prism-mcp</module>
@@ -66,6 +67,7 @@
         <spring-boot.version>3.4.13</spring-boot.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
         <langchain4j.version>1.0.1</langchain4j.version>
+        <opennlp.version>2.5.6</opennlp.version>
         <jmh.version>1.37</jmh.version>
         <tomcat.version>10.1.52</tomcat.version>
         <log4j2.version>2.25.3</log4j2.version>

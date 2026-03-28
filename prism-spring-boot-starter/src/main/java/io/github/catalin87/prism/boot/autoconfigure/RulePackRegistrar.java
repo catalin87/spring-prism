@@ -34,7 +34,8 @@ final class RulePackRegistrar {
       Set.of("EU", "EUROPE", "DE", "PL", "RO", "UK", "GB");
   private static final Set<String> UNIVERSAL_LOCALES = Set.of("UNIVERSAL", "GLOBAL", "EN", "US");
 
-  List<PrismRulePack> resolve(SpringPrismProperties properties) {
+  List<PrismRulePack> resolve(
+      SpringPrismProperties properties, List<PrismRulePack> additionalRulePacks) {
     Set<String> locales =
         properties.getLocales().stream()
             .map(locale -> locale == null ? "" : locale.trim().toUpperCase(Locale.ROOT))
@@ -57,6 +58,11 @@ final class RulePackRegistrar {
     CustomPropertyRulePack customPropertyRulePack = customPack(properties);
     if (!customPropertyRulePack.getDetectors().isEmpty()) {
       packs.add(filtered(customPropertyRulePack, properties.getDisabledRules()));
+    }
+    if (additionalRulePacks != null) {
+      additionalRulePacks.stream()
+          .map(rulePack -> filtered(rulePack, properties.getDisabledRules()))
+          .forEach(packs::add);
     }
     return List.copyOf(packs);
   }
