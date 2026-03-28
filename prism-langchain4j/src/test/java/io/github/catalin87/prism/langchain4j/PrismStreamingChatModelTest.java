@@ -25,6 +25,10 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -128,7 +132,16 @@ class PrismStreamingChatModelTest {
           }
         });
 
-    assertThat(failure.get()).isInstanceOf(IllegalStateException.class);
+    assertThat(failure.get())
+        .isInstanceOfSatisfying(
+            PrismProtectionException.class,
+            error -> {
+              assertThat(error.phase()).isEqualTo(PrismProtectionPhase.DETECT);
+              assertThat(error.reason()).isEqualTo(PrismProtectionReason.DETECTOR_FAILURE);
+              assertThat(error.failureMode()).isEqualTo(PrismFailureMode.FAIL_CLOSED);
+              assertThat(error.integration()).isEqualTo(PrismMetricsSink.LANGCHAIN4J_INTEGRATION);
+              assertThat(error.getCause()).isInstanceOf(IllegalStateException.class);
+            });
     assertThat(delegate.recordedRequest).isNull();
   }
 
