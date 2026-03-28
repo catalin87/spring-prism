@@ -28,6 +28,9 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
   participate in `spring.prism.locales` without breaking existing `1.x` custom implementations.
 - Preserved the legacy in-core `UniversalRulePack` for direct `prism-core` consumers while the
   starter begins preferring the modular `prism-rulepack-common` baseline.
+- Clarified that Spring applications should inject `@Qualifier("springPrismRulePacks")` for the
+  resolved active rule pack list, while plain `List<PrismRulePack>` remains the contract for
+  discovering available rule pack beans in the application context.
 
 ### Redis-First Cluster Safety
 
