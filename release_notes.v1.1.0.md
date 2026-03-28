@@ -73,3 +73,4 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
   `1.0.0` release checklist.
 - Refined README and configuration docs so example paths, rollout choices, and required validation
   steps are easier to find.
+- Added a downloadable starter Grafana dashboard JSON for the Prism runtime snapshot path.

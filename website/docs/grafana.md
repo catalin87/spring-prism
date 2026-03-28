@@ -61,6 +61,35 @@ If you do not use Actuator, use:
 
 - `/prism/metrics`
 
+### 1.5. Import the starter dashboard
+
+Spring Prism now ships a suggested Grafana dashboard JSON you can import as a starting point:
+
+- [Download `spring-prism-overview.json`](/grafana/spring-prism-overview.json)
+
+What it includes:
+
+- Privacy Score
+- Shared Vault Ready
+- Vault mode summary
+- Token backlog
+- Detection errors
+- history charts for backlog, detections, and scan latency
+- rule-pack and entity activity tables
+
+This dashboard is designed for the **Grafana Infinity** datasource and assumes a default endpoint of
+`http://localhost:8080/actuator/prism` after import. Update the hidden `prism_endpoint` variable in
+Grafana to point at your real node endpoint.
+
+Recommended import flow:
+
+1. Install the Grafana Infinity datasource plugin.
+2. Create an Infinity datasource that your Grafana instance can use.
+3. Import `spring-prism-overview.json`.
+4. Select your Infinity datasource when Grafana prompts for `Prism Infinity Datasource`.
+5. Update the dashboard variable `prism_endpoint` if your node uses a different host, port, or
+   `/prism/metrics` path.
+
 ### 2. Keep Prometheus for infrastructure metrics
 
 Use Prometheus normally for:
@@ -97,7 +126,7 @@ For `v1.1.0`, the recommended cluster pattern is:
 
 ## Suggested First Panels
 
-Start with these Grafana panels sourced from the Prism JSON snapshot:
+The starter JSON already includes these panel ideas sourced from the Prism JSON snapshot:
 
 - Privacy Score
   Show `privacyScore.score`
@@ -145,3 +174,7 @@ That is why the recommended guidance for now is:
 
 - Prometheus for general application and infrastructure telemetry
 - Grafana JSON integration for Prism-specific operational visibility
+
+The provided dashboard JSON should be treated as a strong starter template, not a substitute for
+your own environment-specific alert thresholds, node naming, or organization-wide observability
+standards.

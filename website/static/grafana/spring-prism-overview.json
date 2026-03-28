@@ -1,0 +1,730 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PRISM_INFINITY",
+      "label": "Prism Infinity Datasource",
+      "description": "Grafana Infinity datasource used to query /actuator/prism or /prism/metrics",
+      "type": "datasource",
+      "pluginId": "yesoreyeram-infinity-datasource",
+      "pluginName": "Infinity"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "11.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "yesoreyeram-infinity-datasource",
+      "name": "Infinity",
+      "version": "3.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "text",
+      "title": "How To Use This Dashboard",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "content": "Import this dashboard after installing the Grafana Infinity datasource. Then update the hidden `prism_endpoint` variable to point at `/actuator/prism` or `/prism/metrics` on the node you want to inspect. This starter dashboard is intentionally node-level and works best alongside Prometheus infrastructure dashboards.",
+        "mode": "markdown"
+      },
+      "transparent": true
+    },
+    {
+      "type": "stat",
+      "title": "Privacy Score",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | project score=tonumber(\"privacyScore.score\")"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Shared Vault Ready",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 4,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "true": {
+                  "text": "READY"
+                },
+                "false": {
+                  "text": "NOT READY"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | project ready=iff(tobool(\"sharedVaultReady\"), 1, 0)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Token Backlog",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 8,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | project backlog=tonumber(\"tokenBacklog\")"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Detection Errors",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 12,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | project errors=tonumber(\"detectionErrorCount\")"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Vault Mode",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 16,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | project mode=strcat(tostring(\"configuredVaultMode\"), \" / \", tostring(\"vaultType\"))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Runtime Rule Packs",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 20,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | scope \"activeRulePacks\" | count"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "History: Token Backlog",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "timeseries",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | scope \"historySamples\" | project capturedAt=todatetime(\"capturedAt\"), tokenBacklog=tonumber(\"tokenBacklog\")"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "History: Detections vs Errors",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "timeseries",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | scope \"historySamples\" | project capturedAt=todatetime(\"capturedAt\"), totalDetections=tonumber(\"totalDetections\"), detectionErrors=tonumber(\"detectionErrors\")"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "History: Scan Milliseconds",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "timeseries",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | scope \"historySamples\" | project capturedAt=todatetime(\"capturedAt\"), scanMilliseconds=tonumber(\"scanMilliseconds\")"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Rule Pack Activity",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | scope \"rulePackMetrics\" | project name=tostring(\"name\"), detectorCount=tonumber(\"detectorCount\"), totalDetections=tonumber(\"totalDetections\")"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Entity Activity",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_PRISM_INFINITY}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_PRISM_INFINITY}"
+          },
+          "format": "table",
+          "parser": "uql",
+          "refId": "A",
+          "source": "url",
+          "type": "json",
+          "url": "${prism_endpoint}",
+          "uql": "parse-json | scope \"entityMetrics\" | project rulePackName=tostring(\"rulePackName\"), entityType=tostring(\"entityType\"), detections=tonumber(\"detections\")"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "spring-prism",
+    "privacy",
+    "grafana",
+    "starter"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "http://localhost:8080/actuator/prism",
+          "value": "http://localhost:8080/actuator/prism"
+        },
+        "hide": 2,
+        "label": "Prism Endpoint",
+        "name": "prism_endpoint",
+        "options": [
+          {
+            "selected": true,
+            "text": "http://localhost:8080/actuator/prism",
+            "value": "http://localhost:8080/actuator/prism"
+          }
+        ],
+        "query": "http://localhost:8080/actuator/prism",
+        "skipUrlSync": false,
+        "type": "constant"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Spring Prism Overview",
+  "uid": "spring-prism-overview",
+  "version": 1,
+  "weekStart": ""
+}
