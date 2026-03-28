@@ -42,6 +42,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -62,7 +63,7 @@ class DemoExperienceService {
   private final McpMockRecorder mcpMockRecorder;
 
   DemoExperienceService(
-      List<PrismRulePack> availableRulePacks,
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> availableRulePacks,
       PrismVault prismVault,
       ObservationRegistry observationRegistry,
       PrismRuntimeMetrics prismRuntimeMetrics,
