@@ -12,7 +12,7 @@ mvn clean verify
 
 ## Shipped Today
 
-The following modules are part of the supported library surface:
+The following modules are part of the supported published library surface:
 
 | Module | Role | Status |
 | --- | --- | --- |
@@ -23,9 +23,17 @@ The following modules are part of the supported library surface:
 | `prism-spring-boot-starter` | Spring Boot properties, auto-configuration, Redis selection, metrics surface, readiness signals | Supported |
 | `prism-rulepack-ro/us/pl/nl/gb/fr/de` | Optional regional Big 7 rulepacks with checksum-backed validation | Supported |
 | `prism-extensions-nlp` | Optional person-name redaction through heuristic, OpenNLP, and hybrid modes | Supported |
-| `prism-integration-tests` | Testcontainers Redis and WireMock-backed multi-node release validation | Supported |
 | `prism-dashboard` | Embedded dashboard with retained history, filters, exports, and alerts | Supported |
-| `prism-examples` | Runnable Spring Boot sample apps for Spring AI, LangChain4j, and MCP | Supported |
+
+The following modules remain in the repository for contributor workflows, manual QA, and release
+verification, but are not part of the published Maven library surface:
+
+| Module | Role | Status |
+| --- | --- | --- |
+| `prism-integration-tests` | Testcontainers Redis and WireMock-backed multi-node release validation | Repo-only |
+| `prism-benchmarks` | JMH benchmark suite for detector, vault, streaming, and Redis-backed paths | Repo-only |
+| `prism-examples` | Runnable Spring Boot sample apps for Spring AI, LangChain4j, and MCP | Repo-only |
+| `demo-app` | Unified manual-test application covering Spring AI, LangChain4j, MCP, dashboards, and rulepack selection | Repo-only |
 
 ## v1.1.0 Release Scope
 
@@ -37,7 +45,7 @@ Spring Prism `v1.1.0-SNAPSHOT` currently covers:
 - large-context and RAG-oriented performance improvements
 - optional NLP extensions for person-name redaction outside `prism-core`
 - an embedded operator dashboard with live history, alerts, exports, and readiness posture
-- runnable example applications and Docusaurus documentation for supported deployment paths
+- runnable repository example applications and Docusaurus documentation for supported deployment paths
 
 ## Deferred
 
@@ -110,6 +118,7 @@ Use this as the final gate before cutting `v1.1.0`.
 - Large-context and RAG performance work is shipped and documented
 - Optional NLP extension path is shipped and documented
 - Example apps and integration suites exist for the supported release train paths
+- Example apps, benchmarks, and the unified demo app remain repo-only contributor assets and are not published to Maven Central
 - `release` profile produces `sources.jar` and `javadoc.jar`
 
 ### Must Pass Right Before Tagging

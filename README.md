@@ -148,6 +148,9 @@ Examples live under `prism-examples/`:
 - `mcp-example`
 - `demo-app`
 
+These applications stay in the repository as runnable contributor assets and manual QA tooling.
+They are not part of the published Maven library surface.
+
 The Spring AI example now has configuration variants for:
 
 - local default: `application.yml`
@@ -155,9 +158,9 @@ The Spring AI example now has configuration variants for:
 - NLP heuristic: `application-nlp-heuristic.yml`
 - NLP hybrid: `application-nlp-hybrid.yml`
 
-## Module surface
+## Published module surface
 
-Supported modules in the `v1.1.0-SNAPSHOT` train:
+Published Maven modules in the `v1.1.0-SNAPSHOT` train:
 
 - `prism-core`
 - `prism-rulepack-common`
@@ -174,8 +177,13 @@ Supported modules in the `v1.1.0-SNAPSHOT` train:
 - `prism-spring-boot-starter`
 - `prism-extensions-nlp`
 - `prism-dashboard`
+
+Repo-only contributor modules:
+
 - `prism-integration-tests`
+- `prism-benchmarks`
 - `prism-examples`
+- `demo-app`
 
 Deferred:
 
@@ -213,6 +221,13 @@ Benchmark packaging:
 
 ```bash
 mvn -pl prism-benchmarks -am package -DskipTests
+```
+
+Unified demo app, outside the main examples reactor:
+
+```bash
+mvn install -DskipTests
+mvn -f prism-examples/demo-app/pom.xml spring-boot:run
 ```
 
 ## Security posture

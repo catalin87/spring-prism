@@ -10,6 +10,10 @@
     <name>Prism Benchmarks</name>
     <description>JMH microbenchmarks for detector, vault, streaming, and Redis-backed paths.</description>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.github.catalin87.prism</groupId>

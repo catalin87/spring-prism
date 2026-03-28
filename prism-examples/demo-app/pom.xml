@@ -10,6 +10,10 @@
     <name>Spring Prism Unified Demo App</name>
     <description> A unified demo application showcasing the capabilities of Spring Prism across various AI ecosystems.</description>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.github.catalin87.prism</groupId>
@@ -52,6 +56,13 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <suppressionsLocation>${project.basedir}/../../checkstyle-suppressions.xml</suppressionsLocation>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
