@@ -28,7 +28,7 @@ Add the starter dependency:
   <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
@@ -160,7 +160,7 @@ Add the module when you want higher-recall detection for person names:
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-extensions-nlp</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 

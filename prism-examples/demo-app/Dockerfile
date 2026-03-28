@@ -20,6 +20,6 @@ RUN mvn -q -DskipTests -Djacoco.skip=true -f prism-examples/demo-app/pom.xml pac
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=model-download /opt/spring-prism/models /opt/spring-prism/models
-COPY --from=build /workspace/prism-examples/demo-app/target/demo-app-1.1.0-SNAPSHOT.jar /app/demo-app.jar
+COPY --from=build /workspace/prism-examples/demo-app/target/demo-app-1.1.0.jar /app/demo-app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/demo-app.jar"]

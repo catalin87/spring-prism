@@ -126,7 +126,7 @@ Any new runtime feature or behavior change should include:
 
 ## Release-train checklist
 
-Before merging into `v1.1.0-SNAPSHOT`, confirm:
+Before merging into `v1.1.0`, confirm:
 
 - the chosen runtime mode is documented
 - example config exists or is updated
