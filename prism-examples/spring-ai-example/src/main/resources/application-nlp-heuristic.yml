@@ -1,0 +1,22 @@
+spring:
+  prism:
+    app-secret: ${PRISM_APP_SECRET:replace-me-for-real-deployments}
+    locales: UNIVERSAL
+    extensions:
+      nlp:
+        enabled: true
+        backend: heuristic
+        confidence-threshold: 4
+    dashboard:
+      default-polling-seconds: 15
+      audit-retention: 16
+      history-retention: 180
+      alert-thresholds:
+        scan-latency-warn-ms: 20
+        scan-latency-critical-ms: 60
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prism

@@ -6,18 +6,22 @@ sidebar_position: 4
 
 This guide is the production path for running Spring Prism safely across multiple nodes.
 
+If you want the shorter adoption map first, start with [Production Playbook](/docs/production-playbook).
+
 ## Single-Node vs Multi-Node
 
 Use `in-memory` when:
 
 - one application node handles both request tokenization and response restoration
 - you do not rely on cross-node response handling
+- you are intentionally choosing a local-only posture
 
 Use `redis` when:
 
 - you run multiple pods or nodes behind a load balancer
 - requests and responses may land on different nodes
 - you use asynchronous or streaming flows where restore can happen elsewhere in the fleet
+- you want a production-safe shared vault contract across the cluster
 
 ## Production Rules for Multi-Node
 
@@ -112,6 +116,8 @@ Before marking a multi-node rollout production-ready, confirm:
 - `spring.prism.app-secret` is not the default value
 - Redis is shared by every node that can participate in restore
 - TTL covers the real request-to-restore latency window
+
+You can use this as a pre-go-live checklist in change management or deployment review.
 
 ## What the Dashboard Means
 
