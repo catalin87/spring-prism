@@ -17,6 +17,7 @@ package io.github.catalin87.prism.boot.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatModel;
@@ -24,6 +25,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import io.github.catalin87.prism.core.PrismFailureMode;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.detector.universal.EmailDetector;
@@ -47,6 +49,7 @@ import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 /** Starter wiring tests for Spring Prism auto-configuration. */
@@ -70,6 +73,7 @@ class SpringPrismAutoConfigurationTest {
           assertThat(context).hasSingleBean(PrismActuatorEndpoint.class);
           assertThat(context).doesNotHaveBean(MetricsController.class);
           assertThat(context).doesNotHaveBean(PrismMcpClient.class);
+          assertThat(context).doesNotHaveBean(PrismProtectionExceptionHandler.class);
 
           List<PrismRulePack> rulePacks = getRulePacks(context);
           assertThat(rulePacks).hasSize(1);
@@ -119,6 +123,19 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void customRulePackBeansRemainInactiveByDefaultForBackwardCompatibility() {
+    contextRunner
+        .withUserConfiguration(NonDiscoverableRulePackConfiguration.class)
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks).extracting(PrismRulePack::getName).containsExactly("UNIVERSAL");
+            });
+  }
+
+  @Test
   void additionalRulePacksFromClasspathAreAppendedAndFiltered() {
     contextRunner
         .withUserConfiguration(AdditionalRulePackConfiguration.class)
@@ -152,6 +169,7 @@ class SpringPrismAutoConfigurationTest {
             context -> {
               SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
               assertThat(properties.isSecurityStrictMode()).isTrue();
+              assertThat(properties.resolveFailureMode()).isEqualTo(PrismFailureMode.FAIL_CLOSED);
               assertThat(properties.getTtl()).isEqualTo(Duration.ofMinutes(45));
               assertThat(properties.getVault().getType())
                   .isEqualTo(SpringPrismProperties.VaultType.REDIS);
@@ -284,6 +302,10 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.historyRetentionLimit()).isEqualTo(120);
           assertThat(snapshot.auditEvents()).isNotEmpty();
           assertThat(snapshot.auditRetentionLimit()).isEqualTo(12);
+          assertThat(snapshot.totalActiveRules()).isEqualTo(5);
+          assertThat(snapshot.failureMode()).isEqualTo("FAIL_SAFE");
+          assertThat(snapshot.blockedRequestCount()).isZero();
+          assertThat(snapshot.blockedResponseCount()).isZero();
           assertThat(snapshot.configuredVaultMode()).isEqualTo("AUTO");
           assertThat(snapshot.customAppSecretConfigured()).isTrue();
           assertThat(snapshot.sharedVaultReady()).isFalse();
@@ -309,6 +331,7 @@ class SpringPrismAutoConfigurationTest {
               assertThat(snapshot.distributedVault()).isTrue();
               assertThat(snapshot.sharedVaultReady()).isTrue();
               assertThat(snapshot.vaultReadinessStatus()).isEqualTo("READY");
+              assertThat(snapshot.failureMode()).isEqualTo("FAIL_SAFE");
             });
   }
 
@@ -425,6 +448,28 @@ class SpringPrismAutoConfigurationTest {
                           .getMcp()
                           .resolveSecurityStrictMode(properties.isSecurityStrictMode()))
                   .isTrue();
+              assertThat(properties.getMcp().resolveFailureMode(properties.resolveFailureMode()))
+                  .isEqualTo(PrismFailureMode.FAIL_CLOSED);
+            });
+  }
+
+  @Test
+  void protectionExceptionHandlerIsOptInForWebApplications() {
+    contextRunner
+        .withPropertyValues("spring.prism.web.protection-exception-handler-enabled=true")
+        .run(context -> assertThat(context).hasSingleBean(PrismProtectionExceptionHandler.class));
+  }
+
+  @Test
+  void explicitFailureModeOverridesLegacyStrictModeCompatibilityFlag() {
+    contextRunner
+        .withPropertyValues(
+            "spring.prism.failure-mode=fail-safe", "spring.prism.security-strict-mode=true")
+        .run(
+            context -> {
+              SpringPrismProperties properties = context.getBean(SpringPrismProperties.class);
+
+              assertThat(properties.resolveFailureMode()).isEqualTo(PrismFailureMode.FAIL_SAFE);
             });
   }
 
@@ -556,7 +601,10 @@ class SpringPrismAutoConfigurationTest {
 
     @Bean
     StringRedisTemplate stringRedisTemplate() {
-      return mock(StringRedisTemplate.class);
+      StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+      when(redisTemplate.execute(org.mockito.ArgumentMatchers.<RedisCallback<String>>any()))
+          .thenReturn("PONG");
+      return redisTemplate;
     }
   }
 
@@ -609,6 +657,30 @@ class SpringPrismAutoConfigurationTest {
                   return "PERSON_NAME";
                 }
               });
+        }
+
+        @Override
+        public boolean isAutoDiscoverable() {
+          return true;
+        }
+      };
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class NonDiscoverableRulePackConfiguration {
+
+    @Bean
+    PrismRulePack customRulePackBean() {
+      return new PrismRulePack() {
+        @Override
+        public String getName() {
+          return "NON_DISCOVERABLE";
+        }
+
+        @Override
+        public List<io.github.catalin87.prism.core.PiiDetector> getDetectors() {
+          return List.of(new EmailDetector());
         }
       };
     }

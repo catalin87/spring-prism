@@ -2,6 +2,22 @@
 
 This guide summarizes the externally visible changes made while closing phases 1-3.
 
+## Backward Compatibility Contract
+
+Spring Prism `v1.1.0` is a minor release and keeps `v1.0.0` integrations working by default.
+
+- The legacy `PrismMetricsSnapshot` constructor remains available for custom integrations compiled
+  against `v1.0.0`.
+- Legacy strict-mode properties remain functional, but are deprecated in favor of
+  `spring.prism.failure-mode`.
+- Custom `PrismRulePack` beans no longer become active automatically unless they explicitly opt in
+  through `isAutoDiscoverable()`.
+
+:::tip[Deprecation]
+Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
+`spring.prism.failure-mode` instead.
+:::
+
 ## Current Integration Shape
 
 - Prefer the Spring Boot starter as the default integration entrypoint.
@@ -13,6 +29,7 @@ This guide summarizes the externally visible changes made while closing phases 1
 - `spring.prism.enabled` defaults to `true`.
 - `spring.prism.ttl` defaults to `30m`.
 - `spring.prism.locales` defaults to `UNIVERSAL`.
+- `spring.prism.failure-mode` defaults to `FAIL_SAFE`.
 - blank or missing `spring.prism.app-secret` falls back to `spring-prism-change-me`, but real
   deployments must override it.
 
@@ -47,7 +64,12 @@ new PrismChatClientAdvisor(List.of(rulePack), prismVault, ObservationRegistry.NO
 
 1. Move to `prism-spring-boot-starter` if you were wiring components manually.
 2. Set an explicit `spring.prism.app-secret`.
-3. Choose `spring.prism.vault.type=redis` for multi-node deployments and keep all nodes on the
+3. Move from `spring.prism.security-strict-mode` to `spring.prism.failure-mode` when you want
+   explicit policy control. Use `FAIL_CLOSED` for hard blocking and `FAIL_SAFE` to preserve the
+   legacy default.
+4. Choose `spring.prism.vault.type=redis` for multi-node deployments and keep all nodes on the
    same app secret and shared Redis infrastructure.
-4. Verify your active locales and disabled rules explicitly in configuration.
-5. For LangChain4j applications, expose one delegate chat bean and let the starter wrap it.
+5. Verify your active locales and disabled rules explicitly in configuration.
+6. If your application defines custom `PrismRulePack` beans and you want them auto-activated by the
+   starter, override `isAutoDiscoverable()` to return `true`.
+7. For LangChain4j applications, expose one delegate chat bean and let the starter wrap it.

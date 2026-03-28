@@ -48,4 +48,9 @@ public class UniversalRulePack implements PrismRulePack {
   public @NonNull List<@NonNull PiiDetector> getDetectors() {
     return DETECTORS;
   }
+
+  @Override
+  public boolean isAutoDiscoverable() {
+    return true;
+  }
 }

@@ -61,6 +61,7 @@ final class RulePackRegistrar {
     }
     if (additionalRulePacks != null) {
       additionalRulePacks.stream()
+          .filter(PrismRulePack::isAutoDiscoverable)
           .map(rulePack -> filtered(rulePack, properties.getDisabledRules()))
           .forEach(packs::add);
     }

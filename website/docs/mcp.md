@@ -64,7 +64,6 @@ spring:
 Available MCP-specific settings:
 
 - `spring.prism.mcp.enabled`
-- `spring.prism.mcp.security-strict-mode`
 - `spring.prism.mcp.transport`
 - `spring.prism.mcp.http.base-url`
 - `spring.prism.mcp.stdio.command`
@@ -72,7 +71,13 @@ Available MCP-specific settings:
 - `spring.prism.mcp.stdio.working-directory`
 - `spring.prism.mcp.stdio.env[...]`
 
-If `spring.prism.mcp.security-strict-mode` is not set, the starter inherits the global `spring.prism.security-strict-mode` value.
+:::tip[Deprecation]
+Property `spring.prism.mcp.security-strict-mode` is deprecated and will be removed in `v2.0.0`.
+Use the top-level `spring.prism.failure-mode` instead.
+:::
+
+If `spring.prism.mcp.security-strict-mode` is not set, the starter inherits the global
+`spring.prism.failure-mode` value.
 
 ## Example App
 

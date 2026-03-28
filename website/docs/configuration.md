@@ -10,7 +10,8 @@ deployment choices for production, continue with [Production Playbook](/docs/pro
 | Property | Default | Description |
 |---|---|---|
 | `spring.prism.enabled` | `true` | Globally enable or disable Spring Prism. |
-| `spring.prism.security-strict-mode` | `false` | If true, any failure in detection or vaulting will result in a hard failure (Fail Closed). |
+| `spring.prism.failure-mode` | `FAIL_SAFE` | Failure policy: `FAIL_SAFE` keeps the legacy fail-open behavior, while `FAIL_CLOSED` blocks the request or response when Prism cannot enforce protection. |
+| `spring.prism.security-strict-mode` | `false` | Deprecated legacy alias for `spring.prism.failure-mode=FAIL_CLOSED`. |
 | `spring.prism.app-secret` | `spring-prism-change-me` | The HMAC secret used to sign Prism tokens. Override this in every real deployment. |
 | `spring.prism.ttl` | `30m` | The time-to-live for vault entries. Invalid values fall back to the starter default. |
 | `spring.prism.vault.type` | `auto` | Vault strategy: `auto`, `in-memory`, or `redis`. Use `redis` for multi-node deployments. |
@@ -33,13 +34,18 @@ Add the starter dependency:
 
 Then configure the starter:
 
+:::tip[Deprecation]
+Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
+`spring.prism.failure-mode` instead.
+:::
+
 ```yaml
 spring:
   prism:
     app-secret: ${PRISM_APP_SECRET}
+    failure-mode: FAIL_SAFE
     vault:
       type: auto
-    security-strict-mode: false
     ttl: 30m
     locales: EU,EN
     disabled-rules: SSN
@@ -85,6 +91,20 @@ For distributed deployments, every node must:
 
 If a `StringRedisTemplate` bean is already available in your application, `auto` mode preserves the
 existing low-friction behavior while still allowing explicit enterprise configuration.
+
+## Failure Mode
+
+Spring Prism now exposes an explicit failure policy:
+
+- `spring.prism.failure-mode=FAIL_SAFE`
+  Preserves the `v1.0.0` behavior. Prism emits metrics and continues when protection cannot be
+  applied fully.
+- `spring.prism.failure-mode=FAIL_CLOSED`
+  Blocks the protected exchange when Prism cannot guarantee tokenization or restoration.
+
+For backward compatibility, `spring.prism.security-strict-mode=true` still maps to
+`spring.prism.failure-mode=FAIL_CLOSED`, but the legacy property is deprecated and scheduled for
+removal in `v2.0.0`.
 
 ## Multi-Node Redis Example
 

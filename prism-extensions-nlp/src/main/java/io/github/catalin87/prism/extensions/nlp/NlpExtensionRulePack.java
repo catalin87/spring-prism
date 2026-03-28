@@ -32,4 +32,9 @@ public record NlpExtensionRulePack(@NonNull List<PiiDetector> detectors) impleme
   public @NonNull List<PiiDetector> getDetectors() {
     return detectors;
   }
+
+  @Override
+  public boolean isAutoDiscoverable() {
+    return true;
+  }
 }
