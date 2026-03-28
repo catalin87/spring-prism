@@ -143,13 +143,19 @@ The current supported library surface is:
 Deferred surfaces:
 
 - MCP server-side interception
-- Optional NLP/person-name detection
+
+Optional release-train surfaces:
+
+- `prism-extensions-nlp` for opt-in person-name detection with heuristic or hybrid OpenNLP scoring
 
 See `website/docs/release-readiness.md` for the current verification baseline, release-profile
 expectations, and the shipped-vs-deferred support boundary.
 
 For operational dashboards outside the embedded UI, see `website/docs/grafana.md` for the current
 Grafana integration approach based on the Prism runtime snapshot.
+
+For optional person-name redaction outside the deterministic core detector set, see
+`website/docs/nlp-extensions.md`.
 
 For production rollout guidance in clustered environments, see:
 

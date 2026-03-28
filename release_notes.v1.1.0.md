@@ -1,6 +1,6 @@
 # Spring Prism v1.1.0 Release Notes
 
-This file tracks the `v1.1.0` release line incrementally while work lands on `release/1.1.0`.
+This file tracks the `v1.1.0` release line incrementally while work lands on `v1.1.0-SNAPSHOT`.
 
 ## Unreleased
 
@@ -44,3 +44,20 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `re
   and tokenize-plus-restore costs through the real Spring AI advisor path.
 - Strengthened the Redis multi-node integration suite with a larger RAG-style payload fixture so
   `v1.1.0` performance work is validated against production-shaped prompt sizes.
+
+### Optional NLP Extensions
+
+- Added a new optional module, `prism-extensions-nlp`, so person-name detection can ship outside
+  `prism-core` without changing the deterministic base detector set.
+- Added a heuristic person-name backend, an OpenNLP backend, and a hybrid detector that merges
+  both candidate sources with contextual scoring.
+- Added startup fail-fast validation for `opennlp` and `hybrid` modes when no readable model
+  resource is configured.
+- Extended starter rule-pack resolution so optional rule packs can be contributed from the
+  classpath and still appear in runtime configuration even when their detectors are filtered.
+- Added unit coverage for hybrid scoring and OpenNLP span mapping.
+- Added end-to-end integration coverage proving that the extension is disabled by default, can
+  tokenize and restore person names when enabled, and does not redact technical phrases such as
+  `Spring Boot`.
+- Added Docusaurus documentation for configuration, architecture, and test expectations of the NLP
+  extension path.

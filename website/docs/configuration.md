@@ -21,10 +21,10 @@ Spring Prism is configured using standard Spring Boot property files such as `ap
 Add the starter dependency:
 
 ```xml
-<dependency>
+  <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -102,6 +102,67 @@ For full production guidance, continue with:
 
 - [Distributed Deployments](/docs/distributed-deployments)
 - [Troubleshooting](/docs/troubleshooting)
+
+## Optional NLP Extensions
+
+Person-name detection stays outside `prism-core` and is available only through the optional
+`prism-extensions-nlp` module.
+
+Add the module when you want higher-recall detection for person names:
+
+```xml
+<dependency>
+  <groupId>io.github.catalin87.prism</groupId>
+  <artifactId>prism-extensions-nlp</artifactId>
+  <version>1.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+Then enable it explicitly:
+
+```yaml
+spring:
+  prism:
+    extensions:
+      nlp:
+        enabled: true
+        backend: heuristic
+        confidence-threshold: 4
+```
+
+Supported backends:
+
+- `heuristic`
+  No external model required. Best for low-friction setups and conservative production rollout.
+- `opennlp`
+  Uses an explicit OpenNLP `TokenNameFinderModel`. Requires
+  `spring.prism.extensions.nlp.model-resource`.
+- `hybrid`
+  Combines heuristic candidates with OpenNLP candidates and contextual scoring. Also requires
+  `spring.prism.extensions.nlp.model-resource`.
+
+Example hybrid setup:
+
+```yaml
+spring:
+  prism:
+    extensions:
+      nlp:
+        enabled: true
+        backend: hybrid
+        model-resource: classpath:/models/en-ner-person.bin
+        confidence-threshold: 4
+        max-tokens: 3
+        blocked-phrases:
+          - Spring Boot
+          - Redis Cluster
+```
+
+Spring Prism fails fast on startup when `backend=opennlp` or `backend=hybrid` is configured
+without a readable model resource. That keeps distributed production nodes consistent and avoids
+silently falling back to a weaker detector than the deployment intended.
+
+For a deeper architecture and rollout guide, continue with [NLP Extensions](/docs/nlp-extensions).
 
 ## Spring AI Runtime Behavior
 

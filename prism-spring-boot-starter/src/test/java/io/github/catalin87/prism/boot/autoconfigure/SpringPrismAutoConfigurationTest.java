@@ -119,6 +119,23 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void additionalRulePacksFromClasspathAreAppendedAndFiltered() {
+    contextRunner
+        .withUserConfiguration(AdditionalRulePackConfiguration.class)
+        .withPropertyValues("spring.prism.disabled-rules=PERSON_NAME")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).hasSize(2);
+              assertThat(rulePacks)
+                  .extracting(PrismRulePack::getName)
+                  .containsExactly("UNIVERSAL", "OPTIONAL_TEST");
+              assertThat(rulePacks.get(1).getDetectors()).isEmpty();
+            });
+  }
+
+  @Test
   void propertiesBindingSupportsTtlAndStrictMode() {
     contextRunner
         .withUserConfiguration(RedisTemplateConfiguration.class)
@@ -569,6 +586,31 @@ class SpringPrismAutoConfigurationTest {
               return List.of();
             }
           });
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class AdditionalRulePackConfiguration {
+
+    @Bean
+    PrismRulePack optionalRulePack() {
+      return new PrismRulePack() {
+        @Override
+        public String getName() {
+          return "OPTIONAL_TEST";
+        }
+
+        @Override
+        public List<io.github.catalin87.prism.core.PiiDetector> getDetectors() {
+          return List.of(
+              new EmailDetector() {
+                @Override
+                public String getEntityType() {
+                  return "PERSON_NAME";
+                }
+              });
+        }
+      };
     }
   }
 

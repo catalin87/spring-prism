@@ -19,6 +19,7 @@ const sidebars = {
     'intro',
     'architecture',
     'configuration',
+    'nlp-extensions',
     'distributed-deployments',
     'dashboard',
     'grafana',

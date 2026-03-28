@@ -30,6 +30,7 @@ import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -68,8 +69,10 @@ public class SpringPrismAutoConfiguration {
   @Bean("springPrismRulePacks")
   @ConditionalOnMissingBean(name = "springPrismRulePacks")
   List<PrismRulePack> springPrismRulePacks(
-      RulePackRegistrar registrar, SpringPrismProperties properties) {
-    return registrar.resolve(properties);
+      RulePackRegistrar registrar,
+      SpringPrismProperties properties,
+      ListableBeanFactory beanFactory) {
+    return registrar.resolve(properties, findAdditionalRulePacks(beanFactory));
   }
 
   @Bean
@@ -190,6 +193,10 @@ public class SpringPrismAutoConfiguration {
         ClassUtils.resolveClassName(
             REDIS_TEMPLATE_CLASS, SpringPrismAutoConfiguration.class.getClassLoader());
     return beanFactory.getBeanProvider(redisTemplateClass).getIfAvailable();
+  }
+
+  private static List<PrismRulePack> findAdditionalRulePacks(ListableBeanFactory beanFactory) {
+    return new ArrayList<>(beanFactory.getBeansOfType(PrismRulePack.class).values());
   }
 
   @Configuration(proxyBeanMethods = false)
