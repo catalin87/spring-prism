@@ -99,8 +99,6 @@ public class SpringPrismAutoConfiguration {
       prismVault = new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
     } else if (vaultType == SpringPrismProperties.VaultType.REDIS) {
       prismVault = createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
-    } else if (redisTemplate != null) {
-      prismVault = createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
     } else {
       prismVault = new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
     }

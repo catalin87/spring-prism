@@ -318,18 +318,32 @@ class SpringPrismAutoConfigurationTest {
   void additionalRulePacksFromClasspathAreAppendedAndFiltered() {
     contextRunner
         .withUserConfiguration(AdditionalRulePackConfiguration.class)
-        .withPropertyValues("spring.prism.disabled-rules=PERSON_NAME")
+        .withPropertyValues(
+            "spring.prism.locales=UNIVERSAL,OPTIONAL_TEST",
+            "spring.prism.disabled-rules=PERSON_NAME")
         .run(
             context -> {
               List<PrismRulePack> rulePacks = getRulePacks(context);
 
-              assertThat(rulePacks).hasSize(2);
+              assertThat(rulePacks).hasSize(1);
               assertThat(rulePacks)
                   .extracting(PrismRulePack::getName)
-                  .containsExactly("UNIVERSAL", "OPTIONAL_TEST");
-              assertThat(rulePacks.get(0).getActivationAliases())
-                  .contains("UNIVERSAL", "GLOBAL", "EN", "US");
-              assertThat(rulePacks.get(1).getDetectors()).isEmpty();
+                  .containsExactly("OPTIONAL_TEST");
+              assertThat(rulePacks.get(0).getDetectors()).isEmpty();
+            });
+  }
+
+  @Test
+  void localeFilteringDoesNotAppendUnrequestedAutoDiscoverableRulePacks() {
+    contextRunner
+        .withUserConfiguration(RegionalAdditionalRulePackConfiguration.class)
+        .withPropertyValues("spring.prism.locales=US")
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks).extracting(PrismRulePack::getName).containsExactly("UNIVERSAL");
             });
   }
 
@@ -383,13 +397,13 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
-  void redisTemplateSwitchesVaultImplementation() {
+  void defaultVaultRemainsLocalEvenWhenRedisBeanExists() {
     contextRunner
         .withUserConfiguration(RedisTemplateConfiguration.class)
         .run(
             context -> {
               assertThat(context).hasSingleBean(PrismVault.class);
-              assertThat(context.getBean(PrismVault.class)).isInstanceOf(RedisPrismVault.class);
+              assertThat(context.getBean(PrismVault.class)).isInstanceOf(DefaultPrismVault.class);
             });
   }
 
@@ -863,6 +877,35 @@ class SpringPrismAutoConfigurationTest {
                   return "PERSON_NAME";
                 }
               });
+        }
+
+        @Override
+        public boolean isAutoDiscoverable() {
+          return true;
+        }
+      };
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class RegionalAdditionalRulePackConfiguration {
+
+    @Bean
+    PrismRulePack franceOnlyRulePack() {
+      return new PrismRulePack() {
+        @Override
+        public String getName() {
+          return "FR_OPTIONAL";
+        }
+
+        @Override
+        public List<io.github.catalin87.prism.core.PiiDetector> getDetectors() {
+          return List.of(new EmailDetector());
+        }
+
+        @Override
+        public java.util.Set<String> getActivationAliases() {
+          return java.util.Set.of("FR", "FRA", "FRANCE");
         }
 
         @Override

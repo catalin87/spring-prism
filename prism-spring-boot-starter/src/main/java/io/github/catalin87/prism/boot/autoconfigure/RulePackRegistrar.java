@@ -86,7 +86,7 @@ final class RulePackRegistrar {
 
     autoDiscoverableRulePacks.stream()
         .filter(rulePack -> !sameRulePack(rulePack, primaryRulePack))
-        .filter(this::shouldAppendAutoDiscoverable)
+        .filter(rulePack -> shouldAppendAutoDiscoverable(rulePack, locales))
         .map(rulePack -> filtered(rulePack, properties.getDisabledRules()))
         .forEach(packs::add);
 
@@ -131,8 +131,9 @@ final class RulePackRegistrar {
         .findFirst();
   }
 
-  private boolean shouldAppendAutoDiscoverable(PrismRulePack candidate) {
-    return !isBaselineFamilyPack(candidate);
+  private boolean shouldAppendAutoDiscoverable(
+      PrismRulePack candidate, Set<String> requestedLocales) {
+    return !isBaselineFamilyPack(candidate) && matchesAnyAlias(candidate, requestedLocales);
   }
 
   private boolean isBaselineFamilyPack(PrismRulePack rulePack) {

@@ -23,6 +23,9 @@ import io.github.catalin87.prism.core.TokenGenerator;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -83,6 +86,7 @@ final class RedisPrismVault implements PrismVault, PrismVaultAvailability {
 
   @Override
   public void verifyAvailability(Duration timeout) {
+    long timeoutMillis = Math.max(1L, timeout.toMillis());
     try {
       String result =
           redisTemplate.execute(
@@ -93,7 +97,7 @@ final class RedisPrismVault implements PrismVault, PrismVaultAvailability {
                     if (asyncResult != null) {
                       return asyncResult;
                     }
-                    Object pingResult = connection.ping();
+                    Object pingResult = pingSynchronouslyWithTimeout(connection, timeoutMillis);
                     return pingResult == null ? null : pingResult.toString();
                   });
       if (result == null || !"PONG".equalsIgnoreCase(result)) {
@@ -135,6 +139,35 @@ final class RedisPrismVault implements PrismVault, PrismVaultAvailability {
       Thread.currentThread().interrupt();
       throw new IllegalStateException("Redis availability check interrupted", exception);
     } catch (Exception exception) {
+      throw new IllegalStateException("Redis availability check failed", exception);
+    }
+  }
+
+  private static @Nullable Object pingSynchronouslyWithTimeout(
+      Object connection, long timeoutMillis) {
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    try {
+      Future<Object> future = executor.submit(() -> invokeSynchronousPing(connection));
+      return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException exception) {
+      throw new IllegalStateException("Redis availability check timed out", exception);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("Redis availability check interrupted", exception);
+    } catch (ExecutionException exception) {
+      Throwable cause = exception.getCause();
+      throw new IllegalStateException(
+          "Redis availability check failed", cause != null ? cause : exception);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private static @Nullable Object invokeSynchronousPing(Object connection) {
+    try {
+      Method pingMethod = connection.getClass().getMethod("ping");
+      return pingMethod.invoke(connection);
+    } catch (ReflectiveOperationException exception) {
       throw new IllegalStateException("Redis availability check failed", exception);
     }
   }
