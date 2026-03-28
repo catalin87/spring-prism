@@ -61,3 +61,16 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
   `Spring Boot`.
 - Added Docusaurus documentation for configuration, architecture, and test expectations of the NLP
   extension path.
+
+### Developer Experience and Guides
+
+- Reorganized the Docusaurus information architecture into clearer groups for onboarding,
+  operations, feature guides, and release quality.
+- Added a dedicated quickstart guide for the fastest production-shaped starter adoption path.
+- Added a production playbook that maps single-node, Redis, heuristic NLP, and hybrid NLP rollout
+  choices.
+- Updated release-readiness guidance to reflect the `v1.1.0-SNAPSHOT` train instead of the older
+  `1.0.0` release checklist.
+- Refined README and configuration docs so example paths, rollout choices, and required validation
+  steps are easier to find.
+- Added a downloadable starter Grafana dashboard JSON for the Prism runtime snapshot path.

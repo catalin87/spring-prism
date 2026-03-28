@@ -16,15 +16,27 @@
  */
 const sidebars = {
   docsSidebar: [
-    'intro',
-    'architecture',
-    'configuration',
-    'nlp-extensions',
-    'distributed-deployments',
-    'dashboard',
-    'grafana',
-    'demo-app',
-    'detectors',
+    {
+      type: 'category',
+      label: 'Start Here',
+      items: ['intro', 'quickstart', 'configuration', 'production-playbook', 'architecture'],
+    },
+    {
+      type: 'category',
+      label: 'Operate',
+      items: [
+        'distributed-deployments',
+        'dashboard',
+        'grafana',
+        'performance',
+        'troubleshooting',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Features & Examples',
+      items: ['nlp-extensions', 'demo-app', 'detectors'],
+    },
     {
       type: 'category',
       label: 'MCP Integration',
@@ -37,11 +49,11 @@ const sidebars = {
         'mcp-docker-hosted',
       ],
     },
-    'compatibility',
-    'performance',
-    'troubleshooting',
-    'migration-guide',
-    'release-readiness',
+    {
+      type: 'category',
+      label: 'Release & Quality',
+      items: ['compatibility', 'integration-test-tracker', 'release-readiness', 'migration-guide'],
+    },
   ],
 };
 

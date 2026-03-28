@@ -2,6 +2,9 @@
 
 Spring Prism is configured using standard Spring Boot property files such as `application.yml`.
 
+If you want the shortest route first, start with [Quickstart](/docs/quickstart). If you are mapping
+deployment choices for production, continue with [Production Playbook](/docs/production-playbook).
+
 ## Configuration Properties
 
 | Property | Default | Description |
@@ -52,6 +55,13 @@ The starter auto-configures:
 - primary LangChain4j `PrismChatModel` and `PrismStreamingChatModel` wrappers when a single delegate `ChatModel` or `StreamingChatModel` bean is present
 - the runtime metrics endpoint at `/actuator/prism` when Spring Boot Actuator is on the classpath
 - the fallback metrics endpoint at `/prism/metrics` when Actuator is absent
+
+Canonical example variants live in:
+
+- `prism-examples/spring-ai-example/src/main/resources/application.yml`
+- `prism-examples/spring-ai-example/src/main/resources/application-redis.yml`
+- `prism-examples/spring-ai-example/src/main/resources/application-nlp-heuristic.yml`
+- `prism-examples/spring-ai-example/src/main/resources/application-nlp-hybrid.yml`
 
 ## Vault Selection
 

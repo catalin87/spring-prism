@@ -6,6 +6,9 @@ sidebar_position: 12
 
 This page focuses on the real failure modes teams are likely to hit first in production.
 
+If you are still choosing the right deployment mode, read [Production Playbook](/docs/production-playbook)
+first.
+
 ## Response Returned With Prism Tokens Still Present
 
 Likely causes:
@@ -27,6 +30,7 @@ Fix:
 - ensure every node shares the same Redis deployment
 - ensure every node shares the same non-default app secret
 - increase TTL if the restore window is too short
+- confirm the node-level metrics endpoint reports `sharedVaultReady = true`
 
 ## Startup Fails in Redis Mode
 
@@ -42,6 +46,7 @@ Fix:
 
 - add Spring Data Redis and a working Redis configuration
 - or change `spring.prism.vault.type` back to `auto` or `in-memory` for local-only deployments
+- do not leave production manifests half-migrated between local and shared vault modes
 
 ## Shared Vault Ready Is False
 
@@ -59,6 +64,7 @@ Fix:
 
 - override `spring.prism.app-secret` with a shared non-default secret on every node
 - ensure the runtime vault is actually `RedisPrismVault`
+- verify the deployment spec, not just local `application.yml`, because env overrides often win
 
 ## Restore Works On One Node But Fails After Deployment
 
@@ -107,6 +113,7 @@ Fix:
 - inspect the affected integration path
 - review recent deployment changes
 - verify custom rules and locale configuration
+- verify optional NLP rollout changes if the affected entity is `PERSON_NAME`
 
 ## Recommended First Escalation Data
 
