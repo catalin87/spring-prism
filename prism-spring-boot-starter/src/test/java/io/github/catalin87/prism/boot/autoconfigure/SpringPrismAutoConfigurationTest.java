@@ -38,6 +38,8 @@ import io.github.catalin87.prism.mcp.PrismHttpMcpClient;
 import io.github.catalin87.prism.mcp.PrismMcpClient;
 import io.github.catalin87.prism.mcp.PrismMcpMetricsSink;
 import io.github.catalin87.prism.mcp.PrismStdioMcpClient;
+import io.github.catalin87.prism.rulepack.common.CommonRulePack;
+import io.github.catalin87.prism.rulepack.common.autoconfigure.PrismCommonRulePackAutoConfiguration;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
 import io.micrometer.observation.ObservationRegistry;
@@ -56,6 +58,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 class SpringPrismAutoConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
+      new ApplicationContextRunner()
+          .withConfiguration(
+              AutoConfigurations.of(
+                  PrismCommonRulePackAutoConfiguration.class, SpringPrismAutoConfiguration.class))
+          .withPropertyValues("spring.prism.app-secret=test-secret-value");
+
+  private final ApplicationContextRunner legacyOnlyContextRunner =
       new ApplicationContextRunner()
           .withConfiguration(AutoConfigurations.of(SpringPrismAutoConfiguration.class))
           .withPropertyValues("spring.prism.app-secret=test-secret-value");
@@ -77,7 +86,8 @@ class SpringPrismAutoConfigurationTest {
 
           List<PrismRulePack> rulePacks = getRulePacks(context);
           assertThat(rulePacks).hasSize(1);
-          assertThat(rulePacks.get(0)).isInstanceOf(UniversalRulePack.class);
+          assertThat(rulePacks.get(0)).isInstanceOf(CommonRulePack.class);
+          assertThat(rulePacks.get(0).getName()).isEqualTo("UNIVERSAL");
         });
   }
 
@@ -132,6 +142,22 @@ class SpringPrismAutoConfigurationTest {
 
               assertThat(rulePacks).hasSize(1);
               assertThat(rulePacks).extracting(PrismRulePack::getName).containsExactly("UNIVERSAL");
+              assertThat(rulePacks.get(0)).isInstanceOf(CommonRulePack.class);
+            });
+  }
+
+  @Test
+  void customAutoDiscoverableUniversalPackReplacesCommonBaselineWithoutDuplication() {
+    contextRunner
+        .withUserConfiguration(CustomAutoDiscoverableUniversalRulePackConfiguration.class)
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks).extracting(PrismRulePack::getName).containsExactly("CUSTOM_US");
+              assertThat(rulePacks.get(0).getActivationAliases())
+                  .contains("UNIVERSAL", "GLOBAL", "EN", "US");
             });
   }
 
@@ -148,6 +174,8 @@ class SpringPrismAutoConfigurationTest {
               assertThat(rulePacks)
                   .extracting(PrismRulePack::getName)
                   .containsExactly("UNIVERSAL", "OPTIONAL_TEST");
+              assertThat(rulePacks.get(0).getActivationAliases())
+                  .contains("UNIVERSAL", "GLOBAL", "EN", "US");
               assertThat(rulePacks.get(1).getDetectors()).isEmpty();
             });
   }
@@ -269,6 +297,23 @@ class SpringPrismAutoConfigurationTest {
   }
 
   @Test
+  void starterFallsBackToLegacyUniversalPackWhenCommonModuleIsMissing() {
+    legacyOnlyContextRunner
+        .withClassLoader(
+            new FilteredClassLoader(
+                "io.github.catalin87.prism.rulepack.common",
+                "io.github.catalin87.prism.rulepack.common.autoconfigure"))
+        .run(
+            context -> {
+              List<PrismRulePack> rulePacks = getRulePacks(context);
+
+              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks.get(0)).isInstanceOf(UniversalRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("UNIVERSAL");
+            });
+  }
+
+  @Test
   void actuatorEndpointExposesRuntimeSnapshot() {
     contextRunner.run(
         context -> {
@@ -313,6 +358,14 @@ class SpringPrismAutoConfigurationTest {
           assertThat(snapshot.tokenBacklog()).isGreaterThanOrEqualTo(0);
           assertThat(snapshot.dashboardConfiguration().defaultPollingSeconds()).isEqualTo(30);
         });
+  }
+
+  @Test
+  void legacyUniversalRulePackStillExposesUniversalAliasesForCompatibility() {
+    PrismRulePack pack = new UniversalRulePack();
+
+    assertThat(pack.getActivationAliases())
+        .containsExactlyInAnyOrder("UNIVERSAL", "GLOBAL", "EN", "US");
   }
 
   @Test
@@ -485,7 +538,7 @@ class SpringPrismAutoConfigurationTest {
             context -> {
               List<PrismRulePack> rulePacks = getRulePacks(context);
               assertThat(rulePacks).hasSize(1);
-              assertThat(rulePacks.get(0)).isInstanceOf(UniversalRulePack.class);
+              assertThat(rulePacks.get(0).getName()).isEqualTo("UNIVERSAL");
             });
   }
 
@@ -681,6 +734,35 @@ class SpringPrismAutoConfigurationTest {
         @Override
         public List<io.github.catalin87.prism.core.PiiDetector> getDetectors() {
           return List.of(new EmailDetector());
+        }
+      };
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class CustomAutoDiscoverableUniversalRulePackConfiguration {
+
+    @Bean
+    PrismRulePack customUniversalRulePackBean() {
+      return new PrismRulePack() {
+        @Override
+        public String getName() {
+          return "CUSTOM_US";
+        }
+
+        @Override
+        public List<io.github.catalin87.prism.core.PiiDetector> getDetectors() {
+          return List.of(new EmailDetector());
+        }
+
+        @Override
+        public java.util.Set<String> getActivationAliases() {
+          return java.util.Set.of("UNIVERSAL", "GLOBAL", "EN", "US");
+        }
+
+        @Override
+        public boolean isAutoDiscoverable() {
+          return true;
         }
       };
     }

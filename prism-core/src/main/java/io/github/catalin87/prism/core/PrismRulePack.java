@@ -16,6 +16,8 @@
 package io.github.catalin87.prism.core;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -37,6 +39,19 @@ public interface PrismRulePack {
    * @return the locale identifier or logical grouping name (e.g. "EN", "EU", "UNIVERSAL").
    */
   @NonNull String getName();
+
+  /**
+   * Declares the locale aliases that should activate this pack through {@code
+   * spring.prism.locales}.
+   *
+   * <p>The default keeps {@code 1.x} custom implementations compatible by exposing only the pack
+   * name itself as an activation alias.
+   *
+   * @return the normalized locale aliases that map to this pack.
+   */
+  default @NonNull Set<@NonNull String> getActivationAliases() {
+    return Set.of(getName().trim().toUpperCase(Locale.ROOT));
+  }
 
   /**
    * Signals whether this rule pack should be auto-discovered by the Spring Boot starter when it is

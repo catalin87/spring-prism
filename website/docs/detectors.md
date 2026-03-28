@@ -3,7 +3,12 @@
 Spring Prism provides a robust suite of built-in PII detectors grouped into `PrismRulePack` configurations for easy adoption.
 
 ## Universal Detectors
-The `UniversalRulePack` contains detectors applicable in nearly any context.
+For Spring Boot starter users on `1.1.x`, the default universal baseline comes from the modular
+`prism-rulepack-common` artifact via `CommonRulePack`.
+
+The legacy in-core `UniversalRulePack` remains functional for direct `prism-core` consumers and
+for starter compatibility fallbacks, but it is deprecated in `1.1.0` and scheduled for removal in
+`2.0.0`.
 
 | Entity Type | Description | Validation |
 |---|---|---|
@@ -14,7 +19,7 @@ The `UniversalRulePack` contains detectors applicable in nearly any context.
 | `IP_ADDRESS` | IPv4 and IPv6 addresses. | Octet range (0-255) and format validation. |
 
 ## European Detectors
-The `EuropeRulePack` extends the Universal set with GDPR-critical European PII.
+The `EuropeRulePack` extends the universal baseline with GDPR-critical European PII.
 
 | Entity Type | Description | Validation |
 |---|---|---|

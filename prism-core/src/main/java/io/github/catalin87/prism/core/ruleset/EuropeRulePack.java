@@ -28,6 +28,7 @@ import io.github.catalin87.prism.core.detector.universal.IpAddressDetector;
 import io.github.catalin87.prism.core.detector.universal.PhoneNumberDetector;
 import io.github.catalin87.prism.core.detector.universal.SsnDetector;
 import java.util.List;
+import java.util.Set;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -57,6 +58,11 @@ public class EuropeRulePack implements PrismRulePack {
   @Override
   public @NonNull List<@NonNull PiiDetector> getDetectors() {
     return DETECTORS;
+  }
+
+  @Override
+  public @NonNull Set<@NonNull String> getActivationAliases() {
+    return Set.of("EU", "EUROPE", "DE", "PL", "RO", "UK", "GB");
   }
 
   @Override

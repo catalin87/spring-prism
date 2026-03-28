@@ -32,7 +32,6 @@ import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -216,7 +215,7 @@ public class SpringPrismAutoConfiguration {
   }
 
   private static List<PrismRulePack> findAdditionalRulePacks(ListableBeanFactory beanFactory) {
-    return new ArrayList<>(beanFactory.getBeansOfType(PrismRulePack.class).values());
+    return beanFactory.getBeanProvider(PrismRulePack.class).orderedStream().toList();
   }
 
   @Configuration(proxyBeanMethods = false)

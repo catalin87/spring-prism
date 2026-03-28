@@ -114,8 +114,6 @@ final class RedisPrismVault implements PrismVault, PrismVaultAvailability {
       pingMethod = nativeConnection.getClass().getMethod("ping");
     } catch (NoSuchMethodException exception) {
       return null;
-    } catch (ReflectiveOperationException exception) {
-      throw new IllegalStateException("Redis availability check failed", exception);
     }
     Object pingResult;
     try {

@@ -12,6 +12,8 @@ Spring Prism `v1.1.0` is a minor release and keeps `v1.0.0` integrations working
   `spring.prism.failure-mode`.
 - Custom `PrismRulePack` beans no longer become active automatically unless they explicitly opt in
   through `isAutoDiscoverable()`.
+- The starter now prefers the modular `prism-rulepack-common` baseline for `UNIVERSAL` detection,
+  while legacy in-core `UniversalRulePack` remains available for direct `prism-core` consumers.
 
 :::tip[Deprecation]
 Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
@@ -73,3 +75,5 @@ new PrismChatClientAdvisor(List.of(rulePack), prismVault, ObservationRegistry.NO
 6. If your application defines custom `PrismRulePack` beans and you want them auto-activated by the
    starter, override `isAutoDiscoverable()` to return `true`.
 7. For LangChain4j applications, expose one delegate chat bean and let the starter wrap it.
+8. If you instantiate `UniversalRulePack` directly from `prism-core`, you can keep doing so in
+   `1.x`; the modular starter path is additive and does not remove the legacy class until `2.0.0`.

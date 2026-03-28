@@ -18,6 +18,11 @@
         </dependency>
         <dependency>
             <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
             <artifactId>prism-spring-ai</artifactId>
             <version>${project.version}</version>
         </dependency>
