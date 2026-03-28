@@ -25,7 +25,9 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 /** Integration tests for the unified demo app. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = "spring.prism.vault.type=IN_MEMORY")
 class DemoApplicationTest {
 
   @LocalServerPort private int port;
@@ -33,44 +35,52 @@ class DemoApplicationTest {
   @Autowired private TestRestTemplate restTemplate;
 
   @Test
-  void demoAppExposesOptionsAndFrontend() {
-    DemoOptionsResponse options =
-        restTemplate.postForObject(
-            "http://localhost:" + port + "/demo-lab/api/options", null, DemoOptionsResponse.class);
-
-    assertThat(options).isNotNull();
-    assertThat(options.integrations()).containsExactly("spring-ai", "langchain4j", "mcp");
-    assertThat(options.rulePacks()).contains("EUROPE");
-
-    String page =
+  void labExposesBootstrapAndMetrics() {
+    LabBootstrapResponse bootstrap =
         restTemplate.getForObject(
-            "http://localhost:" + port + "/demo-lab/index.html", String.class);
-    assertThat(page).contains("Prism Demo Lab");
+            "http://localhost:" + port + "/lab/api/bootstrap", LabBootstrapResponse.class);
+
+    assertThat(bootstrap).isNotNull();
+    assertThat(bootstrap.integrations()).containsExactly("spring-ai", "langchain4j", "mcp");
+    assertThat(bootstrap.availableRulePacks())
+        .extracting(LabRulePackOption::id)
+        .contains("RO", "US", "DE");
+
+    LabMetricsResponse metrics =
+        restTemplate.getForObject(
+            "http://localhost:" + port + "/lab/api/metrics", LabMetricsResponse.class);
+    assertThat(metrics).isNotNull();
+    assertThat(metrics.nodes()).isNotEmpty();
   }
 
   @Test
-  void demoAppShowsSanitizeAndRestoreAcrossAllIntegrations() {
-    assertDemo("spring-ai");
-    assertDemo("langchain4j");
-    assertDemo("mcp");
+  void labShowsSanitizeAndRestoreAcrossAllIntegrations() {
+    assertLabRun("spring-ai");
+    assertLabRun("langchain4j");
+    assertLabRun("mcp");
   }
 
-  private void assertDemo(String integration) {
-    DemoRunRequest request =
-        new DemoRunRequest(
+  private void assertLabRun(String integration) {
+    LabRunRequest request =
+        new LabRunRequest(
             integration,
-            "Please contact user@example.com and validate RO49AAAA1B31007593840000.",
-            List.of("UNIVERSAL", "EUROPE"));
+            "Please contact Jane Smith at user@example.com and validate RO49AAAA1B31007593840000.",
+            List.of("UNIVERSAL", "RO", "US"),
+            "FAIL_SAFE",
+            "HEURISTIC",
+            "LOCAL");
 
-    DemoRunResponse response =
+    LabRunResponse response =
         restTemplate.postForObject(
-            "http://localhost:" + port + "/demo-lab/api/run", request, DemoRunResponse.class);
+            "http://localhost:" + port + "/lab/api/run", request, LabRunResponse.class);
 
     assertThat(response).isNotNull();
+    assertThat(response.blocked()).isFalse();
     assertThat(response.restoredResponse())
         .contains("user@example.com")
         .contains("RO49AAAA1B31007593840000");
     assertThat(response.sanitizedOutbound()).contains("<PRISM_").doesNotContain("user@example.com");
     assertThat(response.mockModelResponse()).contains("<PRISM_");
+    assertThat(response.traceEvents()).isNotEmpty();
   }
 }

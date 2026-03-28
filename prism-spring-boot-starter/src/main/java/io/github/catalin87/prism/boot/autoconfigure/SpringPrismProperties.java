@@ -15,12 +15,14 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
+import io.github.catalin87.prism.core.PrismFailureMode;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 
 /** Externalized configuration for the Spring Prism starter. */
 @ConfigurationProperties(prefix = "spring.prism")
@@ -35,12 +37,16 @@ public class SpringPrismProperties {
 
   private boolean enabled = true;
   private boolean securityStrictMode;
+  private PrismFailureMode failureMode = PrismFailureMode.FAIL_SAFE;
+  private boolean failureModeConfigured;
   private Duration ttl = DEFAULT_TTL;
   private String appSecret = DEFAULT_SECRET;
   private List<String> locales = new ArrayList<>(DEFAULT_LOCALES);
   private List<CustomRule> customRules = new ArrayList<>();
   private Set<String> disabledRules = new LinkedHashSet<>();
+  private Vault vault = new Vault();
   private Dashboard dashboard = new Dashboard();
+  private Web web = new Web();
   private Mcp mcp = new Mcp();
 
   public boolean isEnabled() {
@@ -51,12 +57,44 @@ public class SpringPrismProperties {
     this.enabled = enabled;
   }
 
+  /**
+   * Legacy strict-mode accessor kept for {@code 1.0.0} compatibility.
+   *
+   * @deprecated since {@code 1.1.0}. Use {@link #getFailureMode()} and set {@code
+   *     spring.prism.failure-mode=FAIL_CLOSED} instead. Will be removed in {@code 2.0.0}.
+   */
+  @Deprecated(since = "1.1.0", forRemoval = true)
+  @DeprecatedConfigurationProperty(replacement = "spring.prism.failure-mode")
   public boolean isSecurityStrictMode() {
     return securityStrictMode;
   }
 
+  /**
+   * Legacy strict-mode mutator kept for {@code 1.0.0} compatibility.
+   *
+   * @deprecated since {@code 1.1.0}. Use {@link #setFailureMode(PrismFailureMode)} instead. Will be
+   *     removed in {@code 2.0.0}.
+   */
+  @Deprecated(since = "1.1.0", forRemoval = true)
   public void setSecurityStrictMode(boolean securityStrictMode) {
     this.securityStrictMode = securityStrictMode;
+  }
+
+  public PrismFailureMode getFailureMode() {
+    return failureMode;
+  }
+
+  public void setFailureMode(PrismFailureMode failureMode) {
+    this.failureModeConfigured = failureMode != null;
+    this.failureMode = failureMode == null ? PrismFailureMode.FAIL_SAFE : failureMode;
+  }
+
+  /** Resolves the effective failure mode, honoring the legacy strict-mode compatibility flag. */
+  public PrismFailureMode resolveFailureMode() {
+    if (failureModeConfigured) {
+      return failureMode;
+    }
+    return securityStrictMode ? PrismFailureMode.FAIL_CLOSED : PrismFailureMode.FAIL_SAFE;
   }
 
   public Duration getTtl() {
@@ -115,6 +153,14 @@ public class SpringPrismProperties {
         disabledRules == null ? new LinkedHashSet<>() : new LinkedHashSet<>(disabledRules);
   }
 
+  public Vault getVault() {
+    return vault;
+  }
+
+  public void setVault(Vault vault) {
+    this.vault = vault == null ? new Vault() : vault;
+  }
+
   public Dashboard getDashboard() {
     return dashboard;
   }
@@ -123,12 +169,40 @@ public class SpringPrismProperties {
     this.dashboard = dashboard == null ? new Dashboard() : dashboard;
   }
 
+  public Web getWeb() {
+    return web;
+  }
+
+  public void setWeb(Web web) {
+    this.web = web == null ? new Web() : web;
+  }
+
   public Mcp getMcp() {
     return mcp;
   }
 
   public void setMcp(Mcp mcp) {
     this.mcp = mcp == null ? new Mcp() : mcp;
+  }
+
+  /** Externalized vault selection settings. */
+  public static class Vault {
+    private VaultType type = VaultType.AUTO;
+
+    public VaultType getType() {
+      return type;
+    }
+
+    public void setType(VaultType type) {
+      this.type = type == null ? VaultType.AUTO : type;
+    }
+  }
+
+  /** Supported vault deployment strategies. */
+  public enum VaultType {
+    AUTO,
+    IN_MEMORY,
+    REDIS
   }
 
   /** Externalized dashboard-specific configuration. */
@@ -172,6 +246,19 @@ public class SpringPrismProperties {
     }
   }
 
+  /** Externalized web-specific configuration. */
+  public static class Web {
+    private boolean protectionExceptionHandlerEnabled;
+
+    public boolean isProtectionExceptionHandlerEnabled() {
+      return protectionExceptionHandlerEnabled;
+    }
+
+    public void setProtectionExceptionHandlerEnabled(boolean protectionExceptionHandlerEnabled) {
+      this.protectionExceptionHandlerEnabled = protectionExceptionHandlerEnabled;
+    }
+  }
+
   /** Externalized MCP client configuration. */
   public static class Mcp {
     private boolean enabled;
@@ -188,16 +275,50 @@ public class SpringPrismProperties {
       this.enabled = enabled;
     }
 
+    /**
+     * Legacy MCP strict-mode accessor kept for compatibility.
+     *
+     * @deprecated since {@code 1.1.0}. Use the top-level {@code spring.prism.failure-mode} setting
+     *     instead. Will be removed in {@code 2.0.0}.
+     */
+    @Deprecated(since = "1.1.0", forRemoval = true)
+    @DeprecatedConfigurationProperty(replacement = "spring.prism.failure-mode")
     public Boolean getSecurityStrictMode() {
       return securityStrictMode;
     }
 
+    /**
+     * Legacy MCP strict-mode mutator kept for compatibility.
+     *
+     * @deprecated since {@code 1.1.0}. Use the top-level {@code spring.prism.failure-mode} setting
+     *     instead. Will be removed in {@code 2.0.0}.
+     */
+    @Deprecated(since = "1.1.0", forRemoval = true)
     public void setSecurityStrictMode(Boolean securityStrictMode) {
       this.securityStrictMode = securityStrictMode;
     }
 
+    /**
+     * Legacy MCP strict-mode resolver kept for compatibility.
+     *
+     * @deprecated since {@code 1.1.0}. Use {@link #resolveFailureMode(PrismFailureMode)} instead.
+     *     Will be removed in {@code 2.0.0}.
+     */
+    @Deprecated(since = "1.1.0", forRemoval = true)
     public boolean resolveSecurityStrictMode(boolean fallback) {
       return securityStrictMode != null ? securityStrictMode.booleanValue() : fallback;
+    }
+
+    /**
+     * Resolves the effective MCP failure mode while preserving legacy strict-mode compatibility.
+     */
+    public PrismFailureMode resolveFailureMode(PrismFailureMode fallback) {
+      if (securityStrictMode == null) {
+        return fallback;
+      }
+      return securityStrictMode.booleanValue()
+          ? PrismFailureMode.FAIL_CLOSED
+          : PrismFailureMode.FAIL_SAFE;
     }
 
     public String getTransport() {

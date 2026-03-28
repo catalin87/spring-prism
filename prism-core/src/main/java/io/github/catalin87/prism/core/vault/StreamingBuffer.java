@@ -42,30 +42,28 @@ public class StreamingBuffer {
       return "";
     }
 
-    fragmentationBuffer.append(chunk);
-    String currentContext = Objects.requireNonNull(fragmentationBuffer.toString());
+    if (!chunk.isEmpty()) {
+      fragmentationBuffer.append(chunk);
+    }
 
     // The boundary metric for our cryptographic tokens is strictly defined utilizing '<' and '>'.
-    int lastOpenBracket = currentContext.lastIndexOf('<');
-    int lastCloseBracket = currentContext.lastIndexOf('>');
+    int lastOpenBracket = lastIndexOf(fragmentationBuffer, '<');
+    int lastCloseBracket = lastIndexOf(fragmentationBuffer, '>');
 
     // Standard topological line: No dangling incomplete bounds sequentially detected
     if (lastOpenBracket == -1 || (lastCloseBracket != -1 && lastCloseBracket > lastOpenBracket)) {
+      String completeChunk = Objects.requireNonNull(fragmentationBuffer.toString());
       fragmentationBuffer.setLength(0);
-      return currentContext;
+      return completeChunk;
     }
 
     // Structural constraint: A `<` was isolated natively without a subsequent resolving `>`.
     // We logically mathematically split the output: safely flush everything before the `<`
     // instantly,
     // and securely lock the dangling sequence natively inside the internal buffer bounds.
-
-    String safelyFlushable = Objects.requireNonNull(currentContext.substring(0, lastOpenBracket));
-    String danglingTail = Objects.requireNonNull(currentContext.substring(lastOpenBracket));
-
-    fragmentationBuffer.setLength(0);
-    fragmentationBuffer.append(danglingTail);
-
+    String safelyFlushable =
+        Objects.requireNonNull(fragmentationBuffer.substring(0, lastOpenBracket));
+    fragmentationBuffer.delete(0, lastOpenBracket);
     return safelyFlushable;
   }
 
@@ -80,5 +78,14 @@ public class StreamingBuffer {
     String remainder = Objects.requireNonNull(fragmentationBuffer.toString());
     fragmentationBuffer.setLength(0);
     return remainder;
+  }
+
+  private static int lastIndexOf(StringBuilder source, char needle) {
+    for (int index = source.length() - 1; index >= 0; index--) {
+      if (source.charAt(index) == needle) {
+        return index;
+      }
+    }
+    return -1;
   }
 }

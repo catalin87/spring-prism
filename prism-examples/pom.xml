@@ -4,15 +4,18 @@
     <parent>
         <groupId>io.github.catalin87.prism</groupId>
         <artifactId>prism-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </parent>
     <artifactId>prism-examples</artifactId>
     <name>Spring Prism Examples</name>
     <description>A collection of reference implementations demonstrating Spring Prism across various AI ecosystems.</description>
     <packaging>pom</packaging>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <modules>
-        <module>demo-app</module>
         <module>spring-ai-example</module>
         <module>langchain4j-example</module>
         <module>mcp-example</module>

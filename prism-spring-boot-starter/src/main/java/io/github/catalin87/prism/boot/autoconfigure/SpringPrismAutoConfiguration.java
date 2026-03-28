@@ -15,8 +15,10 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
+import io.github.catalin87.prism.core.PrismFailureMode;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
@@ -31,9 +33,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
@@ -43,6 +45,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.util.ClassUtils;
 
 /** Auto-configuration entry point for Spring Prism. */
 @AutoConfiguration
@@ -55,6 +58,9 @@ import org.springframework.context.annotation.Primary;
 @EnableConfigurationProperties(SpringPrismProperties.class)
 public class SpringPrismAutoConfiguration {
 
+  private static final String REDIS_TEMPLATE_CLASS =
+      "org.springframework.data.redis.core.StringRedisTemplate";
+
   @Bean
   @ConditionalOnMissingBean
   RulePackRegistrar rulePackRegistrar() {
@@ -64,8 +70,10 @@ public class SpringPrismAutoConfiguration {
   @Bean("springPrismRulePacks")
   @ConditionalOnMissingBean(name = "springPrismRulePacks")
   List<PrismRulePack> springPrismRulePacks(
-      RulePackRegistrar registrar, SpringPrismProperties properties) {
-    return registrar.resolve(properties);
+      RulePackRegistrar registrar,
+      SpringPrismProperties properties,
+      ListableBeanFactory beanFactory) {
+    return registrar.resolve(properties, findAdditionalRulePacks(beanFactory));
   }
 
   @Bean
@@ -76,10 +84,31 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  PrismVault prismVault(TokenGenerator prismTokenGenerator, SpringPrismProperties properties) {
+  PrismVault prismVault(
+      TokenGenerator prismTokenGenerator,
+      SpringPrismProperties properties,
+      ListableBeanFactory beanFactory) {
     long ttlSeconds = Math.max(1L, properties.getTtl().toSeconds());
     byte[] secret = secretKey(properties);
-    return new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
+    Duration ttl = properties.getTtl();
+    Object redisTemplate = findRedisTemplate(beanFactory);
+    SpringPrismProperties.VaultType vaultType = properties.getVault().getType();
+
+    PrismVault prismVault;
+    if (vaultType == SpringPrismProperties.VaultType.IN_MEMORY) {
+      prismVault = new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
+    } else if (vaultType == SpringPrismProperties.VaultType.REDIS) {
+      prismVault = createRedisVault(prismTokenGenerator, ttl, secret, redisTemplate);
+    } else {
+      prismVault = new DefaultPrismVault(prismTokenGenerator, secret, ttlSeconds);
+    }
+
+    if (properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED
+        && prismVault instanceof PrismVaultAvailability availability) {
+      availability.verifyAvailability(Duration.ofSeconds(2));
+    }
+
+    return prismVault;
   }
 
   @Bean
@@ -120,7 +149,7 @@ public class SpringPrismAutoConfiguration {
         prismVault,
         observationRegistry,
         prismMetricsSink,
-        properties.isSecurityStrictMode());
+        properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
   }
 
   @Bean
@@ -147,8 +176,44 @@ public class SpringPrismAutoConfiguration {
         prismRuntimeMetrics, springPrismRulePacks, prismVault, properties);
   }
 
+  @Bean
+  @ConditionalOnMissingBean(PrismProtectionExceptionHandler.class)
+  @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestControllerAdvice")
+  @ConditionalOnProperty(
+      prefix = "spring.prism.web",
+      name = "protection-exception-handler-enabled",
+      havingValue = "true")
+  PrismProtectionExceptionHandler prismProtectionExceptionHandler() {
+    return new PrismProtectionExceptionHandler();
+  }
+
   private static byte[] secretKey(SpringPrismProperties properties) {
     return properties.getAppSecret().getBytes(StandardCharsets.UTF_8);
+  }
+
+  private static PrismVault createRedisVault(
+      TokenGenerator prismTokenGenerator, Duration ttl, byte[] secret, Object redisTemplate) {
+    if (!(redisTemplate instanceof org.springframework.data.redis.core.StringRedisTemplate typed)) {
+      throw new IllegalStateException(
+          "spring.prism.vault.type=redis requires a StringRedisTemplate bean for shared vault"
+              + " configuration.");
+    }
+    return new RedisPrismVault(typed, prismTokenGenerator, secret, ttl);
+  }
+
+  private static Object findRedisTemplate(ListableBeanFactory beanFactory) {
+    if (!ClassUtils.isPresent(
+        REDIS_TEMPLATE_CLASS, SpringPrismAutoConfiguration.class.getClassLoader())) {
+      return null;
+    }
+    Class<?> redisTemplateClass =
+        ClassUtils.resolveClassName(
+            REDIS_TEMPLATE_CLASS, SpringPrismAutoConfiguration.class.getClassLoader());
+    return beanFactory.getBeanProvider(redisTemplateClass).getIfAvailable();
+  }
+
+  private static List<PrismRulePack> findAdditionalRulePacks(ListableBeanFactory beanFactory) {
+    return beanFactory.getBeanProvider(PrismRulePack.class).orderedStream().toList();
   }
 
   @Configuration(proxyBeanMethods = false)
@@ -172,7 +237,7 @@ public class SpringPrismAutoConfiguration {
           prismVault,
           observationRegistry,
           prismRuntimeMetrics,
-          properties.isSecurityStrictMode());
+          properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
     }
 
     @Bean
@@ -192,7 +257,7 @@ public class SpringPrismAutoConfiguration {
           prismVault,
           observationRegistry,
           prismRuntimeMetrics,
-          properties.isSecurityStrictMode());
+          properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
     }
   }
 
@@ -218,7 +283,9 @@ public class SpringPrismAutoConfiguration {
               .withVault(prismVault)
               .withObservationRegistry(observationRegistry)
               .withMetricsSink(prismMcpMetricsSink)
-              .withStrictMode(mcp.resolveSecurityStrictMode(properties.isSecurityStrictMode()));
+              .withStrictMode(
+                  mcp.resolveFailureMode(properties.resolveFailureMode())
+                      == PrismFailureMode.FAIL_CLOSED);
       return switch (transport) {
         case STDIO ->
             builder
@@ -236,23 +303,6 @@ public class SpringPrismAutoConfiguration {
         return Path.of(".");
       }
       return Path.of(workingDirectory);
-    }
-  }
-
-  @Configuration(proxyBeanMethods = false)
-  @ConditionalOnClass(name = "org.springframework.data.redis.core.StringRedisTemplate")
-  static class RedisConfiguration {
-
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnBean(type = "org.springframework.data.redis.core.StringRedisTemplate")
-    PrismVault redisPrismVault(
-        TokenGenerator prismTokenGenerator,
-        SpringPrismProperties properties,
-        org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate) {
-      Duration ttl = properties.getTtl();
-      byte[] secret = secretKey(properties);
-      return new RedisPrismVault(stringRedisTemplate, prismTokenGenerator, secret, ttl);
     }
   }
 }

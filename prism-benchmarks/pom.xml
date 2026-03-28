@@ -4,16 +4,65 @@
     <parent>
         <groupId>io.github.catalin87.prism</groupId>
         <artifactId>prism-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </parent>
     <artifactId>prism-benchmarks</artifactId>
     <name>Prism Benchmarks</name>
     <description>JMH microbenchmarks for detector, vault, streaming, and Redis-backed paths.</description>
 
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.github.catalin87.prism</groupId>
             <artifactId>prism-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-ro</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-us</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-pl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-nl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-gb</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-fr</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-de</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-extensions-nlp</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

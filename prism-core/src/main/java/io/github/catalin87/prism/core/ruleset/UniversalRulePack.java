@@ -23,12 +23,18 @@ import io.github.catalin87.prism.core.detector.universal.IpAddressDetector;
 import io.github.catalin87.prism.core.detector.universal.PhoneNumberDetector;
 import io.github.catalin87.prism.core.detector.universal.SsnDetector;
 import java.util.List;
+import java.util.Set;
 import org.jspecify.annotations.NonNull;
 
 /**
  * Universal Rule Pack covering global high-impact PII: Email, Credit Cards, SSNs, and IP Addresses.
  * Suitable as a baseline for any locale.
+ *
+ * @deprecated since {@code 1.1.0}. Prefer the modular {@code prism-rulepack-common} artifact and
+ *     its {@code CommonRulePack}. This legacy in-core pack remains functional for {@code 1.x}
+ *     compatibility and will be removed in {@code 2.0.0}.
  */
+@Deprecated(since = "1.1.0", forRemoval = true)
 public class UniversalRulePack implements PrismRulePack {
 
   private static final List<@NonNull PiiDetector> DETECTORS =
@@ -47,5 +53,15 @@ public class UniversalRulePack implements PrismRulePack {
   @Override
   public @NonNull List<@NonNull PiiDetector> getDetectors() {
     return DETECTORS;
+  }
+
+  @Override
+  public @NonNull Set<@NonNull String> getActivationAliases() {
+    return Set.of("UNIVERSAL", "GLOBAL", "EN", "US");
+  }
+
+  @Override
+  public boolean isAutoDiscoverable() {
+    return true;
   }
 }

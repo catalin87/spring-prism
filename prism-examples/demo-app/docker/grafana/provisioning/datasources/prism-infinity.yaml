@@ -1,0 +1,9 @@
+apiVersion: 1
+
+datasources:
+  - name: Prism Infinity
+    uid: prism-infinity
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    isDefault: true
+    editable: true

@@ -1,202 +1,268 @@
 ![Spring Prism Social Banner](social_banner.jpg)
 
-# 🌈 Spring Prism
+# Spring Prism
 
-> **The Reversible Privacy Firewall for Generative AI in the Java Ecosystem.**
-> [📖 Read the Documentation](https://catalin87.github.io/spring-prism/)
+> The reversible privacy firewall for Spring AI, LangChain4j, and MCP client flows.
+> [Read the Documentation](https://catalin87.github.io/spring-prism/)
 
-Spring Prism is a rigorous, zero-dependency data privacy framework designed for integration with
-**Spring AI**, **LangChain4j**, and **MCP client flows**. It seamlessly sits between your robust
-backend infrastructure and untrusted Large Language Model providers or tool endpoints, ensuring
-sensitive data mathematically *cannot* escape your enterprise boundaries.
+Spring Prism sits between your application and an untrusted LLM or tool endpoint. It detects
+supported PII, replaces it with signed Prism tokens before the payload leaves your boundary, and
+restores original values when the response comes back.
 
----
+## Why teams adopt it
 
-## 🏛️ The "Why": EU AI Act & GDPR Sovereignty
-In the era of Generative AI, passing raw user prompts to external APIs frequently violates **Data Sovereignty**, the **GDPR**, and the upcoming **EU AI Act**. 
+- **`prism-core` is zero-dependency** and strictly decoupled from Spring.
+- **Enterprise-grade Redis vaults** support cluster-safe token restoration.
+- **Circuit Breaker support** (`FAIL_CLOSED`) for production environments requiring high security.
+- **Modular Regional Rule Packs** (Big 7: RO, US, PL, NL, DE, GB, FR) with checksum-backed validation.
+- **Optional NLP extensions** (Heuristic/Hybrid) for person-name detection outside the deterministic core.
+- **Optimized for RAG** through segment-aware scanning and hot-path tokenization.
 
-Spring Prism actualizes **"Privacy by Design"** by establishing a zero-trust perimeter around your generative workflows. Before an LLM request crosses the network edge, Prism **refracts** sensitive Personally Identifiable Information (PII) into reversible, cryptographically signed tokens (e.g., `<PRISM_EMAIL_uM9bA>`). When the LLM responds utilizing that token, Prism **restores** the original data dynamically—tricking the AI into safely reasoning about entities it technically cannot see.
 
-## 🔄 The Refraction Flow
+## 5-Minute Start
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant Prism as Spring Prism Advisor
-    participant Vault as Local HMAC Vault
-    participant LLM as External AI Provider
+Add the starter:
 
-    User->>Prism: Prompt: "Email details to user@corp.local"
-    Prism->>Vault: Lock & Sign: "user@corp.local"
-    Vault-->>Prism: Key: <PRISM_EMAIL_T8Z>
-    
-    rect rgb(255, 240, 240)
-    Prism->>LLM: Refracted Prompt: "Email details to <PRISM_EMAIL_T8Z>"
-    note over LLM: Never sees real PII!
-    LLM-->>Prism: Response: "Sent an alert to <PRISM_EMAIL_T8Z>."
-    end
-    
-    Prism->>Vault: Request Decrypt: <PRISM_EMAIL_T8Z>
-    Vault-->>Prism: Raw: "user@corp.local"
-    Prism-->>User: Restored Response: "Sent an alert to user@corp.local."
+```xml
+<dependency>
+  <groupId>io.github.catalin87.prism</groupId>
+  <artifactId>prism-spring-boot-starter</artifactId>
+  <version>1.1.0</version>
+</dependency>
 ```
 
-## ⚡ Core Properties
-
-* **🌱 Java 21 Baseline:** Built and validated on Java 21 with Spring Boot 3.4.x.
-* **🛡️ Zero Spring or AI Dependencies in Core:** `prism-core` stays decoupled from Spring, Spring AI, and LangChain4j so the detection and vault engine remains portable.
-* **🇪🇺 EU-First Detectors:** Ships with universal detectors plus European standards such as **IBAN** (Pan-EU), **PESEL** (PL), **CNP** (RO), and **EU VAT**.
-* **🌊 Streaming Resilient:** `StreamingBuffer` restores tokens correctly even when model responses split them across multiple chunks.
-* **📏 Measured Performance:** The repo now includes a `prism-benchmarks` JMH module plus runtime timing metrics for scan, tokenize, and detokenize paths.
-
----
-
-## 🚀 Quick Start Snippet
-
-Use the starter-first path in your Spring Boot app:
-
-```java
-@Configuration
-public class AiConfiguration {
-
-    @Bean
-    ChatClient protectedChatClient(ChatClient.Builder builder) {
-        return builder.build();
-    }
-}
-```
+Use the default local path:
 
 ```yaml
 spring:
   prism:
     enabled: true
-    app-secret: change-me
+    app-secret: ${PRISM_APP_SECRET}
+    failure-mode: FAIL_SAFE # Options: FAIL_SAFE, FAIL_CLOSED
+    vault:
+      type: auto
     locales: UNIVERSAL
+
 ```
 
-For manual wiring, advanced rule-pack selection, and both integration paths, start with the
-example apps under `prism-examples/` and the docs in `website/docs/`.
+If you already build a `ChatClient` through the standard Spring AI builder, the starter wires the
+Prism advisor automatically:
 
-## ✅ Compatibility
+```java
+@Configuration
+public class AiConfiguration {
 
-| Surface | Version |
-| --- | --- |
-| Java | `21` |
-| Spring Boot | `3.4.x` |
-| Spring AI | `1.0.0-M5` |
-| LangChain4j | `1.0.1` |
+  @Bean
+  ChatClient protectedChatClient(ChatClient.Builder builder) {
+    return builder.build();
+  }
+}
+```
 
-## 🧪 Runnable Examples
+## Choose your deployment path
 
-Spring Prism now ships with three minimal sample apps under `prism-examples/`:
+### Single node
 
-- `spring-ai-example`: starter + Spring AI `ChatClient`
-- `langchain4j-example`: starter + LangChain4j `ChatModel`
-- `mcp-example`: starter + MCP stdio client protection with a fake local server
+Use this when the same application instance handles both tokenization and restoration.
 
-Each example boots with Java 21, avoids real API keys, and includes an integration test proving
-that the delegate sees tokenized content while the caller receives restored PII.
+```yaml
+spring:
+  prism:
+    app-secret: ${PRISM_APP_SECRET}
+    vault:
+      type: in-memory
+```
 
-## 🔁 Upgrade Notes
+### Multi-node or Kubernetes
 
-Use the starter-first path as the default integration model and see `website/docs/migration-guide.md`
-for the current Spring AI constructor shape, LangChain4j wrapper behavior, and Redis auto-selection
-defaults.
+Use Redis when requests and restores can land on different nodes.
 
-## 📦 Release Readiness
+```yaml
+spring:
+  data:
+    redis:
+      host: redis.internal
+      port: 6379
+  prism:
+    app-secret: ${PRISM_APP_SECRET}
+    vault:
+      type: redis
+    ttl: 30m
+```
 
-The current supported library surface is:
+### Optional person-name redaction
+
+Add the NLP extension only when you want person-name coverage beyond the deterministic detector
+set.
+
+```xml
+<dependency>
+  <groupId>io.github.catalin87.prism</groupId>
+  <artifactId>prism-extensions-nlp</artifactId>
+  <version>1.1.0</version>
+</dependency>
+```
+
+Conservative rollout:
+
+```yaml
+spring:
+  prism:
+    extensions:
+      nlp:
+        enabled: true
+        backend: heuristic
+```
+
+Higher-recall rollout with an explicit model:
+
+```yaml
+spring:
+  prism:
+    extensions:
+      nlp:
+        enabled: true
+        backend: hybrid
+        model-resource: file:${PRISM_NLP_MODEL}
+```
+
+For a practical guide to where that model should live and how to mount it in containers or
+multi-node deployments, see `website/docs/nlp-model-guide.md`.
+
+## Documentation map
+
+Recommended reading order:
+
+1. `website/docs/quickstart.md`
+2. `website/docs/configuration.md`
+3. `website/docs/distributed-deployments.md`
+4. `website/docs/nlp-extensions.md`
+5. `website/docs/nlp-model-guide.md`
+6. `website/docs/release-readiness.md`
+
+Useful operational guides:
+
+- `website/docs/grafana.md`
+- `website/docs/troubleshooting.md`
+- `website/docs/performance.md`
+- `website/docs/demo-app.md`
+
+## Clone-and-play enterprise lab
+
+From the repository root, start the repo-only Enterprise Lab with:
+
+```bat
+run-demo.cmd
+```
+
+This spins up two demo nodes, Redis, the public proxy, and Grafana with the Spring Prism Overview
+dashboard preloaded. See `website/docs/demo-app.md` for the smoke-test path and troubleshooting.
+
+## Runnable examples
+
+Examples live under `prism-examples/`:
+
+- `spring-ai-example`
+- `langchain4j-example`
+- `mcp-example`
+- `demo-app` enterprise lab
+
+These applications stay in the repository as runnable contributor assets and manual QA tooling.
+They are not part of the published Maven library surface.
+
+The Spring AI example now has configuration variants for:
+
+- local default: `application.yml`
+- shared Redis: `application-redis.yml`
+- NLP heuristic: `application-nlp-heuristic.yml`
+- NLP hybrid: `application-nlp-hybrid.yml`
+
+## Published module surface
+
+Published Maven modules in the `v1.1.0` train:
 
 - `prism-core`
+- `prism-rulepack-common`
+- `prism-rulepack-ro`
+- `prism-rulepack-us`
+- `prism-rulepack-pl`
+- `prism-rulepack-nl`
+- `prism-rulepack-gb`
+- `prism-rulepack-fr`
+- `prism-rulepack-de`
 - `prism-spring-ai`
 - `prism-langchain4j`
 - `prism-mcp`
 - `prism-spring-boot-starter`
+- `prism-extensions-nlp`
 - `prism-dashboard`
-- `prism-examples`
 
-Deferred surfaces:
+Repo-only contributor modules:
+
+- `prism-integration-tests`
+- `prism-benchmarks`
+- `prism-examples`
+- `demo-app`
+
+Deferred:
 
 - MCP server-side interception
-- Optional NLP/person-name detection
+- broader enterprise follow-ups such as multi-tenant vault strategy and cluster-wide dashboard
+  aggregation
 
-See `website/docs/release-readiness.md` for the current verification baseline, release-profile
-expectations, and the shipped-vs-deferred support boundary.
+## Compatibility note for `1.x`
 
-The current `main` branch also passes:
+- `prism-rulepack-common` is now the default starter baseline for `UNIVERSAL` detection.
+- Legacy `UniversalRulePack` remains functional for direct `prism-core` consumers in `1.x` and is
+  kept as a compatibility shim while modular rulepacks are introduced.
+- Legacy `EuropeRulePack` also remains functional for direct `prism-core` consumers in `1.x`, but
+  is now deprecated and scheduled for removal in `2.0.0`.
+- Existing `spring.prism.locales` values and aliases such as `UNIVERSAL`, `EN`, `US`, `EU`, `RO`,
+  `ROU`, `PL`, `POL`, `NL`, `NLD`, `DE`, `DEU`, `GB`, `GBR`, `FR`, and `FRA` continue to work.
+- Regional rulepack modules are additive and opt-in. If a regional module is absent, locale
+  selection falls back to the legacy in-core family packs in `1.x`.
+
+## Validation baseline
+
+Full verification:
 
 ```bash
 mvn clean verify
 ```
 
-and the performance benchmark module can be packaged with:
+Docs build:
+
+```bash
+cd website && npm run build
+```
+
+Benchmark packaging:
 
 ```bash
 mvn -pl prism-benchmarks -am package -DskipTests
 ```
 
----
+Enterprise lab sandbox, outside the main examples reactor:
 
-## 🔒 Security Posture & Architecture Guarantee
+```bash
+run-demo.cmd
+```
 
-> [!IMPORTANT]
-> **Availability Over Interruption (Fail-Open Default)**
-> If a PII detector encounters a catastrophic parsing anomaly or unexpected string condition, Spring Prism emits a Micrometer warning and **Fails Open** (allowing the text through) rather than crashing the Virtual Thread processing your LLM payload.
+Unix shell alternative:
 
-- **Non-Reversible Cryptography:** Token payloads aren't mere counters or UUIDs; they are statically hardened with **HMAC-SHA256** signatures. This means the LLM (or an orchestrator) cannot trick the firewall into decrypting adjacent user variables without holding the exact contextual signature.
+```bash
+./run-demo.sh
+```
 
-## 🧩 Module Map
+## Security posture
 
-Spring Prism executes strict isolation through a robust Maven multi-module architecture:
+- Prism tokens are signed with HMAC-SHA256
+- restore succeeds only for valid vault-backed tokens
+- fail-open remains the default behavior unless strict mode is enabled
+- raw PII should be monitored through metrics, not logs
 
-| Maven Module | Architectural Role |
-| -------------- | ------- |
-| `prism-core` | The zero-dependency cryptographic Vault, generic `PiiDetector` interfaces, and string boundaries. |
-| `prism-spring-ai` | Spring AI advisor integration for synchronous and streaming chat interception. |
-| `prism-langchain4j` | LangChain4j `ChatModel` and `StreamingChatModel` decorators for tokenization and restoration. |
-| `prism-mcp` | MCP client-side protection for stdio and Streamable HTTP transports with structured payload walking. |
-| `prism-spring-boot-starter` | Boot auto-configuration, properties, metrics, custom rules, and Redis-backed vault selection. |
-| `prism-benchmarks` | JMH benchmarks for detector scanning, vault operations, streaming restoration, and Redis-vault overhead. |
-| `prism-examples` | Runnable Spring Boot examples for Spring AI, LangChain4j, and MCP client flows. |
-| `prism-dashboard` | Embedded observability dashboard with retained history, exports, alerts, and operator filters. |
+## Governance and licensing
 
----
-
-## 📜 Governance & Strategic Licensing
-
-Spring Prism is built for the long-term stability of the Java ecosystem. To ensure both community growth and enterprise-grade reliability, the project operates under a **Strategic Dual Licensing** model. See [LICENSE.md](./LICENSE.md) for details.
-
-### 1. Open Source (EUPL 1.2)
-For open-source enthusiasts, students, and non-profit projects, Spring Prism is available under the **European Union Public Licence (EUPL) v1.2**. 
-* **Copyleft:** Services provided over a network (SaaS) or derivative works must remain open-source under a compatible license.
-* **Compliance:** The EUPL is the official license of the European Commission, perfectly aligned with the **GDPR** and **EU AI Act** terminology.
-
-### 2. Commercial Enterprise License
-For banks, financial institutions, and corporate environments that cannot accept copyleft restrictions or require internal proprietary integration, we offer a **Commercial License**.
-* **Benefits:** Exemption from EUPL copyleft clauses, dedicated SLA, priority support, and access to premium/custom PII Rule Packs.
-* **Contact:** To discuss enterprise licensing or custom implementations, contact **catalin87@gmail.com**.
-
-### 🤝 Contributing & CLA
-We welcome contributions! To maintain the project's legal integrity and support our dual-licensing model, all contributors must sign our automated **Contributor License Agreement (CLA)**. 
-* When you open your first Pull Request, our bot will guide you through the 3-second "Click-to-Sign" process.
-* For details on how to get involved, see [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-### 🏛️ Project Governance
-Decisions regarding the core architecture, security standards, and the roadmap are managed under a transparent governance model led by the founder, **Catalin Dordea**. For more information on roles and decision-making, see [GOVERNANCE.md](./GOVERNANCE.md).
-
-## ⚠️ Disclaimer & Limitation of Liability
-
-**Spring Prism is provided on an "AS IS" basis, without warranties or conditions of any kind.**
-
-While Spring Prism utilizes high-precision detection rules (Regex, Heuristics, and Locales), **no automated PII detection system is 100% foolproof.** Language is inherently ambiguous, and new patterns of data exposure emerge constantly.
-
-- **Accuracy:** The Project Lead and contributors do not guarantee that all sensitive data will be detected and redacted in every scenario. 
-- **User Responsibility:** Users are solely responsible for auditing their specific PII detection requirements and ensuring that the configured `PrismRulePack` meets their compliance standards (GDPR, HIPAA, EU AI Act, etc.).
-- **Limitation of Liability:** Under no circumstances shall the author(s) or the Project be liable for any direct, indirect, incidental, or consequential damages resulting from the use of, or inability to use, this software, including but not limited to data leaks or regulatory fines.
-
-**Always perform a thorough security audit of your Generative AI workflows before moving to production.**
-
----
-
-*Notice of Non-Affiliation: Spring Prism is an independent privacy firewall and is not affiliated, sponsored, or endorsed by VMware, Broadcom, or the Spring Framework.*
+Spring Prism is dual-licensed under EUPL 1.2 and a commercial enterprise license. See
+[LICENSE.md](./LICENSE.md), [GOVERNANCE.md](./GOVERNANCE.md), and
+[CONTRIBUTING.md](./CONTRIBUTING.md) for the current project rules.

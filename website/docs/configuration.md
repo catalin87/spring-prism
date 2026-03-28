@@ -2,15 +2,20 @@
 
 Spring Prism is configured using standard Spring Boot property files such as `application.yml`.
 
+If you want the shortest route first, start with [Quickstart](/docs/quickstart). If you are mapping
+deployment choices for production, continue with [Production Playbook](/docs/production-playbook).
+
 ## Configuration Properties
 
 | Property | Default | Description |
 |---|---|---|
 | `spring.prism.enabled` | `true` | Globally enable or disable Spring Prism. |
-| `spring.prism.security-strict-mode` | `false` | If true, any failure in detection or vaulting will result in a hard failure (Fail Closed). |
+| `spring.prism.failure-mode` | `FAIL_SAFE` | Failure policy: `FAIL_SAFE` keeps the legacy fail-open behavior, while `FAIL_CLOSED` blocks the request or response when Prism cannot enforce protection. |
+| `spring.prism.security-strict-mode` | `false` | Deprecated legacy alias for `spring.prism.failure-mode=FAIL_CLOSED`. |
 | `spring.prism.app-secret` | `spring-prism-change-me` | The HMAC secret used to sign Prism tokens. Override this in every real deployment. |
 | `spring.prism.ttl` | `30m` | The time-to-live for vault entries. Invalid values fall back to the starter default. |
-| `spring.prism.locales` | `UNIVERSAL` | The active locale set. Common values include `UNIVERSAL`, `EU`, `RO`, `PL`, `DE`, `GB`, `EN`, and `US`. |
+| `spring.prism.vault.type` | `auto` | Vault strategy: `auto`, `in-memory`, or `redis`. Use `redis` for multi-node deployments. |
+| `spring.prism.locales` | `UNIVERSAL` | The active locale set. Common values include `UNIVERSAL`, `EU`, `RO`, `PL`, `NL`, `DE`, `GB`, `FR`, `EN`, and `US`. Locale aliases such as `ROU`, `POL`, `NLD`, `DEU`, `GBR`, and `FRA` are also supported. |
 | `spring.prism.disabled-rules` | empty | Entity types to suppress from the resolved rule packs, such as `EMAIL` or `SSN`. |
 | `spring.prism.custom-rules[n].name` | empty | Entity type name for a property-backed custom regex detector. |
 | `spring.prism.custom-rules[n].pattern` | empty | Regex pattern for a property-backed custom regex detector. Blank custom rules are ignored. |
@@ -20,20 +25,27 @@ Spring Prism is configured using standard Spring Boot property files such as `ap
 Add the starter dependency:
 
 ```xml
-<dependency>
+  <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
 Then configure the starter:
 
+:::tip[Deprecation]
+Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
+`spring.prism.failure-mode` instead.
+:::
+
 ```yaml
 spring:
   prism:
     app-secret: ${PRISM_APP_SECRET}
-    security-strict-mode: false
+    failure-mode: FAIL_SAFE
+    vault:
+      type: auto
     ttl: 30m
     locales: EU,EN
     disabled-rules: SSN
@@ -50,7 +62,157 @@ The starter auto-configures:
 - the runtime metrics endpoint at `/actuator/prism` when Spring Boot Actuator is on the classpath
 - the fallback metrics endpoint at `/prism/metrics` when Actuator is absent
 
-When a `StringRedisTemplate` bean is present, the starter switches to the Redis-backed vault automatically. Otherwise it keeps the default in-memory vault.
+Canonical example variants live in:
+
+- `prism-examples/spring-ai-example/src/main/resources/application.yml`
+- `prism-examples/spring-ai-example/src/main/resources/application-redis.yml`
+- `prism-examples/spring-ai-example/src/main/resources/application-nlp-heuristic.yml`
+- `prism-examples/spring-ai-example/src/main/resources/application-nlp-hybrid.yml`
+
+## Vault Selection
+
+The starter now supports an explicit vault selection contract:
+
+- `spring.prism.vault.type=auto`
+  Recommended default for local development and simple deployments. If a `StringRedisTemplate`
+  bean is present, Spring Prism uses `RedisPrismVault`; otherwise it keeps `DefaultPrismVault`.
+- `spring.prism.vault.type=in-memory`
+  Forces the local in-memory vault even when Redis is on the classpath or already configured.
+  Use this only for single-node deployments.
+- `spring.prism.vault.type=redis`
+  Forces the shared Redis-backed vault and fails startup if no `StringRedisTemplate` bean exists.
+  Use this for Kubernetes, load-balanced, and other multi-node deployments.
+
+For distributed deployments, every node must:
+
+- use the same `spring.prism.app-secret`
+- connect to the same Redis deployment or logical shared vault
+- use compatible TTL expectations for restore windows
+
+If a `StringRedisTemplate` bean is already available in your application, `auto` mode preserves the
+existing low-friction behavior while still allowing explicit enterprise configuration.
+
+## Regional Rulepacks
+
+Spring Prism `v1.1.0` adds opt-in regional rulepack modules for the Big 7 coverage line:
+
+- `prism-rulepack-ro`
+- `prism-rulepack-us`
+- `prism-rulepack-pl`
+- `prism-rulepack-nl`
+- `prism-rulepack-gb`
+- `prism-rulepack-fr`
+- `prism-rulepack-de`
+
+When a regional module is present, `spring.prism.locales` prefers that regional pack over the
+legacy in-core family packs. When it is absent, `1.x` still falls back to the compatibility
+baseline (`UniversalRulePack` or `EuropeRulePack`) instead of failing.
+
+## Failure Mode
+
+Spring Prism now exposes an explicit failure policy:
+
+- `spring.prism.failure-mode=FAIL_SAFE`
+  Preserves the `v1.0.0` behavior. Prism emits metrics and continues when protection cannot be
+  applied fully.
+- `spring.prism.failure-mode=FAIL_CLOSED`
+  Blocks the protected exchange when Prism cannot guarantee tokenization or restoration.
+
+For backward compatibility, `spring.prism.security-strict-mode=true` still maps to
+`spring.prism.failure-mode=FAIL_CLOSED`, but the legacy property is deprecated and scheduled for
+removal in `v2.0.0`.
+
+## Multi-Node Redis Example
+
+For a concrete clustered setup, use explicit Redis mode and keep every node on the same app secret:
+
+```yaml
+spring:
+  data:
+    redis:
+      host: redis.internal
+      port: 6379
+  prism:
+    app-secret: ${PRISM_APP_SECRET}
+    vault:
+      type: redis
+    ttl: 30m
+    locales: UNIVERSAL
+```
+
+You can also start from the sample file in:
+
+- `prism-examples/spring-ai-example/src/main/resources/application-redis.yml`
+
+For full production guidance, continue with:
+
+- [Distributed Deployments](/docs/distributed-deployments)
+- [Troubleshooting](/docs/troubleshooting)
+
+## Optional NLP Extensions
+
+Person-name detection stays outside `prism-core` and is available only through the optional
+`prism-extensions-nlp` module.
+
+Add the module when you want higher-recall detection for person names:
+
+```xml
+<dependency>
+  <groupId>io.github.catalin87.prism</groupId>
+  <artifactId>prism-extensions-nlp</artifactId>
+  <version>1.1.0</version>
+</dependency>
+```
+
+Then enable it explicitly:
+
+```yaml
+spring:
+  prism:
+    extensions:
+      nlp:
+        enabled: true
+        backend: heuristic
+        confidence-threshold: 4
+```
+
+Supported backends:
+
+- `heuristic`
+  No external model required. Best for low-friction setups and conservative production rollout.
+- `opennlp`
+  Uses an explicit OpenNLP `TokenNameFinderModel`. Requires
+  `spring.prism.extensions.nlp.model-resource`. For model download, placement, and container
+  mounting examples, use [NLP Model Guide](/docs/nlp-model-guide).
+- `hybrid`
+  Combines heuristic candidates with OpenNLP candidates and contextual scoring. Also requires
+  `spring.prism.extensions.nlp.model-resource`. For model download, placement, and container
+  mounting examples, use [NLP Model Guide](/docs/nlp-model-guide).
+
+Example hybrid setup:
+
+```yaml
+spring:
+  prism:
+    extensions:
+      nlp:
+        enabled: true
+        backend: hybrid
+        model-resource: classpath:/models/en-ner-person.bin
+        confidence-threshold: 4
+        max-tokens: 3
+        blocked-phrases:
+          - Spring Boot
+          - Redis Cluster
+```
+
+Spring Prism fails fast on startup when `backend=opennlp` or `backend=hybrid` is configured
+without a readable model resource. That keeps distributed production nodes consistent and avoids
+silently falling back to a weaker detector than the deployment intended.
+
+For a deeper architecture and rollout guide, continue with [NLP Extensions](/docs/nlp-extensions).
+For a practical model download and provisioning path, continue with
+[NLP Model Guide](/docs/nlp-model-guide).
 
 ## Spring AI Runtime Behavior
 

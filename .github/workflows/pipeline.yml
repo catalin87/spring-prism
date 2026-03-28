@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - v*-SNAPSHOT
   pull_request:
     branches:
       - main
+      - v*-SNAPSHOT
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -106,4 +108,33 @@ jobs:
         with:
           name: jacoco-coverage-reports
           path: "**/target/site/jacoco/"
+          retention-days: 30
+
+  integration-tests:
+    name: "Redis Multi-Node Integration Tests"
+    runs-on: ubuntu-latest
+    needs: build-and-secure
+
+    steps:
+      - name: "Checkout Source Code"
+        uses: actions/checkout@v4
+
+      - name: "Provision JDK 21 (Temurin)"
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: "Run Redis Testcontainers Integration Suite"
+        run: mvn -pl prism-integration-tests -am test --batch-mode
+
+      - name: "Store Integration Test Reports"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prism-integration-test-reports
+          path: |
+            prism-integration-tests/target/surefire-reports/
+            prism-integration-tests/target/failsafe-reports/
           retention-days: 30

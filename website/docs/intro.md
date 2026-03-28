@@ -4,57 +4,40 @@ sidebar_position: 1
 
 # Introduction
 
-Spring Prism is a reversible PII (Personally Identifiable Information) pseudonymization firewall for **Spring AI** and **LangChain4j**.
+Spring Prism is a reversible PII pseudonymization firewall for Spring AI, LangChain4j, and MCP
+client flows.
 
-In the era of LLMs, data privacy is paramount. Spring Prism acts as a transparent layer that detects, redacts, and pseudonymizes sensitive data before it leaves your infrastructure, and restores it when it returns.
+It detects supported sensitive values before they leave your trusted application boundary, replaces
+them with signed Prism tokens, and restores original values when those tokens return in a model or
+tool response.
 
 ## Key Features
 
-- **Automated Detection**: Built-in support for multiple locales (US, EU, Universal).
-- **Reversible Tokens**: Non-reversible HMAC-SHA256 signatures ensure data security while allowing seamless restoration.
-- **Spring AI Integration**: Plugs directly into `ChatClient` via Advisors.
-- **LangChain4j Integration**: Wraps `ChatModel` and `StreamingChatModel` without leaking Spring dependencies into `prism-core`.
-- **Type-Safe & Performance-Oriented**: Built with Java 21, utilizing Virtual Threads for efficient I/O-bound scanning.
-- **Decoupled Architecture**: `prism-core` is zero-dependency, making it portable and lightweight.
+- Automated detection through universal and locale-specific rule packs
+- HMAC-SHA256 Prism tokens with vault-backed restoration
+- Spring AI and LangChain4j integration paths through the starter
+- Redis-backed shared vault support for distributed deployments
+- Optional NLP extensions for person-name redaction without changing `prism-core`
+- Java 21 baseline with a performance-oriented implementation
+- zero-dependency `prism-core`
 
 ## Getting Started
 
-To include Spring Prism in your project, add the following dependency (once published to Maven Central):
+Start with the Spring Boot starter:
 
 ```xml
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
-## Usage at a Glance
+Then continue with:
 
-Protecting your Spring AI interactions is as simple as adding a single Advisor:
-```java
-// Spring Prism automatically pseudonymizes PII before it leaves your app
-var response = chatClient.prompt()
-    .advisors(new PrismChatClientAdvisor()) 
-    .user("My email is john.doe@example.com")
-    .call()
-    .content();
-
-// The 'response' already has the original PII restored transparently!
-```
-
-Then use the runnable examples in `prism-examples/` as the canonical onboarding path:
-
-- `demo-app`
-- `spring-ai-example`
-- `langchain4j-example`
-- `mcp-example`
-
-If you are adopting MCP in real tools, continue with the dedicated tooling docs:
-
-- [MCP Tooling Guides](/docs/mcp-tooling)
-
-For interactive product demos and manual privacy testing across all supported integrations, see the [Unified Demo App](/docs/demo-app).
+- [Quickstart](/docs/quickstart)
+- [Configuration](/docs/configuration)
+- [Production Playbook](/docs/production-playbook)
 
 ## How it Works
 
@@ -63,3 +46,17 @@ For interactive product demos and manual privacy testing across all supported in
 3. **Vault**: Stores the mapping between tokens and original values in a secure, TTL-managed `PrismVault`.
 4. **LLM**: The LLM receives "sanitized" text.
 5. **Restore**: When the LLM responds, Spring Prism scans for tokens and replaces them with the original values from the vault.
+
+## Canonical onboarding assets
+
+Use these as the first real samples:
+
+- `prism-examples/spring-ai-example`
+- `prism-examples/langchain4j-example`
+- `prism-examples/mcp-example`
+- [Enterprise Lab](/docs/demo-app)
+
+These apps live in the repository for onboarding, contributor workflows, and manual verification.
+They are not part of the published Maven library surface.
+
+If you are adopting MCP in real tools, continue with [MCP Tooling Guides](/docs/mcp-tooling).

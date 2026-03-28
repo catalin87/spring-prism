@@ -4,11 +4,15 @@
     <parent>
         <groupId>io.github.catalin87.prism</groupId>
         <artifactId>prism-examples</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </parent>
     <artifactId>demo-app</artifactId>
-    <name>Spring Prism Unified Demo App</name>
-    <description> A unified demo application showcasing the capabilities of Spring Prism across various AI ecosystems.</description>
+    <name>Spring Prism Enterprise Lab</name>
+    <description>A clone-and-play enterprise demo sandbox for distributed Spring Prism flows.</description>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -27,6 +31,46 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-extensions-nlp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-ro</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-us</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-pl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-nl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-gb</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-fr</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.catalin87.prism</groupId>
+            <artifactId>prism-rulepack-de</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-core</artifactId>
         </dependency>
@@ -34,6 +78,10 @@
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-core</artifactId>
             <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -53,9 +101,23 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <suppressionsLocation>${project.basedir}/../../checkstyle-suppressions.xml</suppressionsLocation>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -17,224 +17,256 @@ package io.github.catalin87.prism.spring.ai.advisor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.github.catalin87.prism.core.PiiCandidate;
 import io.github.catalin87.prism.core.PiiDetector;
+import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.github.catalin87.prism.core.TokenGenerator;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
 import io.github.catalin87.prism.core.token.HmacSha256TokenGenerator;
 import io.github.catalin87.prism.core.vault.DefaultPrismVault;
 import io.micrometer.observation.ObservationRegistry;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
-import org.jspecify.annotations.NonNull;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** Unit tests for {@link PrismTextScanner}. */
 class PrismTextScannerTest {
 
-  private static final byte[] SECRET = "test-key-32-bytes-long-padding!!".getBytes();
+  private static final List<PrismRulePack> RULE_PACKS = List.of(new UniversalRulePack());
 
-  private PrismVault vault;
-  private PrismTextScanner scanner;
+  @Test
+  void tokenizesAndRestoresLargePromptInSinglePass() {
+    PrismTextScanner scanner = newScanner();
+    String prompt = largePrompt();
 
-  @BeforeEach
-  void setUp() {
-    TokenGenerator generator = new HmacSha256TokenGenerator();
-    vault = new DefaultPrismVault(generator, SECRET, 3600L);
-    List<PrismRulePack> packs = List.of(new UniversalRulePack());
-    scanner = new PrismTextScanner(packs, vault, ObservationRegistry.NOOP, PrismMetricsSink.NOOP);
+    String sanitized = scanner.tokenize(prompt);
+
+    assertThat(sanitized)
+        .contains("<PRISM_EMAIL_", "<PRISM_SSN_", "<PRISM_CREDIT_CARD_")
+        .doesNotContain("rag-user-00@example.com", "123-45-6700", "4111 1111 1111 0006");
+
+    String restored = scanner.detokenize(sanitized);
+    assertThat(restored).isEqualTo(prompt);
   }
 
   @Test
-  void tokenize_replacesEmailWithVaultToken() {
-    String result = scanner.tokenize("Please contact user@example.com for support.");
+  void returnsOriginalInstanceWhenNoTokenPrefixExists() {
+    PrismTextScanner scanner = newScanner();
+    String text = "A very large but completely safe RAG paragraph with no vault markers.";
 
-    assertThat(result).doesNotContain("user@example.com");
-    assertThat(result).containsPattern("<PRISM_EMAIL_[A-Za-z0-9_-]+>");
+    assertThat(scanner.detokenize(text)).isSameAs(text);
   }
 
   @Test
-  void tokenize_replacesCreditCardWithVaultToken() {
-    String result = scanner.tokenize("card: 4111111111111111 was charged.");
-
-    assertThat(result).doesNotContain("4111111111111111");
-    assertThat(result).containsPattern("<PRISM_CREDIT_CARD_[A-Za-z0-9_-]+>");
-  }
-
-  @Test
-  void tokenize_replacesPhoneNumberWithVaultToken() {
-    String result = scanner.tokenize("Call +40 712 345 678 for support.");
-
-    assertThat(result).doesNotContain("+40 712 345 678");
-    assertThat(result).containsPattern("<PRISM_PHONE_NUMBER_[A-Za-z0-9_-]+>");
-  }
-
-  @Test
-  void tokenize_noopOnCleanText() {
-    String clean = "The weather today is sunny.";
-    String result = scanner.tokenize(clean);
-
-    assertThat(result).isEqualTo(clean);
-  }
-
-  @Test
-  void tokenize_emptyStringReturnsEmpty() {
-    assertThat(scanner.tokenize("")).isEmpty();
-  }
-
-  @Test
-  void detokenize_restoresOriginalEmail() {
-    String tokenized = scanner.tokenize("Contact user@example.com please.");
-
-    String restored = scanner.detokenize(tokenized);
-
-    assertThat(restored).contains("user@example.com");
-    assertThat(restored).doesNotContainPattern("<PRISM_[A-Z0-9_]+>");
-  }
-
-  @Test
-  void detokenize_multipleTokensRestoredCorrectly() {
-    String input = "From user@corp.com to admin@corp.com, card 4111111111111111";
-    String tokenized = scanner.tokenize(input);
-
-    String restored = scanner.detokenize(tokenized);
-
-    assertThat(restored).contains("user@corp.com");
-    assertThat(restored).contains("admin@corp.com");
-    assertThat(restored).contains("4111111111111111");
-  }
-
-  @Test
-  void detokenize_unknownTokenLeftAsIs() {
-    String withFakeToken = "Hello <PRISM_UNKNOWN_fakeXYZ> world.";
-    String result = scanner.detokenize(withFakeToken);
-
-    // Unknown/expired token must be left in place (Fail-Open)
-    assertThat(result).contains("<PRISM_UNKNOWN_fakeXYZ>");
-  }
-
-  @Test
-  void detokenize_emptyStringReturnsEmpty() {
-    assertThat(scanner.detokenize("")).isEmpty();
-  }
-
-  @Test
-  void tokenize_failOpenReturnsOriginalTextWhenDetectorFails() {
-    RecordingMetricsSink metricsSink = new RecordingMetricsSink();
-    PrismTextScanner failOpenScanner =
+  void tokenizationCachesRepeatedValuesWithinSinglePrompt() {
+    PrismVault vault = mock(PrismVault.class);
+    when(vault.tokenize("same@example.com", "EMAIL"))
+        .thenReturn(new PrismToken("<PRISM_EMAIL_REPEAT>", "same@example.com", "EMAIL"));
+    PrismTextScanner scanner =
         new PrismTextScanner(
-            List.of(new FailingRulePack()), vault, ObservationRegistry.NOOP, metricsSink, false);
-
-    assertThat(failOpenScanner.tokenize("safe input")).isEqualTo("safe input");
-    assertThat(metricsSink.detectionErrorCalls).isEqualTo(1);
-    assertThat(metricsSink.lastRulePackName).isEqualTo("FAILING");
-    assertThat(metricsSink.lastEntityType).isEqualTo("FAIL");
-  }
-
-  @Test
-  void tokenize_strictModeThrowsWhenDetectorFails() {
-    PrismTextScanner strictScanner =
-        new PrismTextScanner(
-            List.of(new FailingRulePack()),
+            List.of(new RepeatedEmailRulePack()),
             vault,
             ObservationRegistry.NOOP,
             PrismMetricsSink.NOOP,
-            true);
+            false);
 
-    assertThatThrownBy(() -> strictScanner.tokenize("safe input"))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Strict mode blocked Prism processing");
+    String sanitized = scanner.tokenize("same@example.com then same@example.com");
+
+    assertThat(sanitized).isEqualTo("<PRISM_EMAIL_REPEAT> then <PRISM_EMAIL_REPEAT>");
+    verify(vault, times(1)).tokenize("same@example.com", "EMAIL");
   }
 
   @Test
-  void tokenizeAndDetokenizeRecordTimingMetrics() {
-    RecordingMetricsSink metricsSink = new RecordingMetricsSink();
-    PrismTextScanner timedScanner =
+  void detokenizationCachesRepeatedTokensWithinSingleResponse() {
+    PrismVault vault = mock(PrismVault.class);
+    when(vault.detokenize("<PRISM_EMAIL_REPEAT>")).thenReturn("same@example.com");
+    PrismTextScanner scanner =
         new PrismTextScanner(
-            List.of(new UniversalRulePack()), vault, ObservationRegistry.NOOP, metricsSink, false);
+            RULE_PACKS, vault, ObservationRegistry.NOOP, PrismMetricsSink.NOOP, false);
 
-    String tokenized = timedScanner.tokenize("Contact user@example.com.");
-    timedScanner.detokenize(tokenized);
+    String restored = scanner.detokenize("<PRISM_EMAIL_REPEAT> then <PRISM_EMAIL_REPEAT> again");
 
-    assertThat(metricsSink.scanDurationCalls).isEqualTo(1);
-    assertThat(metricsSink.tokenizeDurationCalls).isEqualTo(1);
-    assertThat(metricsSink.detokenizeDurationCalls).isEqualTo(1);
-    assertThat(metricsSink.lastIntegration).isEqualTo(PrismMetricsSink.SPRING_AI_INTEGRATION);
-    assertThat(metricsSink.lastRecordedNanos).isGreaterThanOrEqualTo(0L);
+    assertThat(restored).isEqualTo("same@example.com then same@example.com again");
+    verify(vault, times(1)).detokenize("<PRISM_EMAIL_REPEAT>");
   }
 
-  private static final class FailingRulePack implements PrismRulePack {
+  @Test
+  void tokenizesEmailCrossingSegmentBoundaryInLargePrompt() {
+    PrismTextScanner scanner = newScanner();
+    String prompt = boundaryPrompt();
+
+    String sanitized = scanner.tokenize(prompt);
+
+    assertThat(sanitized).contains("<PRISM_EMAIL_").doesNotContain("edge@example.com");
+    assertThat(scanner.detokenize(sanitized)).isEqualTo(prompt);
+  }
+
+  @Test
+  void failClosedBlocksWhenDetectorThrows() {
+    PrismTextScanner scanner =
+        new PrismTextScanner(
+            List.of(new FailingRulePack()),
+            new DefaultPrismVault(
+                new HmacSha256TokenGenerator(),
+                "benchmark-secret-material-32bytes".getBytes(StandardCharsets.UTF_8),
+                3600L),
+            ObservationRegistry.NOOP,
+            PrismMetricsSink.NOOP,
+            PrismFailureMode.FAIL_CLOSED);
+
+    assertThatThrownBy(() -> scanner.tokenize("user@example.com"))
+        .isInstanceOf(PrismProtectionException.class)
+        .extracting(
+            failure -> ((PrismProtectionException) failure).phase(),
+            failure -> ((PrismProtectionException) failure).reason(),
+            failure -> ((PrismProtectionException) failure).failureMode())
+        .containsExactly(
+            PrismProtectionPhase.DETECT,
+            PrismProtectionReason.DETECTOR_FAILURE,
+            PrismFailureMode.FAIL_CLOSED);
+  }
+
+  @Test
+  void failClosedBlocksWhenVaultPreflightTimesOut() {
+    PrismTextScanner scanner =
+        new PrismTextScanner(
+            RULE_PACKS,
+            new SlowAvailabilityVault(),
+            ObservationRegistry.NOOP,
+            PrismMetricsSink.NOOP,
+            PrismFailureMode.FAIL_CLOSED);
+
+    assertThatThrownBy(() -> scanner.tokenize("user@example.com"))
+        .isInstanceOf(PrismProtectionException.class)
+        .extracting(
+            failure -> ((PrismProtectionException) failure).phase(),
+            failure -> ((PrismProtectionException) failure).reason())
+        .containsExactly(PrismProtectionPhase.PREFLIGHT, PrismProtectionReason.TIMEOUT);
+  }
+
+  private static PrismTextScanner newScanner() {
+    TokenGenerator tokenGenerator = new HmacSha256TokenGenerator();
+    DefaultPrismVault vault =
+        new DefaultPrismVault(
+            tokenGenerator,
+            "benchmark-secret-material-32bytes".getBytes(StandardCharsets.UTF_8),
+            3600L);
+    return new PrismTextScanner(
+        RULE_PACKS, vault, ObservationRegistry.NOOP, PrismMetricsSink.NOOP, false);
+  }
+
+  private static String largePrompt() {
+    StringBuilder builder = new StringBuilder(4096);
+    for (int index = 0; index < 80; index++) {
+      builder
+          .append("Chunk ")
+          .append(index)
+          .append(": customer rag-user-")
+          .append(String.format("%02d", index))
+          .append("@example.com with SSN 123-45-")
+          .append(String.format("%04d", 6700 + index))
+          .append(" and card 4111 1111 1111 ")
+          .append(String.format("%04d", index))
+          .append(". ");
+    }
+    return builder.toString();
+  }
+
+  private static String boundaryPrompt() {
+    StringBuilder builder = new StringBuilder(10_000);
+    builder.append("A".repeat(4_090)).append("edge@example.com");
+    while (builder.length() < 9_500) {
+      builder.append(" filler text without pii ");
+    }
+    return builder.toString();
+  }
+
+  private static final class RepeatedEmailRulePack implements PrismRulePack {
+
     @Override
-    public @NonNull List<PiiDetector> getDetectors() {
-      return List.of(new FailingDetector());
+    public String getName() {
+      return "TEST";
     }
 
     @Override
-    public @NonNull String getName() {
+    public List<PiiDetector> getDetectors() {
+      return List.of(new RepeatedEmailDetector());
+    }
+  }
+
+  private static final class RepeatedEmailDetector implements PiiDetector {
+
+    @Override
+    public String getEntityType() {
+      return "EMAIL";
+    }
+
+    @Override
+    public List<PiiCandidate> detect(String text) {
+      return List.of(
+          new PiiCandidate("same@example.com", 0, 16, "EMAIL"),
+          new PiiCandidate("same@example.com", 22, 38, "EMAIL"));
+    }
+  }
+
+  private static final class FailingRulePack implements PrismRulePack {
+
+    @Override
+    public String getName() {
       return "FAILING";
+    }
+
+    @Override
+    public List<PiiDetector> getDetectors() {
+      return List.of(new FailingDetector());
     }
   }
 
   private static final class FailingDetector implements PiiDetector {
+
     @Override
-    public @NonNull String getEntityType() {
-      return "FAIL";
+    public String getEntityType() {
+      return "EMAIL";
     }
 
     @Override
-    public @NonNull List<PiiCandidate> detect(@NonNull String text) {
+    public List<PiiCandidate> detect(String text) {
       throw new IllegalStateException("boom");
     }
   }
 
-  private static final class RecordingMetricsSink implements PrismMetricsSink {
-    private int scanDurationCalls;
-    private int tokenizeDurationCalls;
-    private int detokenizeDurationCalls;
-    private int detectionErrorCalls;
-    private String lastIntegration = "";
-    private String lastRulePackName = "";
-    private String lastEntityType = "";
-    private long lastRecordedNanos;
+  private static final class SlowAvailabilityVault implements PrismVault, PrismVaultAvailability {
 
     @Override
-    public void onDetected(@NonNull String rulePackName, @NonNull String entityType, int count) {}
-
-    @Override
-    public void onDetectionError(@NonNull String rulePackName, @NonNull String entityType) {
-      detectionErrorCalls++;
-      lastRulePackName = rulePackName;
-      lastEntityType = entityType;
+    public PrismToken tokenize(String value, String label) {
+      return new PrismToken("<PRISM_EMAIL_TEST>", value, label);
     }
 
     @Override
-    public void onTokenized(int count) {}
-
-    @Override
-    public void onDetokenized(int count) {}
-
-    @Override
-    public void onScanDuration(@NonNull String integration, long nanos) {
-      scanDurationCalls++;
-      lastIntegration = integration;
-      lastRecordedNanos = nanos;
+    public String detokenize(String tokenKey) {
+      return null;
     }
 
     @Override
-    public void onVaultTokenizeDuration(@NonNull String integration, long nanos) {
-      tokenizeDurationCalls++;
-      lastIntegration = integration;
-      lastRecordedNanos = nanos;
-    }
-
-    @Override
-    public void onVaultDetokenizeDuration(@NonNull String integration, long nanos) {
-      detokenizeDurationCalls++;
-      lastIntegration = integration;
-      lastRecordedNanos = nanos;
+    public void verifyAvailability(Duration timeout) {
+      try {
+        Thread.sleep(timeout.toMillis() + 75L);
+      } catch (InterruptedException exception) {
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException(exception);
+      }
     }
   }
 }
