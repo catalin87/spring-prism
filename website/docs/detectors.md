@@ -47,6 +47,19 @@ starter-based integrations.
 | `prism-rulepack-fr` | `FR` | `NIR`, `SIREN`, `SIRET` | Mod-97 and Luhn checksum |
 | `prism-rulepack-de` | `DE` | `STEUER_ID` | ISO 7064 Mod 11,10 checksum |
 
+:::tip[Community Feedback]
+If you find a country-specific edge case, separator format, reserved-number rule, or false
+positive in one of the regional rulepacks, please open a GitHub Issue and include:
+
+- the affected module, such as `prism-rulepack-fr`
+- one valid example and one invalid example
+- the expected detection outcome
+- any official checksum, registry, or standards reference you can share
+
+This is the fastest way to harden Spring Prism geographically without breaking `1.x`
+compatibility.
+:::
+
 ## Custom Detectors
 
 You can implement your own detectors by extending the `PiiDetector` interface.

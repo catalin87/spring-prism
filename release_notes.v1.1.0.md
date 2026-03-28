@@ -138,3 +138,6 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 - Added starter and integration coverage proving that `RO`, `US`, `PL`, `NL`, `GB`, `FR`, and
   `DE` resolve to the correct active rulepack and publish the expected `totalActiveRules`
   snapshots.
+- Community feedback is explicitly encouraged for regional edge cases so new country-specific
+  formats, separators, and validation refinements can land through focused GitHub Issues instead
+  of ad-hoc breaking changes.
