@@ -1,6 +1,6 @@
 # Integration Test Tracker
 
-This page tracks the release-critical integration suites that back the `1.1.0-SNAPSHOT` line.
+This page tracks the release-critical integration suites that back the `1.1.0` line.
 
 ## Current Priority
 

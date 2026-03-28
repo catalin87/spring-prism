@@ -29,7 +29,7 @@ Start with the Spring Boot starter:
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 

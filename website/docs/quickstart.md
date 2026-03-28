@@ -15,7 +15,7 @@ with [Enterprise Lab](/docs/demo-app).
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
@@ -82,7 +82,7 @@ Add:
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-extensions-nlp</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 

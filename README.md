@@ -11,12 +11,13 @@ restores original values when the response comes back.
 
 ## Why teams adopt it
 
-- `prism-core` stays zero-dependency and portable
-- Spring Boot starter support keeps adoption simple
-- the starter now brings the modular `prism-rulepack-common` baseline by default
-- Redis-backed vaults support real multi-node deployments
-- large-prompt and RAG paths are optimized for practical latency
-- optional NLP extensions can add person-name redaction without changing the deterministic core
+- **`prism-core` is zero-dependency** and strictly decoupled from Spring.
+- **Enterprise-grade Redis vaults** support cluster-safe token restoration.
+- **Circuit Breaker support** (`FAIL_CLOSED`) for production environments requiring high security.
+- **Modular Regional Rule Packs** (Big 7: RO, US, PL, NL, DE, GB, FR) with checksum-backed validation.
+- **Optional NLP extensions** (Heuristic/Hybrid) for person-name detection outside the deterministic core.
+- **Optimized for RAG** through segment-aware scanning and hot-path tokenization.
+
 
 ## 5-Minute Start
 
@@ -26,7 +27,7 @@ Add the starter:
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-spring-boot-starter</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
@@ -37,9 +38,11 @@ spring:
   prism:
     enabled: true
     app-secret: ${PRISM_APP_SECRET}
+    failure-mode: FAIL_SAFE # Options: FAIL_SAFE, FAIL_CLOSED
     vault:
       type: auto
     locales: UNIVERSAL
+
 ```
 
 If you already build a `ChatClient` through the standard Spring AI builder, the starter wires the
@@ -96,7 +99,7 @@ set.
 <dependency>
   <groupId>io.github.catalin87.prism</groupId>
   <artifactId>prism-extensions-nlp</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.1.0</version>
 </dependency>
 ```
 
@@ -176,7 +179,7 @@ The Spring AI example now has configuration variants for:
 
 ## Published module surface
 
-Published Maven modules in the `v1.1.0-SNAPSHOT` train:
+Published Maven modules in the `v1.1.0` train:
 
 - `prism-core`
 - `prism-rulepack-common`

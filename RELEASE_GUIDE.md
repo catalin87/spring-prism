@@ -80,9 +80,9 @@ Immediately after tagging, prepare for the next development cycle:
 
 ```bash
 # Update pom.xml version to the next SNAPSHOT
-# e.g., 1.0.0 → 1.1.0-SNAPSHOT
+# e.g., 1.0.0 → 1.1.0
 git add pom.xml
-git commit -s -m "chore: begin 1.1.0-SNAPSHOT development cycle"
+git commit -s -m "chore: begin 1.1.0 development cycle"
 git push origin main
 ```
 

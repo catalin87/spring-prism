@@ -1,6 +1,6 @@
 # Release Readiness
 
-Spring Prism `v1.1.0-SNAPSHOT` now carries a broader production-ready release train than the
+Spring Prism `v1.1.0` now carries a broader production-ready release train than the
 original `1.0.0` cut. This page is the operational definition of what the train currently ships,
 what must stay green, and what every new feature must bring before merge.
 
@@ -37,7 +37,7 @@ verification, but are not part of the published Maven library surface:
 
 ## v1.1.0 Release Scope
 
-Spring Prism `v1.1.0-SNAPSHOT` currently covers:
+Spring Prism `v1.1.0` currently covers:
 
 - zero-dependency core redaction and restoration primitives
 - Spring AI, LangChain4j, and MCP client-side integrations
@@ -88,7 +88,7 @@ Every new feature or runtime behavior change merged into the release line should
 - `prism-integration-tests` coverage when the feature changes real runtime behavior across module
   boundaries
 - Docusaurus documentation updates before merge
-- `release_notes.v1.1.0.md` updates while the `v1.1.0-SNAPSHOT` train is active
+- `release_notes.v1.1.0.md` updates while the `v1.1.0` train is active
 - example config or example-app updates when the feature changes adoption guidance
 - operationally truthful metrics, readiness signals, or troubleshooting notes when behavior changes
   operator expectations
@@ -123,7 +123,7 @@ Use this as the final gate before cutting `v1.1.0`.
 
 ### Must Pass Right Before Tagging
 
-- `v1.1.0-SNAPSHOT` is green in GitHub Actions
+- `v1.1.0` is green in GitHub Actions
 - No open release-blocking PRs remain
 - Full local verification succeeds:
 
@@ -159,7 +159,7 @@ cd website && npm run build
 
 ### Release Cut
 
-1. Update root `pom.xml` from `1.1.0-SNAPSHOT` to `1.1.0`
+1. Update root `pom.xml` from `1.1.0` to `1.1.0`
 2. Commit with:
 
 ```bash
