@@ -14,6 +14,10 @@ Spring Prism `v1.1.0` is a minor release and keeps `v1.0.0` integrations working
   through `isAutoDiscoverable()`.
 - The starter now prefers the modular `prism-rulepack-common` baseline for `UNIVERSAL` detection,
   while legacy in-core `UniversalRulePack` remains available for direct `prism-core` consumers.
+- In Spring applications, inject `@Qualifier("springPrismRulePacks") List<PrismRulePack>` when you
+  need the resolved active rule packs after starter locale selection and filtering.
+- Injecting plain `List<PrismRulePack>` gives you the available rule pack beans from the context,
+  which can include optional modular contributions and compatibility fallbacks.
 
 :::tip[Deprecation]
 Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
