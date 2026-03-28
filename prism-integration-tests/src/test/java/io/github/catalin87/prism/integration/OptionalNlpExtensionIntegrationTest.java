@@ -146,6 +146,7 @@ class OptionalNlpExtensionIntegrationTest {
                 "spring.application.name=nlp-integration",
                 "spring.main.banner-mode=off",
                 "spring.prism.enabled=true",
+                "spring.prism.locales=universal,nlp_extensions",
                 "spring.prism.app-secret=nlp-extension-secret-32-bytes"));
     properties.addAll(List.of(additionalProperties));
     return new SpringApplicationBuilder(TestConfiguration.class)

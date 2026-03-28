@@ -35,6 +35,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -191,6 +192,34 @@ class RedisPrismVaultTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("Redis availability check failed");
     verify(pingFuture).cancel(true);
+  }
+
+  @Test
+  @Timeout(5)
+  void verifyAvailabilityTimesOutWhenSynchronousPingBlocks() {
+    when(redisTemplate.execute(org.mockito.ArgumentMatchers.<RedisCallback<String>>any()))
+        .thenAnswer(
+            invocation -> {
+              RedisCallback<String> callback = invocation.getArgument(0);
+              RedisConnection connection = mock(RedisConnection.class);
+              when(connection.getNativeConnection()).thenReturn(new Object());
+              when(connection.ping())
+                  .thenAnswer(
+                      ignored -> {
+                        Thread.sleep(200L);
+                        return "PONG";
+                      });
+              return callback.doInRedis(connection);
+            });
+
+    RedisPrismVault vault =
+        new RedisPrismVault(
+            redisTemplate, new HmacSha256TokenGenerator(), secretKey, Duration.ofMinutes(5));
+
+    assertThatThrownBy(() -> vault.verifyAvailability(Duration.ofMillis(50)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Redis availability check failed")
+        .hasRootCauseInstanceOf(TimeoutException.class);
   }
 
   private static final class AsyncPingConnection {

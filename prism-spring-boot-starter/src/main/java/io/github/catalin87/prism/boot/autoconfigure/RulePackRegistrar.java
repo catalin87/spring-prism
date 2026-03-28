@@ -19,7 +19,6 @@ import io.github.catalin87.prism.core.PiiDetector;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.ruleset.EuropeRulePack;
 import io.github.catalin87.prism.core.ruleset.UniversalRulePack;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -75,19 +74,37 @@ final class RulePackRegistrar {
             ? List.of()
             : additionalRulePacks.stream().filter(PrismRulePack::isAutoDiscoverable).toList();
 
-    List<PrismRulePack> packs = new ArrayList<>();
-    PrismRulePack primaryRulePack = resolvePrimaryRulePack(locales, autoDiscoverableRulePacks);
-    packs.add(filtered(primaryRulePack, properties.getDisabledRules()));
+    List<PrismRulePack> packs = new java.util.ArrayList<>();
+    java.util.Set<String> disabledRules = properties.getDisabledRules();
+
+    // Resolve primary packs for each requested baseline family
+    if (locales.stream().anyMatch(EUROPE_LOCALES::contains)) {
+      java.util.Optional<PrismRulePack> matching =
+          findMatchingPack(autoDiscoverableRulePacks, EUROPE_LOCALES);
+      packs.add(filtered(matching.orElseGet(() -> new EuropeRulePack()), disabledRules));
+    }
+    if (locales.stream().anyMatch(UNIVERSAL_LOCALES::contains)) {
+      java.util.Optional<PrismRulePack> matching =
+          findMatchingPack(autoDiscoverableRulePacks, UNIVERSAL_LOCALES);
+      // Only add Universal fallback if no other primary pack (e.g. Europe) was picked that already
+      // covers the baseline
+      // or if an exact match for UNIVERSAL was found in the application context.
+      if (matching.isPresent() || packs.isEmpty()) {
+        packs.add(filtered(matching.orElseGet(() -> new UniversalRulePack()), disabledRules));
+      }
+    }
 
     CustomPropertyRulePack customPropertyRulePack = customPack(properties);
     if (!customPropertyRulePack.getDetectors().isEmpty()) {
-      packs.add(filtered(customPropertyRulePack, properties.getDisabledRules()));
+      packs.add(filtered(customPropertyRulePack, disabledRules));
     }
 
+    // Append any other auto-discoverable packs that match requested locales but are not baseline
+    // replacements
     autoDiscoverableRulePacks.stream()
-        .filter(rulePack -> !sameRulePack(rulePack, primaryRulePack))
-        .filter(rulePack -> shouldAppendAutoDiscoverable(rulePack, locales))
-        .map(rulePack -> filtered(rulePack, properties.getDisabledRules()))
+        .filter(rulePack -> !isBaselineFamilyPack(rulePack))
+        .filter(rulePack -> matchesAnyAlias(rulePack, locales))
+        .map(rulePack -> filtered(rulePack, disabledRules))
         .forEach(packs::add);
 
     Map<String, PrismRulePack> deduplicated = new LinkedHashMap<>();
@@ -97,47 +114,23 @@ final class RulePackRegistrar {
     return List.copyOf(deduplicated.values());
   }
 
-  private PrismRulePack resolvePrimaryRulePack(
-      Set<String> locales, List<PrismRulePack> autoDiscoverableRulePacks) {
-    Set<String> specificLocales =
-        locales.stream()
-            .filter(locale -> !BASELINE_PACK_NAMES.contains(locale))
-            .collect(Collectors.toCollection(LinkedHashSet::new));
-    java.util.Optional<PrismRulePack> exactMatch =
-        findMatchingPack(autoDiscoverableRulePacks, specificLocales);
-    if (exactMatch.isPresent()) {
-      return exactMatch.orElseThrow();
-    }
+  private boolean anyPackMatches(List<PrismRulePack> packs, Set<String> aliases) {
+    return packs.stream().anyMatch(p -> matchesAnyAlias(p, aliases));
+  }
 
-    if (locales.stream().anyMatch(EUROPE_LOCALES::contains)) {
-      return findMatchingPack(autoDiscoverableRulePacks, EUROPE_LOCALES)
-          .orElseGet(EuropeRulePack::new);
-    }
-    if (locales.stream().anyMatch(UNIVERSAL_LOCALES::contains)) {
-      return findMatchingPack(autoDiscoverableRulePacks, UNIVERSAL_LOCALES)
-          .orElseGet(UniversalRulePack::new);
-    }
-    return findMatchingPack(autoDiscoverableRulePacks, UNIVERSAL_LOCALES)
-        .orElseGet(UniversalRulePack::new);
+  private boolean isBaselineFamilyPack(PrismRulePack rulePack) {
+    String name = normalizedName(rulePack);
+    return BASELINE_PACK_NAMES.contains(name)
+        || name.contains("EUROPE")
+        || name.contains("UNIVERSAL");
   }
 
   private java.util.Optional<PrismRulePack> findMatchingPack(
       List<PrismRulePack> candidates, Set<String> requestedAliases) {
     return candidates.stream()
         .filter(rulePack -> matchesAnyAlias(rulePack, requestedAliases))
-        .sorted(
-            java.util.Comparator.comparing(
-                (PrismRulePack rulePack) -> isBaselineFamilyPack(rulePack)))
+        .sorted(java.util.Comparator.comparing(this::isBaselineFamilyPack))
         .findFirst();
-  }
-
-  private boolean shouldAppendAutoDiscoverable(
-      PrismRulePack candidate, Set<String> requestedLocales) {
-    return !isBaselineFamilyPack(candidate) && matchesAnyAlias(candidate, requestedLocales);
-  }
-
-  private boolean isBaselineFamilyPack(PrismRulePack rulePack) {
-    return BASELINE_PACK_NAMES.contains(normalizedName(rulePack));
   }
 
   private boolean matchesAnyAlias(PrismRulePack rulePack, Set<String> requestedAliases) {
@@ -147,10 +140,6 @@ final class RulePackRegistrar {
             .filter(alias -> !alias.isEmpty())
             .collect(Collectors.toSet());
     return requestedAliases.stream().anyMatch(normalizedAliases::contains);
-  }
-
-  private boolean sameRulePack(PrismRulePack left, PrismRulePack right) {
-    return normalizedName(left).equals(normalizedName(right));
   }
 
   private String normalizedName(PrismRulePack rulePack) {

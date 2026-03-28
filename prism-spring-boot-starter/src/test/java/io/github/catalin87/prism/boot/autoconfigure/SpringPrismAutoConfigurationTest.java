@@ -325,11 +325,11 @@ class SpringPrismAutoConfigurationTest {
             context -> {
               List<PrismRulePack> rulePacks = getRulePacks(context);
 
-              assertThat(rulePacks).hasSize(1);
+              assertThat(rulePacks).hasSize(2);
               assertThat(rulePacks)
                   .extracting(PrismRulePack::getName)
-                  .containsExactly("OPTIONAL_TEST");
-              assertThat(rulePacks.get(0).getDetectors()).isEmpty();
+                  .containsExactly("UNIVERSAL", "OPTIONAL_TEST");
+              assertThat(rulePacks.get(1).getDetectors()).isEmpty();
             });
   }
 

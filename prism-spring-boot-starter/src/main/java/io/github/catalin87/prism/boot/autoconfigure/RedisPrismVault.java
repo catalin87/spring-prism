@@ -146,12 +146,14 @@ final class RedisPrismVault implements PrismVault, PrismVaultAvailability {
   private static @Nullable Object pingSynchronouslyWithTimeout(
       Object connection, long timeoutMillis) {
     ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    Future<Object> future = executor.submit(() -> invokeSynchronousPing(connection));
     try {
-      Future<Object> future = executor.submit(() -> invokeSynchronousPing(connection));
       return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
     } catch (TimeoutException exception) {
+      future.cancel(true);
       throw new IllegalStateException("Redis availability check timed out", exception);
     } catch (InterruptedException exception) {
+      future.cancel(true);
       Thread.currentThread().interrupt();
       throw new IllegalStateException("Redis availability check interrupted", exception);
     } catch (ExecutionException exception) {
