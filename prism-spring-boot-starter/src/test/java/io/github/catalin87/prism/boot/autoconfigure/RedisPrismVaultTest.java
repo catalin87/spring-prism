@@ -16,6 +16,7 @@
 package io.github.catalin87.prism.boot.autoconfigure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -30,7 +31,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -137,6 +143,73 @@ class RedisPrismVaultTest {
     PrismToken token = writerVault.tokenize("user@corp.local", "EMAIL");
 
     assertThat(readerVault.detokenize(token.key())).isNull();
+  }
+
+  @Test
+  void verifyAvailabilityUsesAsyncNativeConnectionWithTimeout() throws Exception {
+    Future<String> pingFuture = mock(Future.class);
+    AsyncPingConnection asyncCommands = new AsyncPingConnection(pingFuture);
+    when(pingFuture.get(50L, TimeUnit.MILLISECONDS)).thenReturn("PONG");
+    when(redisTemplate.execute(org.mockito.ArgumentMatchers.<RedisCallback<String>>any()))
+        .thenAnswer(
+            invocation -> {
+              RedisCallback<String> callback = invocation.getArgument(0);
+              RedisConnection connection = mock(RedisConnection.class);
+              when(connection.getNativeConnection()).thenReturn(asyncCommands);
+              return callback.doInRedis(connection);
+            });
+
+    RedisPrismVault vault =
+        new RedisPrismVault(
+            redisTemplate, new HmacSha256TokenGenerator(), secretKey, Duration.ofMinutes(5));
+
+    vault.verifyAvailability(Duration.ofMillis(50));
+
+    assertThat(asyncCommands.pingInvoked()).isTrue();
+    verify(pingFuture).get(50L, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  void verifyAvailabilityCancelsAsyncPingWhenTimeoutIsExceeded() throws Exception {
+    Future<String> pingFuture = mock(Future.class);
+    AsyncPingConnection asyncCommands = new AsyncPingConnection(pingFuture);
+    when(pingFuture.get(50L, TimeUnit.MILLISECONDS)).thenThrow(new TimeoutException("late"));
+    when(redisTemplate.execute(org.mockito.ArgumentMatchers.<RedisCallback<String>>any()))
+        .thenAnswer(
+            invocation -> {
+              RedisCallback<String> callback = invocation.getArgument(0);
+              RedisConnection connection = mock(RedisConnection.class);
+              when(connection.getNativeConnection()).thenReturn(asyncCommands);
+              return callback.doInRedis(connection);
+            });
+
+    RedisPrismVault vault =
+        new RedisPrismVault(
+            redisTemplate, new HmacSha256TokenGenerator(), secretKey, Duration.ofMinutes(5));
+
+    assertThatThrownBy(() -> vault.verifyAvailability(Duration.ofMillis(50)))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Redis availability check failed");
+    verify(pingFuture).cancel(true);
+  }
+
+  private static final class AsyncPingConnection {
+
+    private final Future<String> pingFuture;
+    private boolean pingInvoked;
+
+    private AsyncPingConnection(Future<String> pingFuture) {
+      this.pingFuture = pingFuture;
+    }
+
+    public Future<String> ping() {
+      pingInvoked = true;
+      return pingFuture;
+    }
+
+    private boolean pingInvoked() {
+      return pingInvoked;
+    }
   }
 
   private static final class InMemoryStringRedisTemplate extends StringRedisTemplate {

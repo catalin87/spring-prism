@@ -52,6 +52,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -241,8 +242,10 @@ class RedisMultiNodeIntegrationTest {
 
   @Test
   void failsClosedWhenRedisBecomesUnavailableDuringTokenizeAndRestore() throws Exception {
-    IntegrationNode nodeA = startNode("node-a", DEFAULT_SECRET, Duration.ofMinutes(5));
-    IntegrationNode nodeB = startNode("node-b", DEFAULT_SECRET, Duration.ofMinutes(5));
+    IntegrationNode nodeA =
+        startNode("node-a", DEFAULT_SECRET, Duration.ofMinutes(5), "FAIL_CLOSED");
+    IntegrationNode nodeB =
+        startNode("node-b", DEFAULT_SECRET, Duration.ofMinutes(5), "FAIL_CLOSED");
 
     String originalPrompt = "Reach user@example.com about SSN 123-45-6789.";
     wireMockServer.stubFor(
@@ -266,8 +269,8 @@ class RedisMultiNodeIntegrationTest {
                       .user("Outage tokenize for user-two@example.com and SSN 987-65-4321.")
                       .call()
                       .content())
-          .isInstanceOf(Exception.class)
-          .hasMessageContaining("Redis");
+          .isInstanceOf(Exception.class);
+      assertThat(wireMockServer.getAllServeEvents()).isEmpty();
 
       wireMockServer.resetAll();
       wireMockServer.stubFor(
@@ -275,8 +278,52 @@ class RedisMultiNodeIntegrationTest {
               .willReturn(okJson(chatCompletion("Restore after outage " + tokenizedPrompt))));
 
       assertThatThrownBy(() -> nodeB.client().prompt().user("restore outage").call().content())
-          .isInstanceOf(Exception.class)
-          .hasMessageContaining("Redis");
+          .isInstanceOf(Exception.class);
+      assertThat(wireMockServer.getAllServeEvents()).isEmpty();
+    } finally {
+      redis.start();
+    }
+  }
+
+  @Test
+  void failSafeAllowsOutboundCallWhenRedisBecomesUnavailable() throws Exception {
+    IntegrationNode nodeA = startNode("node-a", DEFAULT_SECRET, Duration.ofMinutes(5), "FAIL_SAFE");
+    IntegrationNode nodeB = startNode("node-b", DEFAULT_SECRET, Duration.ofMinutes(5), "FAIL_SAFE");
+
+    String originalPrompt = "Reach user@example.com about SSN 123-45-6789.";
+    wireMockServer.stubFor(
+        post(urlEqualTo("/v1/chat/completions")).willReturn(okJson(chatCompletion("ACK"))));
+    nodeA.client().prompt().user(originalPrompt).call().content();
+
+    String tokenizedPrompt = nodeA.lastPromptContent();
+    assertThat(tokenizedPrompt).contains("PRISM_EMAIL_", "PRISM_SSN_");
+
+    redis.stop();
+    try {
+      wireMockServer.resetAll();
+      wireMockServer.stubFor(
+          post(urlEqualTo("/v1/chat/completions")).willReturn(okJson(chatCompletion("ACK"))));
+
+      String fallbackResponse =
+          nodeA
+              .client()
+              .prompt()
+              .user("Outage tokenize for user-two@example.com and SSN 987-65-4321.")
+              .call()
+              .content();
+
+      assertThat(fallbackResponse).isEqualTo("ACK");
+      assertThat(wireMockServer.getAllServeEvents()).hasSize(1);
+
+      wireMockServer.resetAll();
+      wireMockServer.stubFor(
+          post(urlEqualTo("/v1/chat/completions"))
+              .willReturn(okJson(chatCompletion("Restore after outage " + tokenizedPrompt))));
+
+      String restored = nodeB.client().prompt().user("restore outage").call().content();
+
+      assertThat(restored).contains(tokenizedPrompt).doesNotContain("user@example.com");
+      assertThat(wireMockServer.getAllServeEvents()).hasSize(1);
     } finally {
       redis.start();
     }
@@ -290,6 +337,11 @@ class RedisMultiNodeIntegrationTest {
   }
 
   private IntegrationNode startNode(String nodeName, String secret, Duration ttl) {
+    return startNode(nodeName, secret, ttl, "FAIL_SAFE");
+  }
+
+  private IntegrationNode startNode(
+      String nodeName, String secret, Duration ttl, String failureMode) {
     ConfigurableApplicationContext context =
         new SpringApplicationBuilder(TestNodeConfiguration.class)
             .web(WebApplicationType.NONE)
@@ -298,12 +350,20 @@ class RedisMultiNodeIntegrationTest {
                 "spring.main.banner-mode=off",
                 "spring.prism.enabled=true",
                 "spring.prism.app-secret=" + secret,
+                "spring.prism.failure-mode=" + failureMode,
                 "spring.prism.vault.type=redis",
                 "spring.prism.ttl=" + ttl,
                 "spring.data.redis.host=" + redis.getHost(),
                 "spring.data.redis.port=" + redis.getMappedPort(6379))
             .run();
     IntegrationNode node = new IntegrationNode(context);
+    node.redisTemplate()
+        .execute(
+            (RedisCallback<String>)
+                connection -> {
+                  Object pingResult = connection.ping();
+                  return pingResult == null ? null : pingResult.toString();
+                });
     nodes.add(node);
     return node;
   }

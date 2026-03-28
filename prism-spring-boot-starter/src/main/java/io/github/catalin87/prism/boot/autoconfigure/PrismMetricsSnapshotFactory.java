@@ -37,6 +37,8 @@ final class PrismMetricsSnapshotFactory {
     Map<String, Long> detectionCounts = prismRuntimeMetrics.detectionCounts();
     List<String> activeRulePacks =
         springPrismRulePacks.stream().map(PrismRulePack::getName).toList();
+    int totalActiveRules =
+        springPrismRulePacks.stream().mapToInt(rulePack -> rulePack.getDetectors().size()).sum();
     List<EntityMetric> entityMetrics =
         springPrismRulePacks.stream()
             .flatMap(
@@ -81,6 +83,7 @@ final class PrismMetricsSnapshotFactory {
                         durationMetrics.get(integration + ":vault-detokenize")))
             .toList();
     String vaultType = prismVault.getClass().getSimpleName();
+    String failureMode = properties.resolveFailureMode().name();
     String configuredVaultMode = properties.getVault().getType().name();
     boolean customAppSecretConfigured = !"spring-prism-change-me".equals(properties.getAppSecret());
     boolean distributedVault = vaultType.toLowerCase().contains("redis");
@@ -113,6 +116,10 @@ final class PrismMetricsSnapshotFactory {
         prismRuntimeMetrics.recentAuditEvents(),
         prismRuntimeMetrics.auditRetentionLimit(),
         activeRulePacks,
+        totalActiveRules,
+        failureMode,
+        prismRuntimeMetrics.blockedRequestCount(),
+        prismRuntimeMetrics.blockedResponseCount(),
         configuredVaultMode,
         customAppSecretConfigured,
         vaultType,
@@ -285,7 +292,7 @@ final class PrismMetricsSnapshotFactory {
       PrismRuntimeMetrics prismRuntimeMetrics,
       long tokenBacklog) {
     double score = 0.55d;
-    score += properties.isSecurityStrictMode() ? 0.15d : 0.05d;
+    score += properties.resolveFailureMode().name().equals("FAIL_CLOSED") ? 0.15d : 0.05d;
     score += prismVault.getClass().getSimpleName().toLowerCase().contains("redis") ? 0.20d : 0.15d;
     score += "spring-prism-change-me".equals(properties.getAppSecret()) ? -0.20d : 0.10d;
     if (tokenBacklog == 0L) {
@@ -301,7 +308,10 @@ final class PrismMetricsSnapshotFactory {
       SpringPrismProperties properties,
       PrismRuntimeMetrics prismRuntimeMetrics,
       long tokenBacklog) {
-    String strictMode = properties.isSecurityStrictMode() ? "strict mode on" : "fail-open mode";
+    String strictMode =
+        properties.resolveFailureMode().name().equals("FAIL_CLOSED")
+            ? "fail-closed mode"
+            : "fail-safe mode";
     String vaultMode =
         prismVault.getClass().getSimpleName().toLowerCase().contains("redis")
             ? "Redis-backed shared vault"
