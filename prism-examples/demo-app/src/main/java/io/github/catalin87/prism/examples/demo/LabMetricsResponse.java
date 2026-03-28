@@ -15,7 +15,13 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import java.util.Map;
+import java.util.List;
 
-/** Stored request and response payloads for the local MCP mock endpoint. */
-record McpMockTrace(Map<String, Object> requestPayload, Map<String, Object> responsePayload) {}
+record LabMetricsResponse(
+    long tokenizedCount,
+    long blockedRequestCount,
+    long blockedResponseCount,
+    int totalActiveRules,
+    boolean sharedVaultReady,
+    List<String> activeRulePacks,
+    List<LabNodeStatus> nodes) {}

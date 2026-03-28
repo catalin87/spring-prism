@@ -15,16 +15,8 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-
-/** Unified Spring Prism demo application for manual testing and live demos. */
-@SpringBootApplication
-@EnableConfigurationProperties(LabProperties.class)
-public class DemoApplication {
-
-  public static void main(String[] args) {
-    SpringApplication.run(DemoApplication.class, args);
-  }
+enum LabNlpMode {
+  OFF,
+  HEURISTIC,
+  HYBRID
 }

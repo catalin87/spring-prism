@@ -4,6 +4,32 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 
 ## Unreleased
 
+### Executive Summary
+
+Spring Prism `v1.1.0` turns the project from a strong local privacy library into a more credible
+enterprise-ready privacy layer for Spring AI, LangChain4j, and MCP client flows.
+
+This release focuses on:
+
+- Redis-first multi-node safety and shared-vault restore
+- richer modular rulepack coverage through the Big 7 regional packs
+- optional NLP-based person-name protection without polluting `prism-core`
+- stronger operational visibility through `/actuator/prism`, `/prism/index.html`, and Grafana
+- a clone-and-play Enterprise Lab for realistic manual validation and demos
+
+### Headline Highlights
+
+- **Cluster-safe restore** through Redis-backed shared vaults and explicit runtime readiness
+  signals
+- **Big 7 rulepacks** for `RO`, `US`, `PL`, `NL`, `GB`, `FR`, and `DE`
+- **Fail posture controls** through `FAIL_SAFE` and `FAIL_CLOSED`
+- **Optional NLP extensions** for person-name protection with heuristic, OpenNLP, and hybrid
+  paths
+- **Enterprise Lab sandbox** with two nodes, Redis, Grafana, outage simulation, and cross-node
+  restore
+- **Cleaner Maven Central surface** with examples, benchmarks, and the Enterprise Lab kept
+  repo-only
+
 ### Backward Compatibility and Migration from v1.0.0
 
 - Preserved the legacy `PrismMetricsSnapshot` constructor so custom integrations compiled against
@@ -91,6 +117,8 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
   `Spring Boot`.
 - Added Docusaurus documentation for configuration, architecture, and test expectations of the NLP
   extension path.
+- Added a dedicated NLP model guide covering classpath, file-based, and container-mounted rollout
+  patterns for OpenNLP and hybrid deployments.
 
 ### Developer Experience and Guides
 
@@ -104,10 +132,17 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 - Refined README and configuration docs so example paths, rollout choices, and required validation
   steps are easier to find.
 - Added a downloadable starter Grafana dashboard JSON for the Prism runtime snapshot path.
-- Trimmed Maven Central publication noise by keeping the runnable examples, unified demo app, and
+- Trimmed Maven Central publication noise by keeping the runnable examples, enterprise demo lab, and
   benchmark suite as repo-only contributor assets instead of published library artifacts.
-- Moved the unified demo app out of the main examples reactor while keeping it runnable through its
-  own standalone Maven project for manual QA and release smoke testing.
+- Replaced the old unified demo UI with a clone-and-play Enterprise Lab sandbox that runs as a
+  repo-only contributor asset with two nodes, Redis, Grafana, Big 7 rulepack toggles, NLP modes,
+  and outage simulation.
+- Added `run-demo.cmd` and `run-demo.sh` as the canonical one-command entrypoints for the
+  containerized Enterprise Lab sandbox.
+- Expanded the Enterprise Lab documentation so it now covers topology, operator workflows,
+  marketing/demo talking points, and the recommended smoke-test sequence.
+- Prewired Grafana provisioning now loads the Spring Prism Overview dashboard directly against the
+  live `/actuator/prism` snapshot used by the Enterprise Lab.
 
 ### Rulepack SPI / Modular Rulepacks
 

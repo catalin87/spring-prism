@@ -15,7 +15,20 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import java.util.List;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 
-/** Request payload for running a unified demo flow. */
-record DemoRunRequest(String integration, String message, List<String> rulePacks) {}
+/** Small redirects so the enterprise lab has a single canonical browser entrypoint. */
+@Controller
+final class LabViewController {
+
+  @GetMapping("/")
+  String root() {
+    return "forward:/lab/index.html";
+  }
+
+  @GetMapping({"/lab", "/lab/"})
+  String labIndex() {
+    return "forward:/lab/index.html";
+  }
+}

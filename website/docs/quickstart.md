@@ -95,6 +95,7 @@ spring:
 ```
 
 Use `hybrid` only when you also provide a valid OpenNLP model resource.
+For the actual file placement and deployment path, use [NLP Model Guide](/docs/nlp-model-guide).
 
 ## 5. Verify the runtime posture
 
@@ -127,4 +128,5 @@ Canonical example configurations live in:
 - [Configuration](/docs/configuration)
 - [Distributed Deployments](/docs/distributed-deployments)
 - [NLP Extensions](/docs/nlp-extensions)
+- [NLP Model Guide](/docs/nlp-model-guide)
 - [Release Readiness](/docs/release-readiness)

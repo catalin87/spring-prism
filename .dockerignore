@@ -1,0 +1,8 @@
+.git
+.github
+**/target
+**/node_modules
+website/build
+website/.docusaurus
+prism-examples/demo-app/src/main/resources/static/lab/assets
+prism-examples/demo-app/ui/node_modules

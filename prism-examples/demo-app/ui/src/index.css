@@ -1,0 +1,539 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family:
+    "IBM Plex Sans",
+    "Segoe UI",
+    sans-serif;
+}
+
+body {
+  @apply m-0 min-h-screen text-slate-100;
+  background:
+    radial-gradient(circle at top left, rgba(8, 145, 178, 0.14), transparent 28%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 24%),
+    linear-gradient(180deg, #111827 0%, #0f172a 100%);
+}
+
+#root {
+  @apply min-h-screen;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3b495e #172131;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #172131;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #3b495e;
+  border-radius: 999px;
+}
+
+.command-shell {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr);
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.92), rgba(15, 23, 42, 0.96)),
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.08), transparent 20%);
+}
+
+.command-sidebar {
+  @apply flex flex-col border-r border-slate-700/70 bg-slate-800/85 px-4 py-5 backdrop-blur-md;
+}
+
+.brand-block {
+  @apply flex items-center gap-3 px-2;
+}
+
+.brand-mark {
+  @apply flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-sky-500 shadow-[0_0_18px_rgba(34,211,238,0.28)];
+}
+
+.brand-name {
+  @apply text-2xl font-semibold tracking-tight text-slate-50;
+}
+
+.brand-subtitle {
+  @apply mt-1 text-xs uppercase tracking-[0.18em] text-cyan-200/70;
+}
+
+.sidebar-section {
+  @apply mt-5 rounded-2xl border border-slate-700/70 bg-slate-900/45 p-4;
+}
+
+.section-heading {
+  @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-200/80;
+}
+
+.control-stack {
+  @apply mt-4 space-y-3;
+}
+
+.control-field {
+  @apply block;
+}
+
+.control-field span {
+  @apply mb-2 block text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400;
+}
+
+.control-field select {
+  @apply w-full rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100 outline-none transition focus:border-cyan-400;
+}
+
+.rulepack-grid {
+  @apply mt-4 grid grid-cols-2 gap-2;
+}
+
+.rulepack-chip {
+  @apply flex items-center justify-between rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-left text-sm text-slate-300 transition hover:border-slate-500;
+}
+
+.rulepack-chip-active {
+  @apply border-cyan-400/60 bg-cyan-500/10 text-slate-50 shadow-[0_0_0_1px_rgba(34,211,238,0.18)];
+}
+
+.rulepack-code {
+  @apply text-xs font-semibold tracking-[0.18em];
+}
+
+.sidebar-footer {
+  @apply mt-auto space-y-3 pt-5;
+}
+
+.sidebar-footer-tight {
+  @apply mt-4 space-y-3 pt-0;
+}
+
+.sidebar-spacer {
+  @apply flex-1;
+}
+
+.status-module {
+  @apply flex items-center justify-between rounded-xl border border-slate-700/80 bg-slate-900/55 px-4 py-3;
+}
+
+.status-title {
+  @apply text-sm font-semibold text-slate-100;
+}
+
+.status-value {
+  @apply mt-1 text-xs font-semibold uppercase tracking-[0.16em];
+}
+
+.status-detail {
+  @apply mt-1 text-[11px] text-slate-500;
+}
+
+.status-dot {
+  @apply h-3.5 w-3.5 rounded-full;
+}
+
+.status-dot-ok {
+  @apply bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)];
+}
+
+.status-dot-bad {
+  @apply bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)];
+}
+
+.command-main {
+  @apply flex min-w-0 flex-col overflow-hidden;
+}
+
+.command-header {
+  @apply flex items-center justify-between gap-4 border-b border-slate-700/70 bg-slate-900/50 px-6 py-4 backdrop-blur-sm;
+}
+
+.header-title-block h1 {
+  @apply text-[1.7rem] font-semibold tracking-tight text-cyan-300;
+}
+
+.header-actions {
+  @apply flex items-center gap-4;
+}
+
+.posture-badge {
+  @apply flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2;
+}
+
+.posture-label {
+  @apply text-sm text-slate-400;
+}
+
+.posture-value {
+  @apply text-sm font-bold tracking-[0.14em];
+}
+
+.posture-toggle {
+  @apply relative h-6 w-11 rounded-full bg-cyan-500/85 shadow-[0_0_12px_rgba(34,211,238,0.25)];
+}
+
+.posture-toggle-closed {
+  @apply bg-slate-100;
+}
+
+.posture-toggle-thumb {
+  @apply absolute right-1 top-1 h-4 w-4 rounded-full bg-white;
+}
+
+.lab-badge {
+  @apply rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2 text-sm text-slate-200;
+}
+
+.score-card {
+  @apply min-w-[220px] rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2.5;
+}
+
+.score-topline {
+  @apply flex items-center justify-between text-[11px] text-slate-400;
+}
+
+.score-mainline {
+  @apply mt-1 flex items-center gap-3;
+}
+
+.score-value {
+  @apply text-4xl font-bold leading-none text-slate-50;
+}
+
+.score-bar {
+  @apply h-2 flex-1 overflow-hidden rounded-full bg-slate-700;
+}
+
+.score-bar-fill {
+  @apply h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.45)];
+}
+
+.content-grid {
+  @apply grid flex-1 gap-5 overflow-auto px-6 py-5 xl:grid-cols-[minmax(0,1fr)_320px];
+}
+
+.top-alert-wrap {
+  @apply px-6 pt-5;
+}
+
+.workspace-column {
+  @apply min-w-0 space-y-5;
+}
+
+.metrics-column {
+  @apply space-y-5;
+}
+
+.command-panel {
+  @apply rounded-2xl border border-slate-700/80 bg-slate-800/70 p-4 shadow-[0_10px_30px_rgba(2,8,23,0.28)];
+}
+
+.panel-header {
+  @apply flex items-center justify-between gap-4;
+}
+
+.panel-header h3 {
+  @apply text-[1.05rem] font-semibold text-slate-100;
+}
+
+.workspace-grid {
+  @apply mt-4 grid gap-4 xl:grid-cols-2;
+}
+
+.workspace-control-shell {
+  @apply rounded-2xl border border-slate-700/70 bg-slate-900/55;
+}
+
+.workspace-control-shell-header {
+  @apply border-b border-slate-700/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80;
+}
+
+.workspace-control-shell-body {
+  @apply grid gap-3 px-4 py-4 xl:grid-cols-[minmax(240px,320px)_1fr];
+}
+
+.workspace-panel {
+  @apply rounded-2xl border border-slate-700/70 bg-slate-900/55 p-3;
+}
+
+.workspace-panel-header {
+  @apply mb-3 flex items-start justify-between gap-3;
+}
+
+.workspace-panel-header h4 {
+  @apply text-lg font-medium text-slate-100;
+}
+
+.workspace-panel-body {
+  @apply overflow-hidden rounded-xl border border-slate-700 bg-slate-950/80;
+}
+
+.workspace-preset-label {
+  @apply mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80;
+}
+
+.workspace-preset-list {
+  @apply flex flex-wrap gap-2;
+}
+
+.workspace-actions {
+  @apply flex flex-col gap-3;
+}
+
+.workspace-preset-card {
+  @apply rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-3;
+}
+
+.mini-action {
+  @apply inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.mini-action-cyan {
+  @apply border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20;
+}
+
+.mini-action-red {
+  @apply border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20;
+}
+
+.mini-action-muted {
+  @apply border-slate-700 bg-slate-900/60 text-slate-400 hover:text-slate-200;
+}
+
+.outage-toggle {
+  @apply flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/65 px-3 py-3 text-left transition;
+}
+
+.outage-toggle-active {
+  @apply border-red-400/45 bg-red-500/10;
+}
+
+.outage-toggle input {
+  @apply sr-only;
+}
+
+.outage-toggle-switch {
+  @apply relative h-6 w-11 shrink-0 rounded-full bg-slate-700 transition;
+}
+
+.outage-toggle-active .outage-toggle-switch {
+  @apply bg-red-500/80;
+}
+
+.outage-toggle-thumb {
+  @apply absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition;
+}
+
+.outage-toggle-active .outage-toggle-thumb {
+  transform: translateX(20px);
+}
+
+.outage-toggle-copy {
+  @apply min-w-0;
+}
+
+.outage-toggle-title {
+  @apply block text-xs font-semibold uppercase tracking-[0.16em] text-slate-100;
+}
+
+.outage-toggle-detail {
+  @apply mt-1 block text-[11px] leading-4 text-slate-400;
+}
+
+.outage-toggle-active .outage-toggle-detail {
+  @apply text-red-100/90;
+}
+
+.metric-tile-grid {
+  @apply mt-4 grid grid-cols-2 gap-3;
+}
+
+.metric-tile {
+  @apply rounded-2xl border border-slate-700/70 bg-slate-900/65 p-4;
+}
+
+.metric-icon {
+  @apply mb-3 flex h-8 w-8 items-center justify-center rounded-lg;
+}
+
+.metric-icon-cyan {
+  @apply bg-sky-500/15 text-sky-400;
+}
+
+.metric-icon-red {
+  @apply bg-red-500/15 text-red-400;
+}
+
+.metric-icon-green {
+  @apply bg-emerald-500/15 text-emerald-400;
+}
+
+.metric-value {
+  @apply text-4xl font-bold leading-none text-slate-50;
+}
+
+.metric-value-green {
+  @apply text-3xl text-emerald-400;
+}
+
+.metric-label {
+  @apply mt-2 text-sm text-slate-400;
+}
+
+.chart-wrap {
+  @apply mt-4 h-64 rounded-2xl border border-slate-700/70 bg-slate-900/65 p-3;
+}
+
+.shortcut-list,
+.preset-list,
+.timeline-list {
+  @apply mt-4 space-y-3;
+}
+
+.shortcut-list-sidebar {
+  @apply mt-4;
+}
+
+.shortcut-link {
+  @apply flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/65 px-4 py-3 text-sm text-slate-200 transition hover:border-cyan-400/40;
+}
+
+.shortcut-copy {
+  @apply inline-flex items-center gap-3;
+}
+
+.preset-button {
+  @apply w-full rounded-xl border border-slate-700 bg-slate-900/65 px-4 py-3 text-left text-sm text-slate-200 transition hover:border-cyan-400/35 hover:text-white;
+}
+
+.preset-button-inline {
+  @apply w-auto rounded-lg bg-slate-900/85 px-3 py-2 text-xs;
+}
+
+.trace-rail {
+  @apply mt-5 grid gap-3 xl:grid-cols-5;
+}
+
+.flow-node {
+  @apply flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900/65 px-4 py-4;
+}
+
+.flow-node-active {
+  @apply border-cyan-400/35;
+}
+
+.flow-icon-wrap {
+  @apply flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-slate-400;
+}
+
+.flow-icon-active {
+  @apply bg-cyan-500/10 text-cyan-300;
+}
+
+.flow-copy {
+  @apply min-w-0;
+}
+
+.flow-title {
+  @apply text-sm font-semibold text-slate-100;
+}
+
+.flow-subtitle {
+  @apply mt-1 text-[11px] uppercase tracking-[0.12em] text-slate-500;
+}
+
+.timeline-event {
+  @apply flex items-start justify-between gap-4 rounded-xl border border-slate-700 bg-slate-900/65 px-4 py-3;
+}
+
+.timeline-copy {
+  @apply min-w-0;
+}
+
+.timeline-title {
+  @apply text-sm font-semibold text-slate-100;
+}
+
+.timeline-detail {
+  @apply mt-1 text-xs leading-5 text-slate-400;
+}
+
+.timeline-meta {
+  @apply shrink-0 text-right text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75;
+}
+
+.timeline-meta span {
+  @apply block;
+}
+
+.timeline-empty {
+  @apply rounded-xl border border-dashed border-slate-700 px-4 py-5 text-sm text-slate-400;
+}
+
+.error-banner {
+  @apply rounded-2xl border border-red-400/55 bg-red-500/10 px-5 py-4 text-sm font-semibold text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.14),0_12px_30px_rgba(127,29,29,0.22)];
+}
+
+.ghost-button {
+  @apply rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300 transition hover:border-slate-500;
+}
+
+@media (max-width: 1536px) {
+  .content-grid {
+    @apply grid-cols-1;
+  }
+
+  .metrics-column {
+    @apply grid gap-5 xl:grid-cols-none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .command-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .command-sidebar {
+    @apply gap-4 border-r-0 border-b;
+  }
+
+  .nav-stack {
+    @apply grid grid-cols-2 gap-2;
+  }
+
+  .sidebar-footer {
+    @apply mt-0 grid grid-cols-2 gap-3 pt-0;
+  }
+
+  .command-header {
+    @apply flex-col items-start;
+  }
+
+  .header-actions {
+    @apply flex-wrap;
+  }
+}
+
+@media (max-width: 820px) {
+  .workspace-grid,
+  .trace-rail,
+  .metric-tile-grid,
+  .nav-stack,
+  .sidebar-footer {
+    @apply grid-cols-1;
+  }
+
+  .score-card {
+    @apply min-w-0 w-full;
+  }
+}

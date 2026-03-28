@@ -52,6 +52,9 @@ spring:
           - Redis Cluster
 ```
 
+If you want a practical guide for where to place the model and how to mount it in real
+deployments, continue with [NLP Model Guide](/docs/nlp-model-guide).
+
 ## Backend Modes
 
 ### `heuristic`
@@ -83,6 +86,7 @@ spring:
 - Start with `heuristic` in conservative environments, then promote to `hybrid` once the model has
   been validated against production-shaped text.
 - Keep the extension disabled in services that do not need person-name redaction.
+- Use a versioned model artifact path and deploy the exact same file to every node.
 
 ## Observability
 

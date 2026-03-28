@@ -83,3 +83,8 @@ temp/
 *~
 *.swp
 *.swo
+
+# =========================
+# Local NLP Benchmark Assets
+# =========================
+prism-benchmarks/models/

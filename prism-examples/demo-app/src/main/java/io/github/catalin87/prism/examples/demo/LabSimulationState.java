@@ -15,16 +15,26 @@
  */
 package io.github.catalin87.prism.examples.demo;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.stereotype.Component;
 
-/** Unified Spring Prism demo application for manual testing and live demos. */
-@SpringBootApplication
-@EnableConfigurationProperties(LabProperties.class)
-public class DemoApplication {
+/**
+ * Cluster-sandbox state used to simulate a Redis outage without mutating the actual Redis stack.
+ */
+@Component
+final class LabSimulationState {
 
-  public static void main(String[] args) {
-    SpringApplication.run(DemoApplication.class, args);
+  private final AtomicBoolean redisOutage = new AtomicBoolean();
+
+  boolean redisOutageActive() {
+    return redisOutage.get();
+  }
+
+  void enableRedisOutage() {
+    redisOutage.set(true);
+  }
+
+  void disableRedisOutage() {
+    redisOutage.set(false);
   }
 }
