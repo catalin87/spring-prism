@@ -14,6 +14,13 @@ The heartbeat of the system.
   - `PrismVault`: Interface for secure, TTL-managed token-to-data mapping.
   - `TokenGenerator`: Deterministic HMAC-SHA256 signature generator for pseudonymization.
   - Core detectors stay deterministic and checksum-driven. NLP models are intentionally excluded from this module.
+  - Legacy in-core rule packs remain available for `1.x` backward compatibility while modular packs are introduced.
+
+### `prism-rulepack-common`
+The default modular rule-pack baseline.
+- **Dependencies**: Depends on `prism-core`, but keeps all detector logic deterministic and checksum-focused.
+- **Purpose**: Provides the default `UNIVERSAL` detector set through standard Spring Boot auto-configuration.
+- **Compatibility Rule**: The starter prefers this modular pack when present, but falls back to legacy in-core `UniversalRulePack` behavior if the module is absent.
 
 ### `prism-spring-ai`
 The Spring AI interception layer.
@@ -32,6 +39,7 @@ The Spring Boot 3 autoconfiguration bridge.
 - **Frameworks**: Spring Boot 3.4+, Micrometer Observation.
 - **Safety**: `spring.prism.failure-mode=FAIL_SAFE` preserves the legacy fail-open posture with Micrometer error metrics. `FAIL_CLOSED` is opt-in for production blocking behavior.
 - **Deployments**: Supports explicit vault selection through `spring.prism.vault.type` with `auto`, `in-memory`, and `redis`. `auto` preserves the low-friction Redis auto-detection path; `redis` is the recommended mode for multi-node deployments.
+- **Rule Packs**: Uses modular auto-discovered `PrismRulePack` beans when available, with `prism-rulepack-common` as the default starter baseline and legacy in-core packs preserved as compatibility fallbacks.
 - **Integrations**: Publishes `PrismChatClientAdvisor` for Spring AI and primary LangChain4j wrappers when delegate chat beans are present.
 - **Optional NLP Extensions**: Person-name detection may be wired here or in `prism-spring-ai` through a lazily loaded backend such as Apache OpenNLP, keeping the core zero-dependency.
 

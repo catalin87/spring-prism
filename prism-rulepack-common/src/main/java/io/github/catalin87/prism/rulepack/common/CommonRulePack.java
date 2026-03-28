@@ -13,7 +13,7 @@
  * See the Licence for the specific language governing permissions and
  * limitations under the Licence.
  */
-package io.github.catalin87.prism.core.ruleset;
+package io.github.catalin87.prism.rulepack.common;
 
 import io.github.catalin87.prism.core.PiiDetector;
 import io.github.catalin87.prism.core.PrismRulePack;
@@ -26,16 +26,8 @@ import java.util.List;
 import java.util.Set;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Universal Rule Pack covering global high-impact PII: Email, Credit Cards, SSNs, and IP Addresses.
- * Suitable as a baseline for any locale.
- *
- * @deprecated since {@code 1.1.0}. Prefer the modular {@code prism-rulepack-common} artifact and
- *     its {@code CommonRulePack}. This legacy in-core pack remains functional for {@code 1.x}
- *     compatibility and will be removed in {@code 2.0.0}.
- */
-@Deprecated(since = "1.1.0", forRemoval = true)
-public class UniversalRulePack implements PrismRulePack {
+/** Default modular rule pack that preserves the universal detector baseline for starter users. */
+public final class CommonRulePack implements PrismRulePack {
 
   private static final List<@NonNull PiiDetector> DETECTORS =
       List.of(

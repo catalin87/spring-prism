@@ -47,6 +47,7 @@
     <modules>
         <module>prism-bom</module>
         <module>prism-core</module>
+        <module>prism-rulepack-common</module>
         <module>prism-extensions-nlp</module>
         <module>prism-spring-ai</module>
         <module>prism-langchain4j</module>

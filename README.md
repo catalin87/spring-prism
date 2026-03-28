@@ -13,6 +13,7 @@ restores original values when the response comes back.
 
 - `prism-core` stays zero-dependency and portable
 - Spring Boot starter support keeps adoption simple
+- the starter now brings the modular `prism-rulepack-common` baseline by default
 - Redis-backed vaults support real multi-node deployments
 - large-prompt and RAG paths are optimized for practical latency
 - optional NLP extensions can add person-name redaction without changing the deterministic core
@@ -159,6 +160,7 @@ The Spring AI example now has configuration variants for:
 Supported modules in the `v1.1.0-SNAPSHOT` train:
 
 - `prism-core`
+- `prism-rulepack-common`
 - `prism-spring-ai`
 - `prism-langchain4j`
 - `prism-mcp`
@@ -173,6 +175,14 @@ Deferred:
 - MCP server-side interception
 - broader enterprise follow-ups such as multi-tenant vault strategy and cluster-wide dashboard
   aggregation
+
+## Compatibility note for `1.x`
+
+- `prism-rulepack-common` is now the default starter baseline for `UNIVERSAL` detection.
+- Legacy `UniversalRulePack` remains functional for direct `prism-core` consumers in `1.x` and is
+  kept as a compatibility shim while modular rulepacks are introduced.
+- Existing `spring.prism.locales` values such as `UNIVERSAL`, `EN`, `US`, `EU`, `RO`, `PL`, `DE`,
+  and `GB` continue to work.
 
 ## Validation baseline
 

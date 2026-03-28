@@ -24,6 +24,10 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
   rule pack beans from `v1.0.0` do not become active automatically after upgrading to `v1.1.0`.
 - Official Spring Prism rule packs explicitly opt in to auto-discovery, which preserves extension
   support without introducing surprise redaction behavior for existing applications.
+- Added `PrismRulePack.getActivationAliases()` as an additive SPI method so modular rule packs can
+  participate in `spring.prism.locales` without breaking existing `1.x` custom implementations.
+- Preserved the legacy in-core `UniversalRulePack` for direct `prism-core` consumers while the
+  starter begins preferring the modular `prism-rulepack-common` baseline.
 
 ### Redis-First Cluster Safety
 
@@ -95,3 +99,21 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 - Refined README and configuration docs so example paths, rollout choices, and required validation
   steps are easier to find.
 - Added a downloadable starter Grafana dashboard JSON for the Prism runtime snapshot path.
+
+### Rulepack SPI / Modular Rulepacks
+
+- Added a new `prism-rulepack-common` module as the default modular baseline for `UNIVERSAL`
+  detection in the starter.
+- The Spring Boot starter now depends on `prism-rulepack-common` by default and prefers the
+  modular common pack when it is present on the classpath.
+- Added an additive `PrismRulePack.getActivationAliases()` SPI method so locale activation can
+  evolve without breaking `1.x` implementations.
+- Preserved compatibility fallback to the legacy in-core `UniversalRulePack` when the modular
+  common module is absent.
+- Ensured the starter keeps a single baseline rule pack active per locale family, so custom
+  auto-discoverable `UNIVERSAL` packs can replace the default modular baseline without silently
+  duplicating detectors after a `1.0.0 -> 1.1.0` upgrade.
+- Marked the legacy in-core `UniversalRulePack` deprecated for future `2.0.0` removal while
+  keeping it fully functional in `1.x`.
+- Added module-level, starter-level, and integration-level validation for the new modular common
+  pack path.
