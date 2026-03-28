@@ -15,7 +15,7 @@ deployment choices for production, continue with [Production Playbook](/docs/pro
 | `spring.prism.app-secret` | `spring-prism-change-me` | The HMAC secret used to sign Prism tokens. Override this in every real deployment. |
 | `spring.prism.ttl` | `30m` | The time-to-live for vault entries. Invalid values fall back to the starter default. |
 | `spring.prism.vault.type` | `auto` | Vault strategy: `auto`, `in-memory`, or `redis`. Use `redis` for multi-node deployments. |
-| `spring.prism.locales` | `UNIVERSAL` | The active locale set. Common values include `UNIVERSAL`, `EU`, `RO`, `PL`, `DE`, `GB`, `EN`, and `US`. |
+| `spring.prism.locales` | `UNIVERSAL` | The active locale set. Common values include `UNIVERSAL`, `EU`, `RO`, `PL`, `NL`, `DE`, `GB`, `FR`, `EN`, and `US`. Locale aliases such as `ROU`, `POL`, `NLD`, `DEU`, `GBR`, and `FRA` are also supported. |
 | `spring.prism.disabled-rules` | empty | Entity types to suppress from the resolved rule packs, such as `EMAIL` or `SSN`. |
 | `spring.prism.custom-rules[n].name` | empty | Entity type name for a property-backed custom regex detector. |
 | `spring.prism.custom-rules[n].pattern` | empty | Regex pattern for a property-backed custom regex detector. Blank custom rules are ignored. |
@@ -91,6 +91,22 @@ For distributed deployments, every node must:
 
 If a `StringRedisTemplate` bean is already available in your application, `auto` mode preserves the
 existing low-friction behavior while still allowing explicit enterprise configuration.
+
+## Regional Rulepacks
+
+Spring Prism `v1.1.0` adds opt-in regional rulepack modules for the Big 7 coverage line:
+
+- `prism-rulepack-ro`
+- `prism-rulepack-us`
+- `prism-rulepack-pl`
+- `prism-rulepack-nl`
+- `prism-rulepack-gb`
+- `prism-rulepack-fr`
+- `prism-rulepack-de`
+
+When a regional module is present, `spring.prism.locales` prefers that regional pack over the
+legacy in-core family packs. When it is absent, `1.x` still falls back to the compatibility
+baseline (`UniversalRulePack` or `EuropeRulePack`) instead of failing.
 
 ## Failure Mode
 

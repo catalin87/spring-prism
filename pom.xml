@@ -48,6 +48,13 @@
         <module>prism-bom</module>
         <module>prism-core</module>
         <module>prism-rulepack-common</module>
+        <module>prism-rulepack-ro</module>
+        <module>prism-rulepack-us</module>
+        <module>prism-rulepack-pl</module>
+        <module>prism-rulepack-nl</module>
+        <module>prism-rulepack-gb</module>
+        <module>prism-rulepack-fr</module>
+        <module>prism-rulepack-de</module>
         <module>prism-extensions-nlp</module>
         <module>prism-spring-ai</module>
         <module>prism-langchain4j</module>

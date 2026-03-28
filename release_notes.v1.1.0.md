@@ -31,6 +31,8 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 - Clarified that Spring applications should inject `@Qualifier("springPrismRulePacks")` for the
   resolved active rule pack list, while plain `List<PrismRulePack>` remains the contract for
   discovering available rule pack beans in the application context.
+- Preserved the legacy in-core `EuropeRulePack` for direct `prism-core` consumers while marking it
+  deprecated for removal in `v2.0.0`.
 
 ### Redis-First Cluster Safety
 
@@ -120,3 +122,22 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
   keeping it fully functional in `1.x`.
 - Added module-level, starter-level, and integration-level validation for the new modular common
   pack path.
+
+### Regional Rulepacks / Big 7 Coverage
+
+- Added new modular regional rulepacks:
+  `prism-rulepack-ro`, `prism-rulepack-us`, `prism-rulepack-pl`, `prism-rulepack-nl`,
+  `prism-rulepack-gb`, `prism-rulepack-fr`, and `prism-rulepack-de`.
+- Added checksum-backed regional detectors for `CIF`, `EIN`, `ABA_ROUTING`, `NIP`, `BSN`,
+  `NHS`, `NIR`, `SIREN`, `SIRET`, and `STEUER_ID`.
+- Extended starter rulepack resolution so regional modules can be selected through
+  `spring.prism.locales` and through locale aliases such as `FRA`, `NLD`, and `GBR` without
+  breaking `1.x` fallback behavior.
+- Preserved compatibility fallback to the legacy in-core `EuropeRulePack` when a regional module
+  is absent, while deprecating that in-core pack for removal in `v2.0.0`.
+- Added starter and integration coverage proving that `RO`, `US`, `PL`, `NL`, `GB`, `FR`, and
+  `DE` resolve to the correct active rulepack and publish the expected `totalActiveRules`
+  snapshots.
+- Community feedback is explicitly encouraged for regional edge cases so new country-specific
+  formats, separators, and validation refinements can land through focused GitHub Issues instead
+  of ad-hoc breaking changes.

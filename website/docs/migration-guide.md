@@ -18,6 +18,8 @@ Spring Prism `v1.1.0` is a minor release and keeps `v1.0.0` integrations working
   need the resolved active rule packs after starter locale selection and filtering.
 - Injecting plain `List<PrismRulePack>` gives you the available rule pack beans from the context,
   which can include optional modular contributions and compatibility fallbacks.
+- Legacy in-core `EuropeRulePack` also remains available for direct `prism-core` consumers in
+  `1.x`, but is deprecated in favor of the modular regional rulepacks.
 
 :::tip[Deprecation]
 Property `spring.prism.security-strict-mode` is deprecated and will be removed in `v2.0.0`. Use
@@ -81,3 +83,5 @@ new PrismChatClientAdvisor(List.of(rulePack), prismVault, ObservationRegistry.NO
 7. For LangChain4j applications, expose one delegate chat bean and let the starter wrap it.
 8. If you instantiate `UniversalRulePack` directly from `prism-core`, you can keep doing so in
    `1.x`; the modular starter path is additive and does not remove the legacy class until `2.0.0`.
+9. If you instantiate `EuropeRulePack` directly from `prism-core`, you can also keep doing so in
+   `1.x`; move to the regional modules before `2.0.0`.
