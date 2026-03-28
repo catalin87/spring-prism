@@ -42,10 +42,16 @@ It includes:
 
 ## Running It
 
-Start the app from the examples reactor:
+Build the local snapshots once from the repository root:
 
 ```bash
-mvn -pl prism-examples/demo-app spring-boot:run
+mvn install -DskipTests
+```
+
+Then start the demo app directly from its own Maven project:
+
+```bash
+mvn -f prism-examples/demo-app/pom.xml spring-boot:run
 ```
 
 Then open:

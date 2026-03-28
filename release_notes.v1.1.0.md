@@ -104,6 +104,10 @@ This file tracks the `v1.1.0` release line incrementally while work lands on `v1
 - Refined README and configuration docs so example paths, rollout choices, and required validation
   steps are easier to find.
 - Added a downloadable starter Grafana dashboard JSON for the Prism runtime snapshot path.
+- Trimmed Maven Central publication noise by keeping the runnable examples, unified demo app, and
+  benchmark suite as repo-only contributor assets instead of published library artifacts.
+- Moved the unified demo app out of the main examples reactor while keeping it runnable through its
+  own standalone Maven project for manual QA and release smoke testing.
 
 ### Rulepack SPI / Modular Rulepacks
 

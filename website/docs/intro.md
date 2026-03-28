@@ -56,4 +56,7 @@ Use these as the first real samples:
 - `prism-examples/mcp-example`
 - [Unified Demo App](/docs/demo-app)
 
+These apps live in the repository for onboarding, contributor workflows, and manual verification.
+They are not part of the published Maven library surface.
+
 If you are adopting MCP in real tools, continue with [MCP Tooling Guides](/docs/mcp-tooling).
