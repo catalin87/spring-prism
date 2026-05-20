@@ -143,13 +143,21 @@ public class SpringPrismAutoConfiguration {
       PrismVault prismVault,
       ObservationRegistry observationRegistry,
       PrismMetricsSink prismMetricsSink,
-      SpringPrismProperties properties) {
+      SpringPrismProperties properties,
+      org.springframework.beans.factory.ObjectProvider<io.micrometer.core.instrument.MeterRegistry>
+          meterRegistryProvider) {
+    PrismChatClientAdvisor.ActiveDefenseConfig activeDefenseConfig =
+        new PrismChatClientAdvisor.ActiveDefenseConfig(
+            properties.getActiveDefense().getMaxRestoredTokensPerResponse());
     return new PrismChatClientAdvisor(
         springPrismRulePacks,
         prismVault,
         observationRegistry,
         prismMetricsSink,
-        properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED);
+        properties.resolveFailureMode() == PrismFailureMode.FAIL_CLOSED,
+        0,
+        activeDefenseConfig,
+        meterRegistryProvider.getIfAvailable());
   }
 
   @Bean

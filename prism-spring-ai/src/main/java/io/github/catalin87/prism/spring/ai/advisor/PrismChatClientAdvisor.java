@@ -15,15 +15,23 @@
  */
 package io.github.catalin87.prism.spring.ai.advisor;
 
+import io.github.catalin87.prism.core.PrismProtectionException;
+import io.github.catalin87.prism.core.PrismProtectionPhase;
+import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
 import io.github.catalin87.prism.core.PrismVault;
+import io.github.catalin87.prism.core.guard.ExfiltrationGuard;
 import io.github.catalin87.prism.core.vault.StreamingBuffer;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.client.advisor.api.AdvisedRequest;
 import org.springframework.ai.chat.client.advisor.api.AdvisedResponse;
 import org.springframework.ai.chat.client.advisor.api.CallAroundAdvisor;
@@ -46,13 +54,28 @@ import reactor.core.publisher.Flux;
  *
  * <p>For streaming responses the {@link StreamingBuffer} prevents token fragmentation across SSE
  * chunks (e.g. {@code <PRISM_} arriving in one chunk, {@code EMAIL_xyz>} in the next).
+ *
+ * <p><strong>Active Defense (since 1.2.0):</strong> when an {@link ActiveDefenseConfig} with an
+ * enabled threshold is supplied, the advisor counts vault tokens restored per synchronous response
+ * and per streaming subscription. Exceeding the ceiling raises a {@link PrismProtectionException}
+ * with reason {@link PrismProtectionReason#EXFILTRATION_THRESHOLD_EXCEEDED} and increments the
+ * {@code gen_ai.prism.protection.exfiltration.blocked} counter.
  */
 public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAdvisor {
 
+  private static final org.slf4j.Logger LOG =
+      org.slf4j.LoggerFactory.getLogger(PrismChatClientAdvisor.class);
   private static final int DEFAULT_ORDER = 0;
+  private static final String INTEGRATION = PrismMetricsSink.SPRING_AI_INTEGRATION;
+  private static final String EXFILTRATION_BLOCKED_COUNTER_NAME =
+      "gen_ai.prism.protection.exfiltration.blocked";
+  private static final String VAULT_ERRORS_COUNTER_NAME = "gen_ai.prism.protection.vault.errors";
 
   private final PrismTextScanner scanner;
   private final int order;
+  private final ActiveDefenseConfig activeDefenseConfig;
+  private final Counter exfiltrationBlockedCounter;
+  private final Counter vaultErrorsCounter;
 
   /**
    * Creates a new advisor with the supplied rule packs, vault, and default order.
@@ -65,7 +88,15 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull List<PrismRulePack> rulePacks,
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry) {
-    this(rulePacks, vault, observationRegistry, PrismMetricsSink.NOOP, false, DEFAULT_ORDER);
+    this(
+        rulePacks,
+        vault,
+        observationRegistry,
+        PrismMetricsSink.NOOP,
+        false,
+        DEFAULT_ORDER,
+        ActiveDefenseConfig.DISABLED,
+        null);
   }
 
   /** Creates a new advisor with the supplied rule packs, vault, metrics sink, and default order. */
@@ -74,7 +105,15 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink) {
-    this(rulePacks, vault, observationRegistry, metricsSink, false, DEFAULT_ORDER);
+    this(
+        rulePacks,
+        vault,
+        observationRegistry,
+        metricsSink,
+        false,
+        DEFAULT_ORDER,
+        ActiveDefenseConfig.DISABLED,
+        null);
   }
 
   /** Creates a new advisor with the supplied rule packs, vault, metrics sink, and strict mode. */
@@ -84,7 +123,15 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink,
       boolean strictMode) {
-    this(rulePacks, vault, observationRegistry, metricsSink, strictMode, DEFAULT_ORDER);
+    this(
+        rulePacks,
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode,
+        DEFAULT_ORDER,
+        ActiveDefenseConfig.DISABLED,
+        null);
   }
 
   /**
@@ -100,7 +147,15 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull PrismVault vault,
       @NonNull ObservationRegistry observationRegistry,
       int order) {
-    this(rulePacks, vault, observationRegistry, PrismMetricsSink.NOOP, false, order);
+    this(
+        rulePacks,
+        vault,
+        observationRegistry,
+        PrismMetricsSink.NOOP,
+        false,
+        order,
+        ActiveDefenseConfig.DISABLED,
+        null);
   }
 
   /**
@@ -114,9 +169,69 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull PrismMetricsSink metricsSink,
       boolean strictMode,
       int order) {
+    this(
+        rulePacks,
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode,
+        order,
+        ActiveDefenseConfig.DISABLED,
+        null);
+  }
+
+  /**
+   * Full constructor exposing the Active Defense configuration and the Micrometer meter registry.
+   *
+   * <p>The starter auto-configuration wires this constructor so the {@code
+   * spring.prism.active-defense.max-restored-tokens-per-response} property is honoured and the
+   * exfiltration counter is registered against the application registry. Hand-wired applications
+   * may also call this constructor directly to opt into Active Defense without going through the
+   * starter.
+   *
+   * @param rulePacks The list of active PII rule packs to scan with.
+   * @param vault The vault used to store and retrieve token mappings.
+   * @param observationRegistry Micrometer observation registry for emitting redaction metrics.
+   * @param metricsSink The metrics sink used to record detokenization and detection telemetry.
+   * @param strictMode When {@code true}, escalates failures to Fail-Closed.
+   * @param order The position of this advisor in the advisor chain.
+   * @param activeDefenseConfig The Active Defense configuration. Use {@link
+   *     ActiveDefenseConfig#DISABLED} to opt out.
+   * @param meterRegistry Optional Micrometer registry. When {@code null}, {@link
+   *     Metrics#globalRegistry} is used.
+   * @since 1.2.0
+   */
+  public PrismChatClientAdvisor(
+      @NonNull List<PrismRulePack> rulePacks,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode,
+      int order,
+      @NonNull ActiveDefenseConfig activeDefenseConfig,
+      @Nullable MeterRegistry meterRegistry) {
+    Objects.requireNonNull(activeDefenseConfig, "activeDefenseConfig");
     this.scanner =
         new PrismTextScanner(rulePacks, vault, observationRegistry, metricsSink, strictMode);
     this.order = order;
+    this.activeDefenseConfig = activeDefenseConfig;
+    MeterRegistry effectiveRegistry =
+        meterRegistry != null ? meterRegistry : Metrics.globalRegistry;
+    this.exfiltrationBlockedCounter =
+        Counter.builder(EXFILTRATION_BLOCKED_COUNTER_NAME)
+            .tag("integration", INTEGRATION)
+            .description(
+                "Number of LLM responses or streams blocked because the Active Defense restored"
+                    + " token ceiling was exceeded.")
+            .register(effectiveRegistry);
+    this.vaultErrorsCounter =
+        Counter.builder(VAULT_ERRORS_COUNTER_NAME)
+            .tag("integration", INTEGRATION)
+            .description(
+                "Number of vault errors encountered during streaming detokenization. In FAIL_SAFE"
+                    + " mode the stream continues with the unrestored chunk; in FAIL_CLOSED mode"
+                    + " the subscription is terminated with a PrismProtectionException.")
+            .register(effectiveRegistry);
   }
 
   // -----------------------------------------------------------------------
@@ -141,29 +256,97 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       @NonNull AdvisedRequest advisedRequest, @NonNull StreamAroundAdvisorChain chain) {
 
     AdvisedRequest sanitized = tokenizeRequest(advisedRequest);
-    StreamingBuffer buffer = new StreamingBuffer();
 
-    return chain
-        .nextAroundStream(sanitized)
-        .map(
-            advisedResponse -> {
-              String rawChunk = extractText(advisedResponse);
-              // Push through the fragmentation buffer; emit safe portion
-              String safeChunk = buffer.processChunk(rawChunk);
-              String restored = scanner.detokenize(safeChunk);
-              return rebuildWithText(advisedResponse, restored);
-            })
-        .concatWith(
-            Flux.defer(
-                () -> {
-                  // Flush any tail fragment remaining after the stream closes
-                  String tail = scanner.detokenize(buffer.flush());
-                  if (tail.isEmpty()) {
-                    return Flux.empty();
-                  }
-                  return Flux.just(syntheticResponse(tail));
-                }));
+    // Flux.defer ensures each subscriber gets its own StreamingBuffer + ExfiltrationGuard pair, so
+    // counts never bleed across concurrent streams (critical under Virtual Threads / reactive
+    // re-subscription).
+    return Flux.defer(
+        () -> {
+          StreamingBuffer buffer = new StreamingBuffer();
+          ExfiltrationGuard guard = new ExfiltrationGuard(activeDefenseConfig.maxRestoredTokens());
+
+          Flux<AdvisedResponse> body =
+              chain
+                  .nextAroundStream(sanitized)
+                  .concatMap(
+                      advisedResponse -> {
+                        String rawChunk = extractText(advisedResponse);
+                        String safeChunk = buffer.processChunk(rawChunk);
+                        SafeDetokenize attempt = safeDetokenize(safeChunk);
+                        if (attempt.vaultError() != null) {
+                          // FAIL_CLOSED → propagate; FAIL_SAFE → emit unmodified safeChunk.
+                          if (scanner.failureMode()
+                              == io.github.catalin87.prism.core.PrismFailureMode.FAIL_CLOSED) {
+                            return Flux.error(attempt.vaultError());
+                          }
+                          return Flux.just(rebuildWithText(advisedResponse, safeChunk));
+                        }
+                        PrismTextScanner.DetokenizeResult result = attempt.result();
+                        if (guard.recordAndCheck(result.restoredCount())) {
+                          return Flux.error(exfiltrationException(guard));
+                        }
+                        return Flux.just(rebuildWithText(advisedResponse, result.text()));
+                      });
+
+          Flux<AdvisedResponse> tail =
+              Flux.defer(
+                  () -> {
+                    String pending = buffer.flush();
+                    SafeDetokenize attempt = safeDetokenize(pending);
+                    if (attempt.vaultError() != null) {
+                      if (scanner.failureMode()
+                          == io.github.catalin87.prism.core.PrismFailureMode.FAIL_CLOSED) {
+                        return Flux.error(attempt.vaultError());
+                      }
+                      if (pending.isEmpty()) {
+                        return Flux.empty();
+                      }
+                      return Flux.just(syntheticResponse(pending));
+                    }
+                    PrismTextScanner.DetokenizeResult tailResult = attempt.result();
+                    if (guard.recordAndCheck(tailResult.restoredCount())) {
+                      return Flux.error(exfiltrationException(guard));
+                    }
+                    if (tailResult.text().isEmpty()) {
+                      return Flux.empty();
+                    }
+                    return Flux.just(syntheticResponse(tailResult.text()));
+                  });
+
+          return body.concatWith(tail);
+        });
   }
+
+  /**
+   * Runs {@link PrismTextScanner#detokenizeCounted(String)} and turns vault failures into a
+   * structured outcome instead of letting them tear down the stream. {@link
+   * PrismProtectionException}s raised in FAIL_CLOSED mode and any other vault {@link
+   * RuntimeException} are captured, counted on {@code gen_ai.prism.protection.vault.errors}, logged
+   * at warn level (no chunk content, only the exception class and message), and surfaced so the
+   * caller can decide whether to propagate or substitute the raw chunk based on {@link
+   * PrismTextScanner#failureMode()}.
+   */
+  private @NonNull SafeDetokenize safeDetokenize(@NonNull String chunk) {
+    try {
+      return new SafeDetokenize(scanner.detokenizeCounted(chunk), null);
+    } catch (RuntimeException vaultError) {
+      vaultErrorsCounter.increment();
+      LOG.warn(
+          "Spring Prism vault error during streaming detokenization [{}]: {} ({})",
+          scanner.failureMode(),
+          vaultError.getClass().getSimpleName(),
+          vaultError.getMessage());
+      return new SafeDetokenize(null, vaultError);
+    }
+  }
+
+  /**
+   * Tagged union of either a successful detokenization or the vault {@link RuntimeException} that
+   * derailed it. Exactly one field is non-null; the {@code aroundStream} pipeline branches on
+   * which.
+   */
+  private record SafeDetokenize(
+      @Nullable PrismTextScanner.DetokenizeResult result, @Nullable RuntimeException vaultError) {}
 
   // -----------------------------------------------------------------------
   // Advisor metadata
@@ -198,8 +381,27 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
   /** Restores vault tokens found in the synchronous response back to their original values. */
   private @NonNull AdvisedResponse detokenizeResponse(@NonNull AdvisedResponse original) {
     String raw = extractText(original);
-    String restored = scanner.detokenize(raw);
-    return rebuildWithText(original, restored);
+    PrismTextScanner.DetokenizeResult result = scanner.detokenizeCounted(raw);
+    ExfiltrationGuard guard = new ExfiltrationGuard(activeDefenseConfig.maxRestoredTokens());
+    if (guard.recordAndCheck(result.restoredCount())) {
+      throw exfiltrationException(guard);
+    }
+    return rebuildWithText(original, result.text());
+  }
+
+  /**
+   * Builds the protection exception thrown when the Active Defense ceiling is breached. The
+   * Micrometer counter is incremented as a side-effect so every throw site is metered uniformly.
+   */
+  private @NonNull PrismProtectionException exfiltrationException(
+      @NonNull ExfiltrationGuard guard) {
+    exfiltrationBlockedCounter.increment();
+    return new PrismProtectionException(
+        PrismProtectionPhase.DETOKENIZE,
+        PrismProtectionReason.EXFILTRATION_THRESHOLD_EXCEEDED,
+        INTEGRATION,
+        scanner.failureMode(),
+        guard.thresholdMessage());
   }
 
   /** Extracts the plain-text content from the first generation in the response, if available. */
@@ -252,5 +454,32 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
     List<Generation> gens = List.of(new Generation(new AssistantMessage(text)));
     ChatResponse chat = new ChatResponse(gens);
     return new AdvisedResponse(chat, java.util.Map.of());
+  }
+
+  /**
+   * Configuration for the Active Defense exfiltration ceiling. A value of {@link
+   * ExfiltrationGuard#UNLIMITED} disables enforcement; positive values cap restored tokens per
+   * synchronous response or per streaming subscription.
+   *
+   * @param maxRestoredTokens The ceiling (or {@link ExfiltrationGuard#UNLIMITED} to disable).
+   * @since 1.2.0
+   */
+  public record ActiveDefenseConfig(int maxRestoredTokens) {
+
+    /** Configuration that disables Active Defense exfiltration enforcement entirely. */
+    public static final ActiveDefenseConfig DISABLED =
+        new ActiveDefenseConfig(ExfiltrationGuard.UNLIMITED);
+
+    /**
+     * Compact constructor that rejects values below {@link ExfiltrationGuard#UNLIMITED} so the
+     * advisor never silently demotes misconfiguration into an unsafe state.
+     */
+    public ActiveDefenseConfig {
+      if (maxRestoredTokens < ExfiltrationGuard.UNLIMITED) {
+        throw new IllegalArgumentException(
+            "maxRestoredTokens must be >= -1 (use ExfiltrationGuard.UNLIMITED to disable); got "
+                + maxRestoredTokens);
+      }
+    }
   }
 }

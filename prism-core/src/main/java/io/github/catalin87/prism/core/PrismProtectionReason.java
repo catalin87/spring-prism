@@ -22,5 +22,13 @@ public enum PrismProtectionReason {
   DETECTOR_FAILURE,
   STRUCTURED_PARSE_FAILURE,
   RESTORE_FAILURE,
-  POLICY_BLOCK
+  POLICY_BLOCK,
+  /**
+   * Detokenization halted because the number of vault tokens encountered in a single LLM response
+   * or streaming session crossed the configured Active Defense exfiltration threshold (property
+   * {@code spring.prism.active-defense.max-restored-tokens-per-response}).
+   *
+   * @since 1.2.0
+   */
+  EXFILTRATION_THRESHOLD_EXCEEDED
 }

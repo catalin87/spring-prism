@@ -190,11 +190,25 @@ class PrismTextScanner {
    * @return Text with all recognised vault tokens replaced by their original PII values.
    */
   @NonNull String detokenize(@NonNull String text) {
+    return detokenizeCounted(text).text();
+  }
+
+  /**
+   * Detokenization variant that additionally reports the number of vault tokens restored in this
+   * invocation. Used by the Active Defense exfiltration guard to enforce per-response and
+   * per-stream ceilings.
+   *
+   * @param text The chunk of LLM response text to detokenize.
+   * @return A {@link DetokenizeResult} carrying both the restored text and the count of tokens
+   *     successfully resolved against the vault (unknown or expired tokens are not counted).
+   * @since 1.2.0
+   */
+  @NonNull DetokenizeResult detokenizeCounted(@NonNull String text) {
     if (text.isBlank()) {
-      return text;
+      return new DetokenizeResult(text, 0);
     }
     if (!containsPossibleToken(text)) {
-      return text;
+      return new DetokenizeResult(text, 0);
     }
 
     Matcher matcher = TOKEN_PATTERN.matcher(text);
@@ -219,7 +233,7 @@ class PrismTextScanner {
         appendPosition = matcher.end();
       }
       if (appendPosition == 0) {
-        return text;
+        return new DetokenizeResult(text, 0);
       }
       result.append(text, appendPosition, text.length());
     } catch (RuntimeException exception) {
@@ -230,14 +244,19 @@ class PrismTextScanner {
             inferVaultReason(exception, PrismProtectionReason.RESTORE_FAILURE),
             exception);
       }
-      return text;
+      return new DetokenizeResult(text, 0);
     } finally {
       metricsSink.onVaultDetokenizeDuration(INTEGRATION, System.nanoTime() - detokenizeStartedAt);
     }
     if (detokenizedCount > 0) {
       metricsSink.onDetokenized(detokenizedCount);
     }
-    return result.toString();
+    return new DetokenizeResult(result.toString(), detokenizedCount);
+  }
+
+  /** Exposes the effective failure mode so collaborators can build matching protection errors. */
+  @NonNull PrismFailureMode failureMode() {
+    return failureMode;
   }
 
   /**
@@ -396,4 +415,13 @@ class PrismTextScanner {
   private record TokenCacheKey(@NonNull String text, @NonNull String label) {}
 
   private record ReplacementResult(@NonNull String text, int replacementCount) {}
+
+  /**
+   * Result of a counted detokenize pass.
+   *
+   * @param text The text with all resolvable vault tokens replaced; unknown/expired tokens are left
+   *     in place (Fail-Open).
+   * @param restoredCount The number of vault tokens successfully restored on this call.
+   */
+  record DetokenizeResult(@NonNull String text, int restoredCount) {}
 }

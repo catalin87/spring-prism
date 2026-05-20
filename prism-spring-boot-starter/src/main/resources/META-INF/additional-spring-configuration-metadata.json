@@ -17,6 +17,27 @@
         "replacement": "spring.prism.failure-mode",
         "reason": "Property 'spring.prism.mcp.security-strict-mode' is deprecated; use the top-level 'spring.prism.failure-mode' instead."
       }
+    },
+    {
+      "name": "spring.prism.active-defense.max-restored-tokens-per-response",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of <PRISM_...> tokens that may be restored within a single LLM response or streaming session before Spring Prism aborts processing with a PrismProtectionException (reason=EXFILTRATION_THRESHOLD_EXCEEDED). Use -1 to disable the limit. Available since 1.2.0.",
+      "defaultValue": 100
+    }
+  ],
+  "hints": [
+    {
+      "name": "spring.prism.active-defense.max-restored-tokens-per-response",
+      "values": [
+        {
+          "value": -1,
+          "description": "Disable the Active Defense exfiltration limit (not recommended in production)."
+        },
+        {
+          "value": 100,
+          "description": "Default ceiling; balances LLM expressiveness with anti-exfiltration protection."
+        }
+      ]
     }
   ]
 }

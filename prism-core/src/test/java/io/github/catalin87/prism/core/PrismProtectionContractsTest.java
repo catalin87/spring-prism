@@ -60,6 +60,9 @@ class PrismProtectionContractsTest {
     assertEquals(
         PrismProtectionReason.RESTORE_FAILURE, PrismProtectionReason.valueOf("RESTORE_FAILURE"));
     assertEquals(PrismProtectionReason.POLICY_BLOCK, PrismProtectionReason.valueOf("POLICY_BLOCK"));
+    assertEquals(
+        PrismProtectionReason.EXFILTRATION_THRESHOLD_EXCEEDED,
+        PrismProtectionReason.valueOf("EXFILTRATION_THRESHOLD_EXCEEDED"));
   }
 
   @Test

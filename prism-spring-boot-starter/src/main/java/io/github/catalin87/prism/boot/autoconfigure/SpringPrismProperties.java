@@ -48,6 +48,7 @@ public class SpringPrismProperties {
   private Dashboard dashboard = new Dashboard();
   private Web web = new Web();
   private Mcp mcp = new Mcp();
+  private ActiveDefense activeDefense = new ActiveDefense();
 
   public boolean isEnabled() {
     return enabled;
@@ -183,6 +184,14 @@ public class SpringPrismProperties {
 
   public void setMcp(Mcp mcp) {
     this.mcp = mcp == null ? new Mcp() : mcp;
+  }
+
+  public ActiveDefense getActiveDefense() {
+    return activeDefense;
+  }
+
+  public void setActiveDefense(ActiveDefense activeDefense) {
+    this.activeDefense = activeDefense == null ? new ActiveDefense() : activeDefense;
   }
 
   /** Externalized vault selection settings. */
@@ -479,6 +488,54 @@ public class SpringPrismProperties {
 
     public void setPattern(String pattern) {
       this.pattern = pattern;
+    }
+  }
+
+  /**
+   * Externalized Active Defense configuration. Groups defenses against adversarial LLM behavior
+   * (data exfiltration today; prompt injection and secret leakage on the v1.2.0 roadmap) under a
+   * single namespace so the top-level {@code spring.prism.*} surface stays focused on core wiring.
+   *
+   * <p>Property prefix: {@code spring.prism.active-defense}.
+   *
+   * @since 1.2.0
+   */
+  public static class ActiveDefense {
+
+    /** Sentinel value indicating the limit is disabled. */
+    public static final int UNLIMITED = -1;
+
+    /**
+     * Default upper bound on tokens restored per LLM response or stream. {@link #UNLIMITED} keeps
+     * Active Defense opt-in so existing 1.x deployments are unaffected when upgrading; operators
+     * who want exfiltration enforcement set {@code spring.prism.active-defense
+     * .max-restored-tokens-per-response} to a positive ceiling.
+     */
+    public static final int DEFAULT_MAX_RESTORED_TOKENS = UNLIMITED;
+
+    private int maxRestoredTokensPerResponse = DEFAULT_MAX_RESTORED_TOKENS;
+
+    /**
+     * Maximum {@code <PRISM_...>} tokens that may be restored within a single synchronous response
+     * or streaming session before Spring Prism aborts processing with a {@link
+     * io.github.catalin87.prism.core.PrismProtectionException} carrying reason {@code
+     * EXFILTRATION_THRESHOLD_EXCEEDED}. A value of {@link #UNLIMITED} disables the limit.
+     */
+    public int getMaxRestoredTokensPerResponse() {
+      return maxRestoredTokensPerResponse;
+    }
+
+    /**
+     * Sets the exfiltration threshold. The {@link #UNLIMITED} sentinel is preserved verbatim;
+     * positive values pass through; any other value (including {@code 0} and {@code < -1}) falls
+     * back to {@link #DEFAULT_MAX_RESTORED_TOKENS} to keep misconfiguration safe-by-default.
+     */
+    public void setMaxRestoredTokensPerResponse(int maxRestoredTokensPerResponse) {
+      if (maxRestoredTokensPerResponse == UNLIMITED || maxRestoredTokensPerResponse > 0) {
+        this.maxRestoredTokensPerResponse = maxRestoredTokensPerResponse;
+        return;
+      }
+      this.maxRestoredTokensPerResponse = DEFAULT_MAX_RESTORED_TOKENS;
     }
   }
 }
