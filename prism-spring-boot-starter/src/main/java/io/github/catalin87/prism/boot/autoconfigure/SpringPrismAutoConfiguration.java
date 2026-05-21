@@ -16,7 +16,10 @@
 package io.github.catalin87.prism.boot.autoconfigure;
 
 import io.github.catalin87.prism.core.PrismFailureMode;
+import io.github.catalin87.prism.core.PrismRegistryMetricsSink;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
+import io.github.catalin87.prism.core.PrismRulePackValidator;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -28,12 +31,14 @@ import io.github.catalin87.prism.mcp.PrismMcpMetricsSink;
 import io.github.catalin87.prism.mcp.PrismMcpTransport;
 import io.github.catalin87.prism.spring.ai.advisor.PrismChatClientAdvisor;
 import io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.ListableBeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -74,6 +79,25 @@ public class SpringPrismAutoConfiguration {
       SpringPrismProperties properties,
       ListableBeanFactory beanFactory) {
     return registrar.resolve(properties, findAdditionalRulePacks(beanFactory));
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PrismRulePackValidator prismRulePackValidator() {
+    return PrismRulePackValidator.STRUCTURAL;
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PrismRulePackRegistry prismRulePackRegistry(
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+      ObjectProvider<PrismRegistryMetricsSink> registryMetricsSinkProvider,
+      ObjectProvider<PrismRulePackValidator> validatorProvider) {
+    PrismRegistryMetricsSink sink =
+        registryMetricsSinkProvider.getIfAvailable(() -> PrismRegistryMetricsSink.NOOP);
+    PrismRulePackValidator validator =
+        validatorProvider.getIfAvailable(() -> PrismRulePackValidator.STRUCTURAL);
+    return new PrismRulePackRegistry(springPrismRulePacks, sink, validator);
   }
 
   @Bean
@@ -119,9 +143,13 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  PrismRuntimeMetrics prismRuntimeMetrics(SpringPrismProperties properties) {
+  PrismRuntimeMetrics prismRuntimeMetrics(
+      SpringPrismProperties properties, ObjectProvider<MeterRegistry> meterRegistryProvider) {
     SpringPrismProperties.Dashboard dashboard = properties.getDashboard();
-    return new PrismRuntimeMetrics(dashboard.getAuditRetention(), dashboard.getHistoryRetention());
+    return new PrismRuntimeMetrics(
+        dashboard.getAuditRetention(),
+        dashboard.getHistoryRetention(),
+        meterRegistryProvider.getIfAvailable());
   }
 
   @Bean
@@ -138,14 +166,19 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  PrismRegistryMetricsSink prismRegistryMetricsSink(PrismRuntimeMetrics prismRuntimeMetrics) {
+    return prismRuntimeMetrics;
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   PrismChatClientAdvisor prismChatClientAdvisor(
       @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
       PrismVault prismVault,
       ObservationRegistry observationRegistry,
       PrismMetricsSink prismMetricsSink,
       SpringPrismProperties properties,
-      org.springframework.beans.factory.ObjectProvider<io.micrometer.core.instrument.MeterRegistry>
-          meterRegistryProvider) {
+      ObjectProvider<MeterRegistry> meterRegistryProvider) {
     PrismChatClientAdvisor.ActiveDefenseConfig activeDefenseConfig =
         new PrismChatClientAdvisor.ActiveDefenseConfig(
             properties.getActiveDefense().getMaxRestoredTokensPerResponse());
@@ -182,6 +215,14 @@ public class SpringPrismAutoConfiguration {
       SpringPrismProperties properties) {
     return new PrismActuatorEndpoint(
         prismRuntimeMetrics, springPrismRulePacks, prismVault, properties);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
+  PrismRulePackRegistryEndpoint prismRulePackRegistryEndpoint(
+      PrismRulePackRegistry prismRulePackRegistry, ListableBeanFactory beanFactory) {
+    return new PrismRulePackRegistryEndpoint(prismRulePackRegistry, beanFactory);
   }
 
   @Bean

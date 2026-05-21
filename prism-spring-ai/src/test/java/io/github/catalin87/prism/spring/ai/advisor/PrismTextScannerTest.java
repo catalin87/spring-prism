@@ -29,6 +29,7 @@ import io.github.catalin87.prism.core.PrismProtectionException;
 import io.github.catalin87.prism.core.PrismProtectionPhase;
 import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.PrismVaultAvailability;
@@ -111,6 +112,62 @@ class PrismTextScannerTest {
 
     assertThat(sanitized).contains("<PRISM_EMAIL_").doesNotContain("edge@example.com");
     assertThat(scanner.detokenize(sanitized)).isEqualTo(prompt);
+  }
+
+  @Test
+  void registryConstructorBehavesIdenticallyToListConstructor() {
+    TokenGenerator tokenGenerator = new HmacSha256TokenGenerator();
+    DefaultPrismVault vaultA =
+        new DefaultPrismVault(
+            tokenGenerator,
+            "benchmark-secret-material-32bytes".getBytes(StandardCharsets.UTF_8),
+            3600L);
+    DefaultPrismVault vaultB =
+        new DefaultPrismVault(
+            tokenGenerator,
+            "benchmark-secret-material-32bytes".getBytes(StandardCharsets.UTF_8),
+            3600L);
+
+    PrismTextScanner listScanner =
+        new PrismTextScanner(
+            RULE_PACKS, vaultA, ObservationRegistry.NOOP, PrismMetricsSink.NOOP, false);
+    PrismTextScanner registryScanner =
+        new PrismTextScanner(
+            new PrismRulePackRegistry(RULE_PACKS),
+            vaultB,
+            ObservationRegistry.NOOP,
+            PrismMetricsSink.NOOP,
+            false);
+
+    String prompt = "Reach me at edge@example.com or via 123-45-6789 ASAP.";
+
+    String listSanitized = listScanner.tokenize(prompt);
+    String registrySanitized = registryScanner.tokenize(prompt);
+
+    assertThat(registrySanitized).isEqualTo(listSanitized);
+    assertThat(registryScanner.detokenize(registrySanitized)).isEqualTo(prompt);
+  }
+
+  @Test
+  void replaceBetweenTokenizeCallsSwapsActivePacks() {
+    PrismVault vault = mock(PrismVault.class);
+    when(vault.tokenize("same@example.com", "EMAIL"))
+        .thenReturn(new PrismToken("<PRISM_EMAIL_REPEAT>", "same@example.com", "EMAIL"));
+
+    PrismRulePackRegistry registry = new PrismRulePackRegistry(List.of());
+    PrismTextScanner scanner =
+        new PrismTextScanner(
+            registry, vault, ObservationRegistry.NOOP, PrismMetricsSink.NOOP, false);
+
+    String prompt = "same@example.com appears here.";
+
+    String beforeSwap = scanner.tokenize(prompt);
+    assertThat(beforeSwap).isEqualTo(prompt);
+
+    registry.replace(List.of(new RepeatedSingleEmailRulePack()));
+
+    String afterSwap = scanner.tokenize(prompt);
+    assertThat(afterSwap).isEqualTo("<PRISM_EMAIL_REPEAT> appears here.");
   }
 
   @Test
@@ -218,6 +275,32 @@ class PrismTextScannerTest {
       return List.of(
           new PiiCandidate("same@example.com", 0, 16, "EMAIL"),
           new PiiCandidate("same@example.com", 22, 38, "EMAIL"));
+    }
+  }
+
+  private static final class RepeatedSingleEmailRulePack implements PrismRulePack {
+
+    @Override
+    public String getName() {
+      return "TEST_SWAP";
+    }
+
+    @Override
+    public List<PiiDetector> getDetectors() {
+      return List.of(new RepeatedSingleEmailDetector());
+    }
+  }
+
+  private static final class RepeatedSingleEmailDetector implements PiiDetector {
+
+    @Override
+    public String getEntityType() {
+      return "EMAIL";
+    }
+
+    @Override
+    public List<PiiCandidate> detect(String text) {
+      return List.of(new PiiCandidate("same@example.com", 0, 16, "EMAIL"));
     }
   }
 

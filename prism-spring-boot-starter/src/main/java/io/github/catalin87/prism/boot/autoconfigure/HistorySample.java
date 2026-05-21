@@ -15,13 +15,31 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
-/** Immutable server-side history point retained for dashboard trend rendering. */
+import org.jspecify.annotations.NonNull;
+
+/**
+ * Immutable server-side history point retained for dashboard trend rendering.
+ *
+ * <p>Instances are produced exclusively by {@link PrismRuntimeMetrics#captureHistorySample(String)}
+ * and are safe to publish across threads — every field is either a {@code long}/{@code double}
+ * primitive or a non-null immutable {@link String}.
+ *
+ * @param capturedAt ISO-8601 timestamp of the snapshot; never {@code null}.
+ * @param totalDetections Sum of all detection counts across rule packs at the time of capture.
+ * @param detectionErrors Cumulative detector errors at the time of capture.
+ * @param scanMilliseconds Rolling-average scan latency in milliseconds.
+ * @param tokenizedCount Cumulative tokens produced.
+ * @param detokenizedCount Cumulative tokens redeemed.
+ * @param tokenBacklog {@code max(0, tokenizedCount - detokenizedCount)} captured atomically.
+ * @param vaultType Configured vault implementation type (e.g. {@code IN_MEMORY}); never {@code
+ *     null}.
+ */
 public record HistorySample(
-    String capturedAt,
+    @NonNull String capturedAt,
     long totalDetections,
     long detectionErrors,
     double scanMilliseconds,
     long tokenizedCount,
     long detokenizedCount,
     long tokenBacklog,
-    String vaultType) {}
+    @NonNull String vaultType) {}

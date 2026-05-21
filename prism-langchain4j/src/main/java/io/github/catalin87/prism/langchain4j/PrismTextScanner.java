@@ -22,6 +22,7 @@ import io.github.catalin87.prism.core.PrismProtectionException;
 import io.github.catalin87.prism.core.PrismProtectionPhase;
 import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.PrismVaultAvailability;
@@ -56,7 +57,7 @@ final class PrismTextScanner {
   private static final String INTEGRATION = PrismMetricsSink.LANGCHAIN4J_INTEGRATION;
   private static final Duration PREFLIGHT_TIMEOUT = Duration.ofMillis(50);
 
-  private final List<PrismRulePack> rulePacks;
+  private final PrismRulePackRegistry registry;
   private final PrismVault vault;
   private final ObservationRegistry observationRegistry;
   private final PrismMetricsSink metricsSink;
@@ -68,12 +69,7 @@ final class PrismTextScanner {
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink,
       boolean strictMode) {
-    this(
-        rulePacks,
-        vault,
-        observationRegistry,
-        metricsSink,
-        strictMode ? PrismFailureMode.FAIL_CLOSED : PrismFailureMode.FAIL_SAFE);
+    this(new PrismRulePackRegistry(rulePacks), vault, observationRegistry, metricsSink, strictMode);
   }
 
   PrismTextScanner(
@@ -82,7 +78,31 @@ final class PrismTextScanner {
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink,
       @NonNull PrismFailureMode failureMode) {
-    this.rulePacks = List.copyOf(rulePacks);
+    this(
+        new PrismRulePackRegistry(rulePacks), vault, observationRegistry, metricsSink, failureMode);
+  }
+
+  PrismTextScanner(
+      @NonNull PrismRulePackRegistry registry,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode) {
+    this(
+        registry,
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode ? PrismFailureMode.FAIL_CLOSED : PrismFailureMode.FAIL_SAFE);
+  }
+
+  PrismTextScanner(
+      @NonNull PrismRulePackRegistry registry,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      @NonNull PrismFailureMode failureMode) {
+    this.registry = registry;
     this.vault = vault;
     this.observationRegistry = observationRegistry;
     this.metricsSink = metricsSink;
@@ -94,6 +114,10 @@ final class PrismTextScanner {
       return text;
     }
     runPreflightIfRequired();
+
+    // Snapshot-per-call: read the active rule packs exactly once so a concurrent
+    // PrismRulePackRegistry.replace(...) cannot perturb this in-flight scan.
+    List<PrismRulePack> rulePacks = registry.snapshot();
 
     List<PiiCandidate> allCandidates = new ArrayList<>();
     long scanStartedAt = System.nanoTime();

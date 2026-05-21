@@ -15,19 +15,47 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
+import io.github.catalin87.prism.core.PrismRegistryMetricsSink;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-/** In-memory runtime metrics collector for dashboard and actuator-style reads. */
+/**
+ * In-memory runtime metrics collector for dashboard and actuator-style reads.
+ *
+ * <p>When a Micrometer {@link MeterRegistry} is supplied (via the three-arg constructor), this
+ * class additionally registers three meters:
+ *
+ * <ul>
+ *   <li>{@code prism.registry.swap.count} — counter, incremented on every successful {@code
+ *       PrismRulePackRegistry.replace(...)} call.
+ *   <li>{@code prism.registry.swap.error.count} — counter, incremented on every failed swap.
+ *   <li>{@code prism.scanner.tokenize.duration} — timer, fed by scanner {@code onScanDuration}
+ *       callbacks (tagged by {@code integration}).
+ * </ul>
+ *
+ * <p>When no {@link MeterRegistry} is supplied, the class still operates as the in-memory sink for
+ * the existing dashboard, but emits nothing to Micrometer. This preserves backward compatibility
+ * with hosts that have not configured a metrics backend.
+ */
 public class PrismRuntimeMetrics
     implements io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink,
         io.github.catalin87.prism.langchain4j.PrismMetricsSink,
-        io.github.catalin87.prism.mcp.PrismMcpMetricsSink {
+        io.github.catalin87.prism.mcp.PrismMcpMetricsSink,
+        PrismRegistryMetricsSink {
+
+  static final String REGISTRY_SWAP_COUNTER = "prism.registry.swap.count";
+  static final String REGISTRY_SWAP_ERROR_COUNTER = "prism.registry.swap.error.count";
+  static final String SCANNER_TOKENIZE_TIMER = "prism.scanner.tokenize.duration";
 
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
@@ -43,13 +71,56 @@ public class PrismRuntimeMetrics
   private final int auditRetentionLimit;
   private final int historyRetentionLimit;
 
+  private final @Nullable MeterRegistry meterRegistry;
+  private final @Nullable Counter registrySwapCounter;
+  private final @Nullable Counter registrySwapErrorCounter;
+  private final ConcurrentHashMap<String, Timer> tokenizeTimers = new ConcurrentHashMap<>();
+
   public PrismRuntimeMetrics() {
     this(12, 120);
   }
 
   public PrismRuntimeMetrics(int auditRetentionLimit, int historyRetentionLimit) {
+    this(auditRetentionLimit, historyRetentionLimit, null);
+  }
+
+  /**
+   * Creates a metrics collector that additionally publishes registry and scanner metrics to {@code
+   * meterRegistry} when it is non-null. Passing {@code null} preserves the legacy in-memory-only
+   * behaviour.
+   */
+  public PrismRuntimeMetrics(
+      int auditRetentionLimit, int historyRetentionLimit, @Nullable MeterRegistry meterRegistry) {
     this.auditRetentionLimit = Math.max(1, auditRetentionLimit);
     this.historyRetentionLimit = Math.max(10, historyRetentionLimit);
+    this.meterRegistry = meterRegistry;
+    if (meterRegistry != null) {
+      this.registrySwapCounter =
+          Counter.builder(REGISTRY_SWAP_COUNTER)
+              .description("Number of successful PrismRulePackRegistry.replace(...) swaps.")
+              .register(meterRegistry);
+      this.registrySwapErrorCounter =
+          Counter.builder(REGISTRY_SWAP_ERROR_COUNTER)
+              .description("Number of failed PrismRulePackRegistry.replace(...) swaps.")
+              .register(meterRegistry);
+    } else {
+      this.registrySwapCounter = null;
+      this.registrySwapErrorCounter = null;
+    }
+  }
+
+  @Override
+  public void onRegistrySwap() {
+    if (registrySwapCounter != null) {
+      registrySwapCounter.increment();
+    }
+  }
+
+  @Override
+  public void onRegistryError(@NonNull Throwable cause) {
+    if (registrySwapErrorCounter != null) {
+      registrySwapErrorCounter.increment();
+    }
   }
 
   @Override
@@ -81,6 +152,17 @@ public class PrismRuntimeMetrics
   @Override
   public void onScanDuration(@NonNull String integration, long nanos) {
     recordDuration(integration, "scan", nanos);
+    if (meterRegistry != null) {
+      tokenizeTimers
+          .computeIfAbsent(
+              integration,
+              key ->
+                  Timer.builder(SCANNER_TOKENIZE_TIMER)
+                      .description("Duration of PrismTextScanner.tokenize() across integrations.")
+                      .tag("integration", key)
+                      .register(meterRegistry))
+          .record(nanos, TimeUnit.NANOSECONDS);
+    }
   }
 
   @Override
@@ -171,7 +253,7 @@ public class PrismRuntimeMetrics
   }
 
   /** Captures a single aggregate sample so dashboard trends survive browser refreshes. */
-  public synchronized void captureHistorySample(String vaultType) {
+  public synchronized void captureHistorySample(@NonNull String vaultType) {
     long totalDetections = detectionCounts().values().stream().mapToLong(Long::longValue).sum();
     long detectionErrors = detectionErrorCount();
     long tokenized = tokenizedCount();
