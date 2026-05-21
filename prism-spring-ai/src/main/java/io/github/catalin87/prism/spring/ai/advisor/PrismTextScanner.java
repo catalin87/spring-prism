@@ -22,6 +22,7 @@ import io.github.catalin87.prism.core.PrismProtectionException;
 import io.github.catalin87.prism.core.PrismProtectionPhase;
 import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.PrismVaultAvailability;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,7 +48,7 @@ import org.jspecify.annotations.Nullable;
  * Internal utility for scanning text blocks to replace detected PII with vault tokens (tokenize)
  * and to replace vault tokens in LLM responses with the original values (detokenize).
  */
-class PrismTextScanner {
+final class PrismTextScanner {
 
   private static final int LARGE_TEXT_THRESHOLD = 8_192;
   private static final int SEGMENT_SIZE = 4_096;
@@ -56,7 +58,7 @@ class PrismTextScanner {
   private static final String INTEGRATION = PrismMetricsSink.SPRING_AI_INTEGRATION;
   private static final Duration PREFLIGHT_TIMEOUT = Duration.ofMillis(50);
 
-  private final List<PrismRulePack> rulePacks;
+  private final PrismRulePackRegistry registry;
   private final PrismVault vault;
   private final ObservationRegistry observationRegistry;
   private final PrismMetricsSink metricsSink;
@@ -90,7 +92,31 @@ class PrismTextScanner {
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink,
       @NonNull PrismFailureMode failureMode) {
-    this.rulePacks = List.copyOf(rulePacks);
+    this(
+        new PrismRulePackRegistry(rulePacks), vault, observationRegistry, metricsSink, failureMode);
+  }
+
+  PrismTextScanner(
+      @NonNull PrismRulePackRegistry registry,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode) {
+    this(
+        registry,
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode ? PrismFailureMode.FAIL_CLOSED : PrismFailureMode.FAIL_SAFE);
+  }
+
+  PrismTextScanner(
+      @NonNull PrismRulePackRegistry registry,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      @NonNull PrismFailureMode failureMode) {
+    this.registry = Objects.requireNonNull(registry, "registry");
     this.vault = vault;
     this.observationRegistry = observationRegistry;
     this.metricsSink = metricsSink;
@@ -108,78 +134,92 @@ class PrismTextScanner {
     if (text == null || text.isBlank()) {
       return text;
     }
-    runPreflightIfRequired();
-
-    // Collect all candidates across all detectors in all packs
-    List<PiiCandidate> allCandidates = new ArrayList<>();
-    long scanStartedAt = System.nanoTime();
+    // End-to-end wall clock for the entire tokenize() body (detection + dedup + vault tokenize).
+    // Reported via onTokenizeDuration so a single Timer can capture full-method latency without
+    // double-counting the detect-only and vault-only sub-phases that already report separately.
+    long tokenizeMethodStartedAt = System.nanoTime();
     try {
-      for (PrismRulePack pack : rulePacks) {
-        for (PiiDetector detector : pack.getDetectors()) {
-          if (!detector.mayMatch(text)) {
-            continue;
-          }
-          try {
-            List<PiiCandidate> detected = detectCandidates(detector, text);
-            if (!detected.isEmpty()) {
-              metricsSink.onDetected(pack.getName(), detector.getEntityType(), detected.size());
-              allCandidates.addAll(detected);
+      runPreflightIfRequired();
+
+      // Snapshot-per-call: capture the active ruleset once so this tokenize() pass
+      // runs entirely against a single immutable list, even if registry.update()
+      // lands mid-scan. One volatile load; subsequent iteration is lock-free.
+      List<PrismRulePack> rulePacks = registry.snapshot();
+
+      // Collect all candidates across all detectors in all packs
+      List<PiiCandidate> allCandidates = new ArrayList<>();
+      long scanStartedAt = System.nanoTime();
+      try {
+        for (PrismRulePack pack : rulePacks) {
+          for (PiiDetector detector : pack.getDetectors()) {
+            if (!detector.mayMatch(text)) {
+              continue;
             }
-          } catch (Exception e) {
-            metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
-            if (failureMode == PrismFailureMode.FAIL_CLOSED) {
-              metricsSink.onRequestBlocked(INTEGRATION);
-              throw protectionException(
-                  PrismProtectionPhase.DETECT, PrismProtectionReason.DETECTOR_FAILURE, e);
+            try {
+              List<PiiCandidate> detected = detectCandidates(detector, text);
+              if (!detected.isEmpty()) {
+                metricsSink.onDetected(pack.getName(), detector.getEntityType(), detected.size());
+                allCandidates.addAll(detected);
+              }
+            } catch (Exception e) {
+              metricsSink.onDetectionError(pack.getName(), detector.getEntityType());
+              if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+                metricsSink.onRequestBlocked(INTEGRATION);
+                throw protectionException(
+                    PrismProtectionPhase.DETECT, PrismProtectionReason.DETECTOR_FAILURE, e);
+              }
+              observationRegistry
+                  .observationConfig()
+                  .observationHandler(null); // triggers default handler chain
             }
-            observationRegistry
-                .observationConfig()
-                .observationHandler(null); // triggers default handler chain
           }
         }
+      } finally {
+        metricsSink.onScanDuration(INTEGRATION, System.nanoTime() - scanStartedAt);
       }
-    } finally {
-      metricsSink.onScanDuration(INTEGRATION, System.nanoTime() - scanStartedAt);
-    }
 
-    if (allCandidates.isEmpty()) {
-      return text;
-    }
-
-    // Sort by start offset descending so deduplication preserves the most specific/right-most span
-    allCandidates.sort((a, b) -> Integer.compare(b.start(), a.start()));
-
-    // Deduplicate overlapping spans (keep the largest / first by offset)
-    List<PiiCandidate> deduplicated = deduplicate(allCandidates);
-
-    int redactedCount = 0;
-    long tokenizeStartedAt = System.nanoTime();
-    String sanitized;
-    try {
-      ReplacementResult replacementResult = tokenizeCandidates(text, deduplicated);
-      redactedCount = replacementResult.replacementCount();
-      sanitized = replacementResult.text();
-    } catch (RuntimeException exception) {
-      if (failureMode == PrismFailureMode.FAIL_CLOSED) {
-        metricsSink.onRequestBlocked(INTEGRATION);
-        throw protectionException(
-            PrismProtectionPhase.TOKENIZE,
-            inferVaultReason(exception, PrismProtectionReason.POLICY_BLOCK),
-            exception);
+      if (allCandidates.isEmpty()) {
+        return text;
       }
-      sanitized = text;
+
+      // Sort by start offset descending so deduplication preserves the most specific/right-most
+      // span
+      allCandidates.sort((a, b) -> Integer.compare(b.start(), a.start()));
+
+      // Deduplicate overlapping spans (keep the largest / first by offset)
+      List<PiiCandidate> deduplicated = deduplicate(allCandidates);
+
+      int redactedCount = 0;
+      long tokenizeStartedAt = System.nanoTime();
+      String sanitized;
+      try {
+        ReplacementResult replacementResult = tokenizeCandidates(text, deduplicated);
+        redactedCount = replacementResult.replacementCount();
+        sanitized = replacementResult.text();
+      } catch (RuntimeException exception) {
+        if (failureMode == PrismFailureMode.FAIL_CLOSED) {
+          metricsSink.onRequestBlocked(INTEGRATION);
+          throw protectionException(
+              PrismProtectionPhase.TOKENIZE,
+              inferVaultReason(exception, PrismProtectionReason.POLICY_BLOCK),
+              exception);
+        }
+        sanitized = text;
+      } finally {
+        metricsSink.onVaultTokenizeDuration(INTEGRATION, System.nanoTime() - tokenizeStartedAt);
+      }
+
+      if (redactedCount > 0) {
+        metricsSink.onTokenized(redactedCount);
+        observationRegistry
+            .observationConfig()
+            .observationHandler(null); // no-op: real metrics emitted via Observation API
+      }
+
+      return sanitized;
     } finally {
-      metricsSink.onVaultTokenizeDuration(INTEGRATION, System.nanoTime() - tokenizeStartedAt);
+      metricsSink.onTokenizeDuration(INTEGRATION, System.nanoTime() - tokenizeMethodStartedAt);
     }
-
-    if (redactedCount > 0) {
-      metricsSink.onTokenized(redactedCount);
-      observationRegistry
-          .observationConfig()
-          .observationHandler(null); // no-op: real metrics emitted via Observation API
-    }
-
-    return sanitized;
   }
 
   /**

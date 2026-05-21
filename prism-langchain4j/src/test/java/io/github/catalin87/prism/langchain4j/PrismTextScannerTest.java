@@ -29,6 +29,7 @@ import io.github.catalin87.prism.core.PrismProtectionException;
 import io.github.catalin87.prism.core.PrismProtectionPhase;
 import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismToken;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -43,6 +44,30 @@ import org.junit.jupiter.api.Test;
 class PrismTextScannerTest {
 
   private static final List<PrismRulePack> RULE_PACKS = List.of(new UniversalRulePack());
+
+  @Test
+  void scannerObservesRulesetUpdatePublishedThroughRegistry() {
+    PrismRulePackRegistry registry =
+        new PrismRulePackRegistry(List.<PrismRulePack>of(new UniversalRulePack()));
+    DefaultPrismVault vault =
+        new DefaultPrismVault(
+            new HmacSha256TokenGenerator(),
+            "benchmark-secret-material-32bytes".getBytes(StandardCharsets.UTF_8),
+            3600L);
+    PrismTextScanner scanner =
+        new PrismTextScanner(
+            registry, vault, ObservationRegistry.NOOP, PrismMetricsSink.NOOP, false);
+
+    String prompt = "Contact rag-user-00@example.com for details.";
+
+    String firstPass = scanner.tokenize(prompt);
+    assertThat(firstPass).contains("<PRISM_EMAIL_").doesNotContain("rag-user-00@example.com");
+
+    registry.update(List.of());
+
+    String secondPass = scanner.tokenize(prompt);
+    assertThat(secondPass).isEqualTo(prompt);
+  }
 
   @Test
   void tokenizesAndRestoresLargePromptInSinglePass() {

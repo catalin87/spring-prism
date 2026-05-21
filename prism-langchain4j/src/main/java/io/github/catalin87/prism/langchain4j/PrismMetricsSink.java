@@ -42,6 +42,16 @@ public interface PrismMetricsSink {
 
   default void onResponseBlocked(@NonNull String integration) {}
 
+  /**
+   * Wall-clock duration of a full {@code PrismTextScanner.tokenize(...)} call, covering detection,
+   * deduplication, and vault tokenization combined. This is a strict superset of {@link
+   * #onScanDuration(String, long)}, which measures only the detect phase. Backends mapping this to
+   * Micrometer should target a {@code Timer} (e.g. {@code prism.scanner.tokenize.duration}).
+   *
+   * @since 1.2.0
+   */
+  default void onTokenizeDuration(@NonNull String integration, long nanos) {}
+
   /** No-op sink used when callers do not need runtime metrics callbacks. */
   final class NoOpPrismMetricsSink implements PrismMetricsSink {
     @Override

@@ -19,6 +19,7 @@ import io.github.catalin87.prism.core.PrismProtectionException;
 import io.github.catalin87.prism.core.PrismProtectionPhase;
 import io.github.catalin87.prism.core.PrismProtectionReason;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.guard.ExfiltrationGuard;
 import io.github.catalin87.prism.core.vault.StreamingBuffer;
@@ -210,9 +211,51 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
       int order,
       @NonNull ActiveDefenseConfig activeDefenseConfig,
       @Nullable MeterRegistry meterRegistry) {
+    this(
+        new PrismRulePackRegistry(rulePacks),
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode,
+        order,
+        activeDefenseConfig,
+        meterRegistry);
+  }
+
+  /**
+   * Full constructor accepting a {@link PrismRulePackRegistry} so the active ruleset can be swapped
+   * at runtime (e.g. ~2-3 times per day from an operator endpoint) without rebuilding the advisor
+   * or restarting the application.
+   *
+   * <p>Reads through {@link PrismRulePackRegistry#snapshot()} are lock-free: a single volatile load
+   * per {@code tokenize()} call captures the active ruleset for the duration of that call. Updates
+   * via {@link PrismRulePackRegistry#update(List)} are atomic with respect to readers.
+   *
+   * @param registry The dynamic rule-pack registry the underlying scanner will consult on every
+   *     request.
+   * @param vault The vault used to store and retrieve token mappings.
+   * @param observationRegistry Micrometer observation registry for emitting redaction metrics.
+   * @param metricsSink The metrics sink used to record detokenization and detection telemetry.
+   * @param strictMode When {@code true}, escalates failures to Fail-Closed.
+   * @param order The position of this advisor in the advisor chain.
+   * @param activeDefenseConfig The Active Defense configuration. Use {@link
+   *     ActiveDefenseConfig#DISABLED} to opt out.
+   * @param meterRegistry Optional Micrometer registry. When {@code null}, {@link
+   *     Metrics#globalRegistry} is used.
+   * @since 1.2.0
+   */
+  public PrismChatClientAdvisor(
+      @NonNull PrismRulePackRegistry registry,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode,
+      int order,
+      @NonNull ActiveDefenseConfig activeDefenseConfig,
+      @Nullable MeterRegistry meterRegistry) {
     Objects.requireNonNull(activeDefenseConfig, "activeDefenseConfig");
     this.scanner =
-        new PrismTextScanner(rulePacks, vault, observationRegistry, metricsSink, strictMode);
+        new PrismTextScanner(registry, vault, observationRegistry, metricsSink, strictMode);
     this.order = order;
     this.activeDefenseConfig = activeDefenseConfig;
     MeterRegistry effectiveRegistry =
@@ -346,7 +389,7 @@ public class PrismChatClientAdvisor implements CallAroundAdvisor, StreamAroundAd
    * which.
    */
   private record SafeDetokenize(
-      @Nullable PrismTextScanner.DetokenizeResult result, @Nullable RuntimeException vaultError) {}
+      PrismTextScanner.@Nullable DetokenizeResult result, @Nullable RuntimeException vaultError) {}
 
   // -----------------------------------------------------------------------
   // Advisor metadata

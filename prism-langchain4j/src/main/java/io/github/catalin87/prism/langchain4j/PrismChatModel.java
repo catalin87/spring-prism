@@ -29,6 +29,7 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismVault;
 import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
@@ -79,9 +80,39 @@ public final class PrismChatModel implements ChatModel {
       @NonNull ObservationRegistry observationRegistry,
       @NonNull PrismMetricsSink metricsSink,
       boolean strictMode) {
+    this(
+        delegate,
+        new PrismRulePackRegistry(rulePacks),
+        vault,
+        observationRegistry,
+        metricsSink,
+        strictMode);
+  }
+
+  /**
+   * Creates a Prism-protected wrapper backed by a {@link PrismRulePackRegistry}, allowing the
+   * active ruleset to be swapped at runtime without rebuilding this model. Reads through the
+   * registry are lock-free: a single volatile load per {@code tokenize()} call captures the active
+   * ruleset for the duration of that call.
+   *
+   * @param delegate the underlying LangChain4j chat model
+   * @param registry the dynamic rule-pack registry the underlying scanner will consult
+   * @param vault vault used to store and restore token mappings
+   * @param observationRegistry Micrometer observation registry
+   * @param metricsSink optional runtime metrics callback
+   * @param strictMode when true, detector failures abort the call instead of failing open
+   * @since 1.2.0
+   */
+  public PrismChatModel(
+      @NonNull ChatModel delegate,
+      @NonNull PrismRulePackRegistry registry,
+      @NonNull PrismVault vault,
+      @NonNull ObservationRegistry observationRegistry,
+      @NonNull PrismMetricsSink metricsSink,
+      boolean strictMode) {
     this.delegate = Objects.requireNonNull(delegate, "delegate");
     this.scanner =
-        new PrismTextScanner(rulePacks, vault, observationRegistry, metricsSink, strictMode);
+        new PrismTextScanner(registry, vault, observationRegistry, metricsSink, strictMode);
   }
 
   /** Sanitizes the request before delegating to the wrapped model and restores response tokens. */

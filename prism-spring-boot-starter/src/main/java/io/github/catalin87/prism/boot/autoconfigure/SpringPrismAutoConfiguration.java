@@ -17,6 +17,7 @@ package io.github.catalin87.prism.boot.autoconfigure;
 
 import io.github.catalin87.prism.core.PrismFailureMode;
 import io.github.catalin87.prism.core.PrismRulePack;
+import io.github.catalin87.prism.core.PrismRulePackRegistry;
 import io.github.catalin87.prism.core.PrismVault;
 import io.github.catalin87.prism.core.PrismVaultAvailability;
 import io.github.catalin87.prism.core.TokenGenerator;
@@ -78,6 +79,28 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  @ConditionalOnClass(io.micrometer.core.instrument.MeterRegistry.class)
+  io.github.catalin87.prism.core.PrismRegistryMetricsSink prismRegistryMetricsSink(
+      org.springframework.beans.factory.ObjectProvider<io.micrometer.core.instrument.MeterRegistry>
+          meterRegistryProvider) {
+    return new MicrometerPrismRegistryMetricsSink(meterRegistryProvider.getIfAvailable());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  PrismRulePackRegistry prismRulePackRegistry(
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks,
+      org.springframework.beans.factory.ObjectProvider<
+              io.github.catalin87.prism.core.PrismRegistryMetricsSink>
+          prismRegistryMetricsSinkProvider) {
+    io.github.catalin87.prism.core.PrismRegistryMetricsSink sink =
+        prismRegistryMetricsSinkProvider.getIfAvailable(
+            () -> io.github.catalin87.prism.core.PrismRegistryMetricsSink.NOOP);
+    return new PrismRulePackRegistry(springPrismRulePacks, sink);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   TokenGenerator prismTokenGenerator() {
     return new HmacSha256TokenGenerator();
   }
@@ -119,9 +142,15 @@ public class SpringPrismAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  PrismRuntimeMetrics prismRuntimeMetrics(SpringPrismProperties properties) {
+  PrismRuntimeMetrics prismRuntimeMetrics(
+      SpringPrismProperties properties,
+      org.springframework.beans.factory.ObjectProvider<io.micrometer.core.instrument.MeterRegistry>
+          meterRegistryProvider) {
     SpringPrismProperties.Dashboard dashboard = properties.getDashboard();
-    return new PrismRuntimeMetrics(dashboard.getAuditRetention(), dashboard.getHistoryRetention());
+    return new PrismRuntimeMetrics(
+        dashboard.getAuditRetention(),
+        dashboard.getHistoryRetention(),
+        meterRegistryProvider.getIfAvailable());
   }
 
   @Bean
@@ -182,6 +211,15 @@ public class SpringPrismAutoConfiguration {
       SpringPrismProperties properties) {
     return new PrismActuatorEndpoint(
         prismRuntimeMetrics, springPrismRulePacks, prismVault, properties);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
+  PrismRulePackRegistryEndpoint prismRulePackRegistryEndpoint(
+      PrismRulePackRegistry prismRulePackRegistry,
+      @Qualifier("springPrismRulePacks") List<PrismRulePack> springPrismRulePacks) {
+    return new PrismRulePackRegistryEndpoint(prismRulePackRegistry, springPrismRulePacks);
   }
 
   @Bean

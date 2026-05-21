@@ -15,6 +15,8 @@
  */
 package io.github.catalin87.prism.boot.autoconfigure;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -22,12 +24,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /** In-memory runtime metrics collector for dashboard and actuator-style reads. */
 public class PrismRuntimeMetrics
     implements io.github.catalin87.prism.spring.ai.advisor.PrismMetricsSink,
         io.github.catalin87.prism.langchain4j.PrismMetricsSink,
         io.github.catalin87.prism.mcp.PrismMcpMetricsSink {
+
+  static final String TOKENIZE_TIMER_NAME = "prism.scanner.tokenize.duration";
 
   private final AtomicLong tokenizedCount = new AtomicLong();
   private final AtomicLong detokenizedCount = new AtomicLong();
@@ -38,18 +43,39 @@ public class PrismRuntimeMetrics
   private final ConcurrentHashMap<String, AtomicLong> durationTotalsNanos =
       new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> durationSamples = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, Timer> tokenizeTimers = new ConcurrentHashMap<>();
   private final Deque<AuditEvent> auditEvents = new ArrayDeque<>();
   private final Deque<HistorySample> historySamples = new ArrayDeque<>();
   private final int auditRetentionLimit;
   private final int historyRetentionLimit;
+  private final @Nullable MeterRegistry meterRegistry;
 
   public PrismRuntimeMetrics() {
-    this(12, 120);
+    this(12, 120, null);
   }
 
   public PrismRuntimeMetrics(int auditRetentionLimit, int historyRetentionLimit) {
+    this(auditRetentionLimit, historyRetentionLimit, null);
+  }
+
+  /**
+   * Creates a metrics collector wired to an optional Micrometer {@link MeterRegistry}. When the
+   * registry is supplied, {@link #onTokenizeDuration(String, long)} additionally records each
+   * sample to a {@link Timer} named {@code prism.scanner.tokenize.duration} (tagged by
+   * integration); when it is {@code null}, the Timer side is skipped and only the in-memory
+   * dashboard aggregates are updated.
+   *
+   * @param auditRetentionLimit Bounded retention for the masked audit event ring.
+   * @param historyRetentionLimit Bounded retention for the dashboard history samples.
+   * @param meterRegistry Optional Micrometer registry. Use {@code null} to opt out of Timer
+   *     publication (the dashboard still works).
+   * @since 1.2.0
+   */
+  public PrismRuntimeMetrics(
+      int auditRetentionLimit, int historyRetentionLimit, @Nullable MeterRegistry meterRegistry) {
     this.auditRetentionLimit = Math.max(1, auditRetentionLimit);
     this.historyRetentionLimit = Math.max(10, historyRetentionLimit);
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -91,6 +117,28 @@ public class PrismRuntimeMetrics
   @Override
   public void onVaultDetokenizeDuration(@NonNull String integration, long nanos) {
     recordDuration(integration, "vault-detokenize", nanos);
+  }
+
+  @Override
+  public void onTokenizeDuration(@NonNull String integration, long nanos) {
+    if (nanos < 0) {
+      return;
+    }
+    recordDuration(integration, "tokenize", nanos);
+    if (meterRegistry != null) {
+      tokenizeTimers
+          .computeIfAbsent(integration, this::buildTokenizeTimer)
+          .record(nanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+    }
+  }
+
+  private @NonNull Timer buildTokenizeTimer(@NonNull String integration) {
+    return Timer.builder(TOKENIZE_TIMER_NAME)
+        .tag("integration", integration)
+        .description(
+            "Wall-clock duration of full PrismTextScanner.tokenize(...) invocations, including"
+                + " detection, deduplication, and vault tokenization.")
+        .register(java.util.Objects.requireNonNull(meterRegistry));
   }
 
   @Override
